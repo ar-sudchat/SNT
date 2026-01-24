@@ -1,0 +1,224 @@
+import React, { useState, useEffect } from 'react';
+import { gradeAPI } from '../../services/api';
+
+const ManageGrades = () => {
+  const [grades, setGrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingGrade, setEditingGrade] = useState(null);
+  const [formData, setFormData] = useState({
+    gradeName: '',
+    description: '',
+    status: 'ACTIVE'
+  });
+
+  useEffect(() => {
+    fetchGrades();
+  }, []);
+
+  const fetchGrades = async () => {
+    try {
+      const response = await gradeAPI.getAll();
+      setGrades(response.data);
+    } catch (err) {
+      setError('ไม่สามารถโหลดข้อมูลได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingGrade) {
+        await gradeAPI.update(editingGrade.id, formData);
+      } else {
+        await gradeAPI.create(formData);
+      }
+      fetchGrades();
+      closeModal();
+    } catch (err) {
+      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('ต้องการลบชั้นปีนี้หรือไม่?')) {
+      try {
+        await gradeAPI.delete(id);
+        fetchGrades();
+      } catch (err) {
+        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+      }
+    }
+  };
+
+  const openModal = (grade = null) => {
+    if (grade) {
+      setEditingGrade(grade);
+      setFormData({
+        gradeName: grade.gradeName,
+        description: grade.description || '',
+        status: grade.status
+      });
+    } else {
+      setEditingGrade(null);
+      setFormData({
+        gradeName: '',
+        description: '',
+        status: 'ACTIVE'
+      });
+    }
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingGrade(null);
+    setFormData({ gradeName: '', description: '', status: 'ACTIVE' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">จัดการชั้นปี</h1>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          + เพิ่มชั้นปี
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+          <button onClick={() => setError('')} className="float-right">&times;</button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชั้นปี</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">คำอธิบาย</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">ห้องเรียน</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">สถานะ</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {grades.map((grade) => (
+              <tr key={grade.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {grade.gradeName}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {grade.description || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                  {grade._count?.classes || 0}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <span className={`px-2 py-1 text-xs rounded-full ${grade.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {grade.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                  <button
+                    onClick={() => openModal(grade)}
+                    className="text-blue-600 hover:text-blue-800 mr-3"
+                  >
+                    แก้ไข
+                  </button>
+                  <button
+                    onClick={() => handleDelete(grade.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    ลบ
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">
+              {editingGrade ? 'แก้ไขชั้นปี' : 'เพิ่มชั้นปี'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชื่อชั้นปี
+                </label>
+                <input
+                  type="text"
+                  value={formData.gradeName}
+                  onChange={(e) => setFormData({ ...formData, gradeName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  คำอธิบาย
+                </label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  สถานะ
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ACTIVE">ใช้งาน</option>
+                  <option value="INACTIVE">ไม่ใช้งาน</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  บันทึก
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ManageGrades;

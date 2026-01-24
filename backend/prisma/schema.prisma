@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User table for authentication
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role     @default(TEACHER)
+  teacherId Int?     @unique
+  studentId Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher Teacher? @relation(fields: [teacherId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+// Grade table (ชั้นปี)
+model Grade {
+  id          Int      @id @default(autoincrement())
+  gradeName   String   @unique
+  description String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classes Class[]
+}
+
+// Class table (ห้องเรียน)
+model Class {
+  id           Int      @id @default(autoincrement())
+  className    String   @unique
+  gradeId      Int
+  teacherId    Int?     // ครูประจำชั้น
+  academicYear String
+  capacity     Int      @default(40)
+  description  String?
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  grade        Grade     @relation(fields: [gradeId], references: [id])
+  homeTeacher  Teacher?  @relation("HomeClass", fields: [teacherId], references: [id])
+  students     Student[]
+}
+
+// Student table (นักเรียน)
+model Student {
+  id          Int      @id @default(autoincrement())
+  studentCode String   @unique
+  name        String
+  classId     Int
+  email       String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class       Class        @relation(fields: [classId], references: [id])
+  qrcodes     QRCode[]
+  submissions Submission[]
+  user        User?
+}
+
+// Teacher table (ครู)
+model Teacher {
+  id          Int      @id @default(autoincrement())
+  teacherCode String   @unique
+  name        String
+  email       String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  homeClass   Class[]      @relation("HomeClass")
+  subjects    Subject[]
+  tasks       Task[]       @relation("CreatedBy")
+  submissions Submission[] @relation("ReviewedBy")
+  user        User?
+}
+
+// Subject table (วิชา)
+model Subject {
+  id          Int      @id @default(autoincrement())
+  subjectCode String   @unique
+  subjectName String
+  teacherId   Int
+  description String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher Teacher  @relation(fields: [teacherId], references: [id])
+  tasks   Task[]
+  qrcodes QRCode[]
+}
+
+// Task table (งาน)
+model Task {
+  id          Int       @id @default(autoincrement())
+  subjectId   Int
+  taskName    String
+  taskNumber  Int
+  description String?
+  deadline    DateTime?
+  status      Status    @default(ACTIVE)
+  createdById Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  createdBy   Teacher      @relation("CreatedBy", fields: [createdById], references: [id])
+  submissions Submission[]
+
+  @@unique([subjectId, taskNumber])
+}
+
+// QRCode table
+model QRCode {
+  id          Int       @id @default(autoincrement())
+  studentId   Int
+  subjectId   Int
+  qrcodeData  String    @unique
+  qrcodeImage String?   // Base64 or URL
+  status      Status    @default(ACTIVE)
+  printedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([studentId, subjectId])
+}
+
+// Submission table (การส่งงาน)
+model Submission {
+  id           Int              @id @default(autoincrement())
+  studentId    Int
+  taskId       Int
+  status       SubmissionStatus @default(NOT_SUBMITTED)
+  submitDate   DateTime?
+  reviewDate   DateTime?
+  reviewedById Int?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  student    Student  @relation(fields: [studentId], references: [id])
+  task       Task     @relation(fields: [taskId], references: [id])
+  reviewedBy Teacher? @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@unique([studentId, taskId])
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
