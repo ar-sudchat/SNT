@@ -20,7 +20,7 @@ const importController = {
       };
 
       if (!templates[type]) {
-        return res.status(400).json({ error: 'Invalid template type' });
+        return res.status(400).json({ error: 'ประเภท template ไม่ถูกต้อง' });
       }
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -28,7 +28,7 @@ const importController = {
       res.send('\uFEFF' + templates[type]); // Add BOM for Excel UTF-8
     } catch (error) {
       console.error('Download template error:', error);
-      res.status(500).json({ error: 'Failed to download template' });
+      res.status(500).json({ error: 'ไม่สามารถดาวน์โหลด template ได้' });
     }
   },
 
@@ -64,7 +64,7 @@ const importController = {
   async importAcademicYears(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -80,7 +80,7 @@ const importController = {
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!year) {
-            results.failed.push({ row, reason: 'Year is required' });
+            results.failed.push({ row, reason: 'ต้องระบุปีการศึกษา (Year)' });
             continue;
           }
 
@@ -89,7 +89,7 @@ const importController = {
           });
 
           if (existing) {
-            results.failed.push({ row, reason: 'Academic year already exists' });
+            results.failed.push({ row, reason: `ปีการศึกษา ${year} มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -119,12 +119,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} academic years, ${results.failed.length} failed`,
+        message: `นำเข้าปีการศึกษา ${results.success.length} รายการสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import academic years error:', error);
-      res.status(500).json({ error: 'Failed to import academic years' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลปีการศึกษาได้' });
     }
   },
 
@@ -132,7 +132,7 @@ const importController = {
   async importGrades(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -140,12 +140,12 @@ const importController = {
 
       for (const row of data) {
         try {
-          const gradeName = row.GradeName || row.gradeName;
+          const gradeName = (row.GradeName || row.gradeName || '').toString().trim();
           const description = row.Description || row.description || '';
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!gradeName) {
-            results.failed.push({ row, reason: 'GradeName is required' });
+            results.failed.push({ row, reason: 'ต้องระบุชื่อชั้นปี (GradeName)' });
             continue;
           }
 
@@ -154,7 +154,7 @@ const importController = {
           });
 
           if (existing) {
-            results.failed.push({ row, reason: 'Grade already exists' });
+            results.failed.push({ row, reason: `ชั้นปี "${gradeName}" มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -173,12 +173,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} grades, ${results.failed.length} failed`,
+        message: `นำเข้าชั้นปี ${results.success.length} รายการสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import grades error:', error);
-      res.status(500).json({ error: 'Failed to import grades' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลชั้นปีได้' });
     }
   },
 
@@ -186,7 +186,7 @@ const importController = {
   async importClasses(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -194,15 +194,25 @@ const importController = {
 
       for (const row of data) {
         try {
-          const className = row.ClassName || row.className;
-          const gradeName = row.GradeName || row.gradeName;
-          const teacherCode = row.TeacherCode || row.teacherCode;
+          const className = (row.ClassName || row.className || '').toString().trim();
+          const gradeName = (row.GradeName || row.gradeName || '').toString().trim();
+          const teacherCode = (row.TeacherCode || row.teacherCode || '').toString().trim();
           const academicYear = row.AcademicYear || row.academicYear;
           const capacity = parseInt(row.Capacity || row.capacity || 40);
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!className || !gradeName || !academicYear) {
-            results.failed.push({ row, reason: 'ClassName, GradeName, and AcademicYear are required' });
+            results.failed.push({ row, reason: 'ต้องระบุ ห้องเรียน (ClassName), ชั้นปี (GradeName), และ ปีการศึกษา (AcademicYear)' });
+            continue;
+          }
+
+          // Check if class already exists
+          const existingClass = await prisma.class.findUnique({
+            where: { className }
+          });
+
+          if (existingClass) {
+            results.failed.push({ row, reason: `ห้องเรียน "${className}" มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -211,7 +221,7 @@ const importController = {
           });
 
           if (!grade) {
-            results.failed.push({ row, reason: `Grade ${gradeName} not found` });
+            results.failed.push({ row, reason: `ไม่พบชั้นปี "${gradeName}" กรุณาสร้างชั้นปีก่อน` });
             continue;
           }
 
@@ -221,7 +231,7 @@ const importController = {
           });
 
           if (!academicYearRecord) {
-            results.failed.push({ row, reason: `Academic year ${academicYear} not found` });
+            results.failed.push({ row, reason: `ไม่พบปีการศึกษา "${academicYear}" กรุณาสร้างปีการศึกษาก่อน` });
             continue;
           }
 
@@ -230,7 +240,12 @@ const importController = {
             const teacher = await prisma.teacher.findUnique({
               where: { teacherCode }
             });
-            if (teacher) teacherId = teacher.id;
+            if (teacher) {
+              teacherId = teacher.id;
+            } else {
+              results.failed.push({ row, reason: `ไม่พบครูรหัส "${teacherCode}" กรุณาสร้างข้อมูลครูก่อน` });
+              continue;
+            }
           }
 
           const classData = await prisma.class.create({
@@ -251,12 +266,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} classes, ${results.failed.length} failed`,
+        message: `นำเข้าห้องเรียน ${results.success.length} รายการสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import classes error:', error);
-      res.status(500).json({ error: 'Failed to import classes' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลห้องเรียนได้' });
     }
   },
 
@@ -264,7 +279,7 @@ const importController = {
   async importStudents(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -272,15 +287,25 @@ const importController = {
 
       for (const row of data) {
         try {
-          const studentCode = row.StudentCode || row.studentCode;
+          const studentCode = (row.StudentCode || row.studentCode || '').toString().trim();
           const studentNumber = row.StudentNumber || row.studentNumber;
-          const name = row.Name || row.name;
-          const className = row.ClassName || row.className;
+          const name = (row.Name || row.name || '').toString().trim();
+          const className = (row.ClassName || row.className || '').toString().trim();
           const email = row.Email || row.email || null;
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!studentCode || !name || !className) {
-            results.failed.push({ row, reason: 'StudentCode, Name, and ClassName are required' });
+            results.failed.push({ row, reason: 'ต้องระบุ รหัสนักเรียน (StudentCode), ชื่อ (Name), และ ห้องเรียน (ClassName)' });
+            continue;
+          }
+
+          // Check if studentCode already exists
+          const existingStudent = await prisma.student.findUnique({
+            where: { studentCode }
+          });
+
+          if (existingStudent) {
+            results.failed.push({ row, reason: `รหัสนักเรียน ${studentCode} มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -289,7 +314,7 @@ const importController = {
           });
 
           if (!classData) {
-            results.failed.push({ row, reason: `Class ${className} not found` });
+            results.failed.push({ row, reason: `ไม่พบห้องเรียน "${className}" กรุณาสร้างห้องเรียนก่อน` });
             continue;
           }
 
@@ -311,12 +336,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} students, ${results.failed.length} failed`,
+        message: `นำเข้านักเรียน ${results.success.length} คนสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import students error:', error);
-      res.status(500).json({ error: 'Failed to import students' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลนักเรียนได้' });
     }
   },
 
@@ -324,7 +349,7 @@ const importController = {
   async importTeachers(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -332,13 +357,23 @@ const importController = {
 
       for (const row of data) {
         try {
-          const teacherCode = row.TeacherCode || row.teacherCode;
-          const name = row.Name || row.name;
+          const teacherCode = (row.TeacherCode || row.teacherCode || '').toString().trim();
+          const name = (row.Name || row.name || '').toString().trim();
           const email = row.Email || row.email || null;
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!teacherCode || !name) {
-            results.failed.push({ row, reason: 'TeacherCode and Name are required' });
+            results.failed.push({ row, reason: 'ต้องระบุ รหัสครู (TeacherCode) และ ชื่อ (Name)' });
+            continue;
+          }
+
+          // Check if teacher already exists
+          const existingTeacher = await prisma.teacher.findUnique({
+            where: { teacherCode }
+          });
+
+          if (existingTeacher) {
+            results.failed.push({ row, reason: `รหัสครู "${teacherCode}" มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -358,12 +393,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} teachers, ${results.failed.length} failed`,
+        message: `นำเข้าครู ${results.success.length} คนสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import teachers error:', error);
-      res.status(500).json({ error: 'Failed to import teachers' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลครูได้' });
     }
   },
 
@@ -371,7 +406,7 @@ const importController = {
   async importSubjects(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -379,16 +414,26 @@ const importController = {
 
       for (const row of data) {
         try {
-          const subjectCode = row.SubjectCode || row.subjectCode;
-          const subjectName = row.SubjectName || row.subjectName;
-          const gradeName = row.GradeName || row.gradeName;
+          const subjectCode = (row.SubjectCode || row.subjectCode || '').toString().trim();
+          const subjectName = (row.SubjectName || row.subjectName || '').toString().trim();
+          const gradeName = (row.GradeName || row.gradeName || '').toString().trim();
           const academicYear = row.AcademicYear || row.academicYear;
-          const teacherCode = row.TeacherCode || row.teacherCode;
+          const teacherCode = (row.TeacherCode || row.teacherCode || '').toString().trim();
           const description = row.Description || row.description || '';
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!subjectCode || !subjectName || !teacherCode || !gradeName || !academicYear) {
-            results.failed.push({ row, reason: 'SubjectCode, SubjectName, GradeName, AcademicYear, and TeacherCode are required' });
+            results.failed.push({ row, reason: 'ต้องระบุ รหัสวิชา (SubjectCode), ชื่อวิชา (SubjectName), ชั้นปี (GradeName), ปีการศึกษา (AcademicYear), และ รหัสครู (TeacherCode)' });
+            continue;
+          }
+
+          // Check if subject already exists
+          const existingSubject = await prisma.subject.findUnique({
+            where: { subjectCode }
+          });
+
+          if (existingSubject) {
+            results.failed.push({ row, reason: `รหัสวิชา "${subjectCode}" มีอยู่แล้วในระบบ` });
             continue;
           }
 
@@ -397,7 +442,7 @@ const importController = {
           });
 
           if (!teacher) {
-            results.failed.push({ row, reason: `Teacher ${teacherCode} not found` });
+            results.failed.push({ row, reason: `ไม่พบครูรหัส "${teacherCode}" กรุณาสร้างข้อมูลครูก่อน` });
             continue;
           }
 
@@ -406,7 +451,7 @@ const importController = {
           });
 
           if (!grade) {
-            results.failed.push({ row, reason: `Grade ${gradeName} not found` });
+            results.failed.push({ row, reason: `ไม่พบชั้นปี "${gradeName}" กรุณาสร้างชั้นปีก่อน` });
             continue;
           }
 
@@ -415,7 +460,7 @@ const importController = {
           });
 
           if (!academicYearRecord) {
-            results.failed.push({ row, reason: `Academic year ${academicYear} not found` });
+            results.failed.push({ row, reason: `ไม่พบปีการศึกษา "${academicYear}" กรุณาสร้างปีการศึกษาก่อน` });
             continue;
           }
 
@@ -438,12 +483,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} subjects, ${results.failed.length} failed`,
+        message: `นำเข้าวิชา ${results.success.length} รายการสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import subjects error:', error);
-      res.status(500).json({ error: 'Failed to import subjects' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลวิชาได้' });
     }
   },
 
@@ -451,7 +496,7 @@ const importController = {
   async importTasks(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า' });
       }
 
       const data = await importController.parseFile(req.file);
@@ -459,8 +504,8 @@ const importController = {
 
       for (const row of data) {
         try {
-          const subjectCode = row.SubjectCode || row.subjectCode;
-          const taskName = row.TaskName || row.taskName;
+          const subjectCode = (row.SubjectCode || row.subjectCode || '').toString().trim();
+          const taskName = (row.TaskName || row.taskName || '').toString().trim();
           const taskNumber = parseInt(row.TaskNumber || row.taskNumber);
           const description = row.Description || row.description || '';
           const deadline = row.Deadline || row.deadline;
@@ -469,7 +514,7 @@ const importController = {
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!subjectCode || !taskName || !taskNumber) {
-            results.failed.push({ row, reason: 'SubjectCode, TaskName, and TaskNumber are required' });
+            results.failed.push({ row, reason: 'ต้องระบุ รหัสวิชา (SubjectCode), ชื่องาน (TaskName), และ ลำดับงาน (TaskNumber)' });
             continue;
           }
 
@@ -479,7 +524,17 @@ const importController = {
           });
 
           if (!subject) {
-            results.failed.push({ row, reason: `Subject ${subjectCode} not found` });
+            results.failed.push({ row, reason: `ไม่พบวิชารหัส "${subjectCode}" กรุณาสร้างวิชาก่อน` });
+            continue;
+          }
+
+          // Check if task already exists
+          const existingTask = await prisma.task.findFirst({
+            where: { subjectId: subject.id, taskNumber }
+          });
+
+          if (existingTask) {
+            results.failed.push({ row, reason: `งานที่ ${taskNumber} ของวิชา "${subjectCode}" มีอยู่แล้ว` });
             continue;
           }
 
@@ -508,12 +563,12 @@ const importController = {
       }
 
       res.json({
-        message: `Imported ${results.success.length} tasks, ${results.failed.length} failed`,
+        message: `นำเข้างาน ${results.success.length} รายการสำเร็จ, ไม่สำเร็จ ${results.failed.length} รายการ`,
         results
       });
     } catch (error) {
       console.error('Import tasks error:', error);
-      res.status(500).json({ error: 'Failed to import tasks' });
+      res.status(500).json({ error: 'ไม่สามารถนำเข้าข้อมูลงานได้' });
     }
   },
 
@@ -521,7 +576,7 @@ const importController = {
   async validateFile(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการตรวจสอบ' });
       }
 
       const { type } = req.query;
@@ -537,6 +592,20 @@ const importController = {
         task: ['SubjectCode', 'TaskName', 'TaskNumber']
       };
 
+      const fieldNames = {
+        Year: 'ปีการศึกษา',
+        GradeName: 'ชื่อชั้นปี',
+        ClassName: 'ห้องเรียน',
+        AcademicYear: 'ปีการศึกษา',
+        StudentCode: 'รหัสนักเรียน',
+        Name: 'ชื่อ',
+        TeacherCode: 'รหัสครู',
+        SubjectCode: 'รหัสวิชา',
+        SubjectName: 'ชื่อวิชา',
+        TaskName: 'ชื่องาน',
+        TaskNumber: 'ลำดับงาน'
+      };
+
       const required = requiredFields[type] || [];
       const errors = [];
 
@@ -547,7 +616,7 @@ const importController = {
             errors.push({
               row: index + 2, // +2 for header row and 1-based index
               field,
-              message: `Missing required field: ${field}`
+              message: `ไม่พบข้อมูล ${fieldNames[field] || field} (${field}) ในแถวที่ ${index + 2}`
             });
           }
         });
@@ -560,7 +629,7 @@ const importController = {
       });
     } catch (error) {
       console.error('Validate file error:', error);
-      res.status(500).json({ error: 'Failed to validate file' });
+      res.status(500).json({ error: 'ไม่สามารถตรวจสอบไฟล์ได้' });
     }
   }
 };
