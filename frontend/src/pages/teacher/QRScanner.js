@@ -156,11 +156,11 @@ const QRScanner = () => {
     }
   };
 
-  // Start auto-restart countdown
+  // Start auto-restart countdown (reduced to 2 seconds)
   const startAutoRestartCountdown = () => {
     if (!autoRestart) return;
 
-    setCountdown(3);
+    setCountdown(2);
     countdownRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -173,6 +173,13 @@ const QRScanner = () => {
         return prev - 1;
       });
     }, 1000);
+  };
+
+  // Skip countdown and scan immediately
+  const scanNextNow = () => {
+    cancelAutoRestart();
+    resetScanner();
+    setTimeout(() => startScanner(), 100);
   };
 
   // Cancel auto-restart
@@ -506,21 +513,29 @@ const QRScanner = () => {
 
       {/* Auto-restart Countdown Overlay */}
       {countdown > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl max-w-sm mx-4">
-            <div className="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={scanNextNow}>
+          <div className="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="w-16 h-16 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">ตรวจครบแล้ว!</h3>
-            <p className="text-gray-600 mb-4">สแกนคนต่อไปใน {countdown} วินาที...</p>
-            <button
-              onClick={cancelAutoRestart}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              ยกเลิก
-            </button>
+            <h3 className="text-lg font-bold text-gray-800 mb-1">ตรวจครบแล้ว!</h3>
+            <p className="text-gray-500 text-sm mb-4">สแกนคนต่อไปใน {countdown}...</p>
+            <div className="flex gap-2">
+              <button
+                onClick={cancelAutoRestart}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm"
+              >
+                อยู่หน้านี้
+              </button>
+              <button
+                onClick={scanNextNow}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
+              >
+                สแกนเลย →
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -814,12 +829,12 @@ const QRScanner = () => {
                         : 'ไม่มีรายการงาน'
                     }
                   </p>
-                  {taskFilter === 'not_submitted' && autoRestart && stats.notSubmitted === 0 && countdown === 0 && (
+                  {taskFilter === 'not_submitted' && stats.notSubmitted === 0 && countdown === 0 && (
                     <button
-                      onClick={startAutoRestartCountdown}
-                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={scanNextNow}
+                      className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
                     >
-                      สแกนคนถัดไป
+                      สแกนคนถัดไป →
                     </button>
                   )}
                 </div>
