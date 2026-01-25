@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { importAPI } from '../../services/api';
+import { ConfirmDialog } from '../../components/ui';
 
 const DataImport = () => {
   const [selectedType, setSelectedType] = useState('');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [alert, setAlert] = useState({ show: false, type: 'info', title: '', message: '' });
   const [result, setResult] = useState(null);
+
+  const showAlert = (type, title, message) => {
+    setAlert({ show: true, type, title, message });
+  };
 
   const importTypes = [
     { value: 'academicYear', label: 'ปีการศึกษา (Academic Year)', description: 'นำเข้าข้อมูลปีการศึกษา เช่น 2567, 2568' },
@@ -29,7 +34,7 @@ const DataImport = () => {
       link.click();
       link.remove();
     } catch (err) {
-      setError('ไม่สามารถดาวน์โหลด template ได้');
+      showAlert('danger', 'ดาวน์โหลดไม่สำเร็จ', 'ไม่สามารถดาวน์โหลด template ได้');
     }
   };
 
@@ -37,19 +42,17 @@ const DataImport = () => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      setError('');
       setResult(null);
     }
   };
 
   const handleImport = async () => {
     if (!selectedType || !file) {
-      setError('กรุณาเลือกประเภทข้อมูลและไฟล์');
+      showAlert('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกประเภทข้อมูลและไฟล์');
       return;
     }
 
     setLoading(true);
-    setError('');
     setResult(null);
 
     try {
@@ -80,8 +83,20 @@ const DataImport = () => {
           throw new Error('Invalid type');
       }
       setResult(response.data);
+
+      // Show success/partial success message
+      const successCount = response.data.results?.success?.length || 0;
+      const failedCount = response.data.results?.failed?.length || 0;
+
+      if (failedCount === 0 && successCount > 0) {
+        showAlert('success', 'นำเข้าสำเร็จ', response.data.message);
+      } else if (successCount > 0 && failedCount > 0) {
+        showAlert('warning', 'นำเข้าบางส่วน', response.data.message);
+      } else if (successCount === 0) {
+        showAlert('danger', 'นำเข้าไม่สำเร็จ', 'ไม่สามารถนำเข้าข้อมูลได้ กรุณาตรวจสอบไฟล์');
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+      showAlert('danger', 'เกิดข้อผิดพลาด', err.response?.data?.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
     } finally {
       setLoading(false);
     }
@@ -90,13 +105,6 @@ const DataImport = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-800">Import ข้อมูล</h1>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
-          <button onClick={() => setError('')} className="float-right">&times;</button>
-        </div>
-      )}
 
       {/* Import Type Selection */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -234,6 +242,17 @@ const DataImport = () => {
           </p>
         </div>
       </div>
+
+      {/* Alert Dialog */}
+      <ConfirmDialog
+        isOpen={alert.show}
+        onClose={() => setAlert({ ...alert, show: false })}
+        title={alert.title}
+        message={alert.message}
+        confirmText="ตกลง"
+        type={alert.type}
+        mode="alert"
+      />
     </div>
   );
 };

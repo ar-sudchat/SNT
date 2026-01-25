@@ -1,33 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ConfirmDialog } from '../components/ui';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({ show: false, type: 'info', title: '', message: '' });
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const showAlert = (type, title, message) => {
+    setAlert({ show: true, type, title, message });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
       const user = await login(username, password);
 
-      // Redirect based on role
-      if (user.role === 'ADMIN') {
-        navigate('/admin');
-      } else if (user.role === 'TEACHER') {
-        navigate('/teacher');
-      } else {
-        navigate('/student');
-      }
+      // Show success message briefly then redirect
+      showAlert('success', 'เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับ ${user.teacher?.name || user.student?.name || 'Admin'}`);
+
+      // Redirect after showing success message
+      setTimeout(() => {
+        if (user.role === 'ADMIN') {
+          navigate('/admin');
+        } else if (user.role === 'TEACHER') {
+          navigate('/teacher');
+        } else {
+          navigate('/student');
+        }
+      }, 1000);
     } catch (err) {
-      setError(err.response?.data?.error || 'เข้าสู่ระบบไม่สำเร็จ');
+      showAlert('danger', 'เข้าสู่ระบบไม่สำเร็จ', err.response?.data?.error || 'กรุณาตรวจสอบรหัสผู้ใช้และรหัสผ่าน');
     } finally {
       setLoading(false);
     }
@@ -49,11 +58,6 @@ const Login = () => {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
 
           <div className="space-y-4">
             <div>
@@ -120,6 +124,17 @@ const Login = () => {
           <p>Version 1.0.0</p>
         </div>
       </div>
+
+      {/* Alert Dialog */}
+      <ConfirmDialog
+        isOpen={alert.show}
+        onClose={() => setAlert({ ...alert, show: false })}
+        title={alert.title}
+        message={alert.message}
+        confirmText="ตกลง"
+        type={alert.type}
+        mode="alert"
+      />
     </div>
   );
 };
