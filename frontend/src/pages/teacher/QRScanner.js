@@ -707,27 +707,15 @@ const QRScanner = () => {
                   {scanResult.student.studentCode} • {scanResult.student.class?.className} • {scanResult.subject.subjectName}
                 </p>
               </div>
-              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                <button
-                  onClick={() => navigate(`/monitor/student/${scanResult.student.id}?subjectId=${scanResult.subject.id}`)}
-                  className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                  title="ดูข้อมูลทั้งหมด"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </button>
-                <button
-                  onClick={scanNextNow}
-                  className="px-3 py-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-xs font-medium flex items-center gap-1"
-                  title="สแกนคนถัดไป"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  </svg>
-                  ถัดไป
-                </button>
-              </div>
+              <button
+                onClick={() => navigate(`/monitor/student/${scanResult.student.id}?subjectId=${scanResult.subject.id}`)}
+                className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors ml-2 flex-shrink-0"
+                title="ดูข้อมูลทั้งหมด"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </button>
             </div>
             {/* Inline Stats */}
             <div className="flex gap-4 mt-2 pt-2 border-t border-white/20 text-center">
@@ -841,18 +829,21 @@ const QRScanner = () => {
                         : 'ไม่มีรายการงาน'
                     }
                   </p>
-                  {taskFilter === 'not_submitted' && stats.notSubmitted === 0 && countdown === 0 && (
-                    <button
-                      onClick={scanNextNow}
-                      className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-                    >
-                      สแกนคนถัดไป →
-                    </button>
-                  )}
                 </div>
               )}
             </div>
           </div>
+
+          {/* Always visible "Scan Next" button at bottom */}
+          <button
+            onClick={scanNextNow}
+            className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            </svg>
+            สแกนคนถัดไป
+          </button>
         </div>
       )}
     </div>
