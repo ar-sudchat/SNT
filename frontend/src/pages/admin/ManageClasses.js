@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/api';
-import { SmartTable, SmartComboBox } from '../../components/ui';
+import { SmartTable, SmartComboBox, ConfirmDialog } from '../../components/ui';
 
 const ManageClasses = () => {
   const [classes, setClasses] = useState([]);
@@ -11,6 +11,7 @@ const ManageClasses = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null });
   const [filterGrade, setFilterGrade] = useState(null);
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
   const [formData, setFormData] = useState({
@@ -73,10 +74,14 @@ const ManageClasses = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('ต้องการลบห้องเรียนนี้หรือไม่?')) {
+  const handleDeleteClick = (item) => {
+    setDeleteConfirm({ show: true, item });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.item) {
       try {
-        await classAPI.delete(id);
+        await classAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
         setError(err.response?.data?.error || 'ไม่สามารถลบได้');
@@ -170,7 +175,7 @@ const ManageClasses = () => {
       exportable: false,
       render: (_, row) => (
         <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+          onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
           className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
         >
           ลบ
@@ -364,6 +369,18 @@ const ManageClasses = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.show}
+        onClose={() => setDeleteConfirm({ show: false, item: null })}
+        onConfirm={handleDeleteConfirm}
+        title="ยืนยันการลบ"
+        message={`ต้องการลบห้องเรียน "${deleteConfirm.item?.className}" หรือไม่?`}
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        type="danger"
+      />
     </div>
   );
 };

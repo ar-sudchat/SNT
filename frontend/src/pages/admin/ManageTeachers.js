@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { teacherAPI } from '../../services/api';
-import { SmartTable } from '../../components/ui';
+import { SmartTable, ConfirmDialog } from '../../components/ui';
 
 const ManageTeachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -8,6 +8,7 @@ const ManageTeachers = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, teacher: null });
   const [formData, setFormData] = useState({
     teacherCode: '',
     name: '',
@@ -46,10 +47,14 @@ const ManageTeachers = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('ต้องการลบครูนี้หรือไม่?')) {
+  const handleDeleteClick = (teacher) => {
+    setDeleteConfirm({ show: true, teacher });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.teacher) {
       try {
-        await teacherAPI.delete(id);
+        await teacherAPI.delete(deleteConfirm.teacher.id);
         fetchTeachers();
       } catch (err) {
         setError(err.response?.data?.error || 'ไม่สามารถลบได้');
@@ -123,7 +128,7 @@ const ManageTeachers = () => {
       exportable: false,
       render: (_, row) => (
         <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+          onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
           className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
         >
           ลบ
@@ -256,6 +261,18 @@ const ManageTeachers = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.show}
+        onClose={() => setDeleteConfirm({ show: false, teacher: null })}
+        onConfirm={handleDeleteConfirm}
+        title="ยืนยันการลบ"
+        message={`ต้องการลบครู "${deleteConfirm.teacher?.name}" หรือไม่?`}
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        type="danger"
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { taskAPI, subjectAPI, academicYearAPI, gradeAPI } from '../../services/api';
-import { SmartTable, SmartComboBox } from '../../components/ui';
+import { SmartTable, SmartComboBox, ConfirmDialog } from '../../components/ui';
 
 const ManageTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -11,6 +11,7 @@ const ManageTasks = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null });
   const [filterSubject, setFilterSubject] = useState(null);
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
   const [filterGrade, setFilterGrade] = useState(null);
@@ -106,10 +107,14 @@ const ManageTasks = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('ต้องการลบงานนี้หรือไม่?')) {
+  const handleDeleteClick = (item) => {
+    setDeleteConfirm({ show: true, item });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.item) {
       try {
-        await taskAPI.delete(id);
+        await taskAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
         setError(err.response?.data?.error || 'ไม่สามารถลบได้');
@@ -221,7 +226,7 @@ const ManageTasks = () => {
       exportable: false,
       render: (_, row) => (
         <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+          onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
           className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
         >
           ลบ
@@ -491,6 +496,18 @@ const ManageTasks = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.show}
+        onClose={() => setDeleteConfirm({ show: false, item: null })}
+        onConfirm={handleDeleteConfirm}
+        title="ยืนยันการลบ"
+        message={`ต้องการลบงาน "${deleteConfirm.item?.taskName}" หรือไม่?`}
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        type="danger"
+      />
     </div>
   );
 };
