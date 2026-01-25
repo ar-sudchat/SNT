@@ -9,6 +9,12 @@ router.get('/admin/overview', authenticate, isAdmin, reportController.adminOverv
 // Admin task submission statistics
 router.get('/admin/statistics', authenticate, isAdmin, reportController.adminStatistics);
 
+// Teacher dashboard overview (like admin but for teacher's subjects)
+router.get('/teacher/overview', authenticate, isTeacher, reportController.teacherOverview);
+
+// Teacher task statistics
+router.get('/teacher/statistics', authenticate, isTeacher, reportController.teacherStatistics);
+
 // Teacher dashboard - by subject
 router.get('/teacher/subjects', authenticate, isTeacher, reportController.teacherSubjects);
 

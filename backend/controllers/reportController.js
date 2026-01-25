@@ -107,6 +107,138 @@ const reportController = {
     }
   },
 
+  // Teacher overview (like admin but only for teacher's subjects)
+  async teacherOverview(req, res) {
+    try {
+      const teacherId = req.user.teacherId || req.user.teacher?.id;
+
+      if (!teacherId) {
+        return res.status(400).json({ error: 'Teacher ID not found' });
+      }
+
+      // Get teacher's subjects
+      const subjects = await prisma.subject.findMany({
+        where: { teacherId, status: 'ACTIVE' },
+        include: {
+          tasks: { where: { status: 'ACTIVE' } },
+          _count: { select: { qrcodes: true } }
+        }
+      });
+
+      const subjectIds = subjects.map(s => s.id);
+      const taskIds = subjects.flatMap(s => s.tasks.map(t => t.id));
+
+      // Count unique students from QRCodes
+      const qrcodes = await prisma.qRCode.findMany({
+        where: { subjectId: { in: subjectIds } },
+        select: { studentId: true }
+      });
+      const uniqueStudentIds = [...new Set(qrcodes.map(q => q.studentId))];
+      const studentCount = uniqueStudentIds.length;
+
+      // Get submission stats for teacher's tasks
+      const submissions = await prisma.submission.findMany({
+        where: { taskId: { in: taskIds } }
+      });
+
+      const submissionStats = {
+        total: submissions.length,
+        approved: submissions.filter(s => s.status === 'APPROVED').length,
+        rejected: submissions.filter(s => s.status === 'REJECTED').length,
+        pending: submissions.filter(s => s.status === 'PENDING').length,
+        notSubmitted: 0
+      };
+
+      // Calculate expected submissions
+      const expectedSubmissions = studentCount * taskIds.length;
+      submissionStats.notSubmitted = expectedSubmissions - submissionStats.approved - submissionStats.rejected - submissionStats.pending;
+      if (submissionStats.notSubmitted < 0) submissionStats.notSubmitted = 0;
+
+      res.json({
+        counts: {
+          students: studentCount,
+          subjects: subjects.length,
+          tasks: taskIds.length
+        },
+        submissions: submissionStats,
+        expectedSubmissions,
+        submissionRate: expectedSubmissions > 0
+          ? ((submissionStats.approved / expectedSubmissions) * 100).toFixed(1)
+          : 0
+      });
+    } catch (error) {
+      console.error('Teacher overview error:', error);
+      res.status(500).json({ error: 'Failed to fetch overview' });
+    }
+  },
+
+  // Teacher statistics (tasks with stats for teacher's subjects only)
+  async teacherStatistics(req, res) {
+    try {
+      const teacherId = req.user.teacherId || req.user.teacher?.id;
+
+      if (!teacherId) {
+        return res.status(400).json({ error: 'Teacher ID not found' });
+      }
+
+      // Get tasks for teacher's subjects
+      const tasks = await prisma.task.findMany({
+        where: {
+          status: 'ACTIVE',
+          subject: { teacherId }
+        },
+        include: {
+          subject: true,
+          submissions: true
+        },
+        orderBy: [
+          { subject: { subjectName: 'asc' } },
+          { taskNumber: 'asc' }
+        ]
+      });
+
+      // Get student count per subject
+      const subjectStudentCounts = {};
+      for (const task of tasks) {
+        if (!subjectStudentCounts[task.subjectId]) {
+          const qrcodeCount = await prisma.qRCode.count({
+            where: { subjectId: task.subjectId }
+          });
+          subjectStudentCounts[task.subjectId] = qrcodeCount;
+        }
+      }
+
+      const taskStats = tasks.map(task => {
+        const totalStudents = subjectStudentCounts[task.subjectId] || 0;
+        const approved = task.submissions.filter(s => s.status === 'APPROVED').length;
+        const rejected = task.submissions.filter(s => s.status === 'REJECTED').length;
+        const pending = task.submissions.filter(s => s.status === 'PENDING').length;
+        const notSubmitted = Math.max(0, totalStudents - approved - rejected - pending);
+
+        return {
+          taskId: task.id,
+          taskName: task.taskName,
+          taskNumber: task.taskNumber,
+          subjectId: task.subject.id,
+          subjectName: task.subject.subjectName,
+          approved,
+          rejected,
+          pending,
+          notSubmitted,
+          total: totalStudents,
+          approvalRate: totalStudents > 0
+            ? ((approved / totalStudents) * 100).toFixed(1)
+            : 0
+        };
+      });
+
+      res.json(taskStats);
+    } catch (error) {
+      console.error('Teacher statistics error:', error);
+      res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+  },
+
   // Teacher subjects
   async teacherSubjects(req, res) {
     try {
