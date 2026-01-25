@@ -206,6 +206,12 @@ const Layout = () => {
         <nav className="mt-4 pb-4">
           {currentMenuGroups.map(renderMenuGroup)}
         </nav>
+
+        {/* Version info at bottom of sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-center text-xs text-blue-300 bg-blue-900">
+          <p>Version 1.1.0</p>
+          <p className="text-blue-400">Build: 2026-01-25</p>
+        </div>
       </aside>
 
       {/* Main content */}

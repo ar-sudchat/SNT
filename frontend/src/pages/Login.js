@@ -121,7 +121,7 @@ const Login = () => {
         </div>
 
         <div className="mt-6 text-center text-xs text-gray-500">
-          <p>Version 1.0.0</p>
+          <p>Version 1.1.0 (Build: 2026-01-25)</p>
         </div>
       </div>
 
