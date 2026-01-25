@@ -68,6 +68,7 @@ const schemas = {
   // Student schemas
   student: Joi.object({
     studentCode: Joi.string().max(20).required(),
+    studentNumber: Joi.number().integer().min(1).optional().allow(null),
     name: Joi.string().max(100).required(),
     classId: Joi.number().integer().required(),
     email: Joi.string().email().optional().allow('', null),
@@ -87,6 +88,7 @@ const schemas = {
     subjectCode: Joi.string().max(20).required(),
     subjectName: Joi.string().max(100).required(),
     teacherId: Joi.number().integer().required(),
+    gradeId: Joi.number().integer().optional().allow(null),
     academicYearId: Joi.number().integer().optional().allow(null),
     description: Joi.string().max(255).optional().allow(''),
     status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
@@ -99,6 +101,8 @@ const schemas = {
     taskNumber: Joi.number().integer().min(1).max(100).required(),
     description: Joi.string().max(500).optional().allow(''),
     deadline: Joi.date().iso().optional().allow(null),
+    scoringType: Joi.string().valid('SUBMISSION_ONLY', 'PASS_FAIL', 'SCORED').default('SUBMISSION_ONLY'),
+    maxScore: Joi.number().optional().allow(null),
     status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
   }),
 
@@ -107,6 +111,7 @@ const schemas = {
     studentId: Joi.number().integer().required(),
     taskId: Joi.number().integer().required(),
     status: Joi.string().valid('NOT_SUBMITTED', 'PENDING', 'APPROVED', 'REJECTED').required(),
+    score: Joi.number().optional().allow(null),
     notes: Joi.string().max(500).optional().allow('')
   }),
 
