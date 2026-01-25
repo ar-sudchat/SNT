@@ -4,17 +4,30 @@ const taskController = {
   // Get all tasks
   async getAll(req, res) {
     try {
-      const { subjectId, status } = req.query;
+      const { subjectId, academicYearId, gradeId, status } = req.query;
 
       const where = {};
       if (subjectId) where.subjectId = parseInt(subjectId);
+
+      // Build subject filter for academicYearId and gradeId
+      const subjectFilter = {};
+      if (academicYearId) subjectFilter.academicYearId = parseInt(academicYearId);
+      if (gradeId) subjectFilter.gradeId = parseInt(gradeId);
+      if (Object.keys(subjectFilter).length > 0) {
+        where.subject = subjectFilter;
+      }
+
       if (status) where.status = status;
 
       const tasks = await prisma.task.findMany({
         where,
         include: {
           subject: {
-            include: { teacher: true }
+            include: {
+              teacher: true,
+              academicYear: true,
+              grade: true
+            }
           },
           createdBy: true,
           _count: {

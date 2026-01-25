@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { teacherAPI } from '../../services/api';
+import { SmartTable } from '../../components/ui';
 
 const ManageTeachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -14,12 +15,9 @@ const ManageTeachers = () => {
     status: 'ACTIVE'
   });
 
-  useEffect(() => {
-    fetchTeachers();
-  }, []);
-
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await teacherAPI.getAll();
       setTeachers(response.data);
     } catch (err) {
@@ -27,7 +25,11 @@ const ManageTeachers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTeachers();
+  }, [fetchTeachers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,91 +76,181 @@ const ManageTeachers = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingTeacher(null);
+    setError('');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Table columns configuration
+  const columns = [
+    {
+      key: 'teacherCode',
+      label: 'รหัสครู',
+      sortable: true,
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'name',
+      label: 'ชื่อ-นามสกุล',
+      sortable: true
+    },
+    {
+      key: 'email',
+      label: 'อีเมล',
+      render: (value) => value || '-'
+    },
+    {
+      key: 'subjects',
+      label: 'วิชาที่สอน',
+      render: (value) => (
+        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+          {value?.length || 0} วิชา
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      label: 'สถานะ',
+      render: (value) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          value === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {value === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'จัดการ',
+      exportable: false,
+      render: (_, row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+          className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
+        >
+          ลบ
+        </button>
+      )
+    }
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800">จัดการครู</h1>
-        <button onClick={() => openModal()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ เพิ่มครู</button>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          เพิ่มครู
+        </button>
       </div>
 
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
-          <button onClick={() => setError('')} className="float-right">&times;</button>
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รหัส</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">อีเมล</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">วิชาที่สอน</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {teachers.map((t) => (
-              <tr key={t.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.teacherCode}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.email || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">{t.subjects?.length || 0}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className={`px-2 py-1 text-xs rounded-full ${t.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {t.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                  <button onClick={() => openModal(t)} className="text-blue-600 hover:text-blue-800 mr-3">แก้ไข</button>
-                  <button onClick={() => handleDelete(t.id)} className="text-red-600 hover:text-red-800">ลบ</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Smart Table */}
+      <SmartTable
+        data={teachers}
+        columns={columns}
+        loading={loading}
+        title="รายชื่อครู"
+        exportFileName="teachers"
+        searchable
+        exportable
+        pagination
+        pageSize={10}
+        emptyMessage="ไม่พบข้อมูลครู"
+        onRowClick={(row) => openModal(row)}
+      />
 
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingTeacher ? 'แก้ไขครู' : 'เพิ่มครู'}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">{editingTeacher ? 'แก้ไขครู' : 'เพิ่มครู'}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสครู</label>
-                <input type="text" value={formData.teacherCode} onChange={(e) => setFormData({ ...formData, teacherCode: e.target.value })} className="w-full px-3 py-2 border rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  รหัสครู <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.teacherCode}
+                  onChange={(e) => setFormData({ ...formData, teacherCode: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="ACTIVE">ใช้งาน</option>
                   <option value="INACTIVE">ไม่ใช้งาน</option>
                 </select>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={closeModal} className="px-4 py-2 border rounded-lg hover:bg-gray-50">ยกเลิก</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">บันทึก</button>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  บันทึก
+                </button>
               </div>
             </form>
           </div>

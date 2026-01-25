@@ -4,10 +4,11 @@ const studentController = {
   // Get all students
   async getAll(req, res) {
     try {
-      const { classId, status } = req.query;
+      const { classId, gradeId, status } = req.query;
 
       const where = {};
       if (classId) where.classId = parseInt(classId);
+      if (gradeId) where.class = { gradeId: parseInt(gradeId) };
       if (status) where.status = status;
 
       const students = await prisma.student.findMany({
@@ -17,7 +18,11 @@ const studentController = {
             include: { grade: true }
           }
         },
-        orderBy: { studentCode: 'asc' }
+        orderBy: [
+          { class: { className: 'asc' } },
+          { studentNumber: 'asc' },
+          { studentCode: 'asc' }
+        ]
       });
 
       res.json(students);
@@ -91,7 +96,7 @@ const studentController = {
   // Create student
   async create(req, res) {
     try {
-      const { studentCode, name, classId, email, status } = req.body;
+      const { studentCode, studentNumber, name, classId, email, status } = req.body;
 
       const existingStudent = await prisma.student.findUnique({
         where: { studentCode }
@@ -102,7 +107,7 @@ const studentController = {
       }
 
       const student = await prisma.student.create({
-        data: { studentCode, name, classId, email, status },
+        data: { studentCode, studentNumber, name, classId, email, status },
         include: {
           class: {
             include: { grade: true }
@@ -121,7 +126,7 @@ const studentController = {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { studentCode, name, classId, email, status } = req.body;
+      const { studentCode, studentNumber, name, classId, email, status } = req.body;
 
       const existing = await prisma.student.findFirst({
         where: {
@@ -136,7 +141,7 @@ const studentController = {
 
       const student = await prisma.student.update({
         where: { id: parseInt(id) },
-        data: { studentCode, name, classId, email, status },
+        data: { studentCode, studentNumber, name, classId, email, status },
         include: {
           class: {
             include: { grade: true }

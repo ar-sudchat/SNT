@@ -31,52 +31,61 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard ครู</h1>
-        <Link
-          to="/teacher/scan"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-          </svg>
-          สแกน QR Code
-        </Link>
+        <h1 className="text-xl font-bold text-gray-800">วิชาของฉัน</h1>
       </div>
 
+      {/* Main Action - Scan QR */}
+      <Link
+        to="/teacher/scan"
+        className="block w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg active:scale-98"
+      >
+        <div className="flex items-center justify-center gap-3">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          <span className="text-lg font-semibold">สแกน QR ตรวจงาน</span>
+        </div>
+      </Link>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Subject List - Compact for mobile */}
+      <div className="space-y-3">
         {subjects.map((subject) => (
           <Link
             key={subject.id}
             to={`/teacher/subject/${subject.id}`}
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="block bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow active:bg-gray-50"
           >
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {subject.subjectName}
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              รหัสวิชา: {subject.subjectCode}
-            </p>
-
-            <div className="flex justify-between text-sm">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {subject.tasks?.length || 0}
-                </div>
-                <div className="text-gray-500">งาน</div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-800 truncate">
+                  {subject.subjectName}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {subject.subjectCode}
+                </p>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {subject._count?.qrcodes || 0}
+              <div className="flex gap-4 text-center">
+                <div>
+                  <div className="text-lg font-bold text-blue-600">
+                    {subject.tasks?.length || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">งาน</div>
                 </div>
-                <div className="text-gray-500">นักเรียน</div>
+                <div>
+                  <div className="text-lg font-bold text-green-600">
+                    {subject._count?.qrcodes || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">นร.</div>
+                </div>
               </div>
             </div>
           </Link>
@@ -84,12 +93,12 @@ const TeacherDashboard = () => {
       </div>
 
       {subjects.length === 0 && !error && (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-8 bg-white rounded-lg shadow">
+          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">ไม่มีวิชา</h3>
-          <p className="mt-1 text-sm text-gray-500">ยังไม่มีวิชาที่คุณรับผิดชอบ</p>
+          <p className="mt-1 text-xs text-gray-500">ยังไม่มีวิชาที่คุณรับผิดชอบ</p>
         </div>
       )}
     </div>

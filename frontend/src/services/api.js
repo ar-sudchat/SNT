@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -41,6 +41,16 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
   changePassword: (data) => api.put('/auth/change-password', data)
+};
+
+export const academicYearAPI = {
+  getAll: () => api.get('/academic-years'),
+  getCurrent: () => api.get('/academic-years/current'),
+  getById: (id) => api.get(`/academic-years/${id}`),
+  create: (data) => api.post('/academic-years', data),
+  update: (id, data) => api.put(`/academic-years/${id}`, data),
+  setCurrent: (id) => api.put(`/academic-years/${id}/set-current`),
+  delete: (id) => api.delete(`/academic-years/${id}`)
 };
 
 export const gradeAPI = {
@@ -100,6 +110,7 @@ export const qrcodeAPI = {
   generate: (data) => api.post('/qrcodes/generate', data),
   generateBulk: (data) => api.post('/qrcodes/generate-bulk', data),
   scan: (data) => api.post('/qrcodes/scan', data),
+  searchByStudent: (data) => api.post('/qrcodes/search-student', data),
   getById: (id) => api.get(`/qrcodes/${id}`),
   getImage: (id) => api.get(`/qrcodes/${id}/image`),
   printForClass: (classId, subjectId) => api.get(`/qrcodes/print/class/${classId}/subject/${subjectId}`)
@@ -114,6 +125,13 @@ export const submissionAPI = {
 
 export const importAPI = {
   downloadTemplate: (type) => api.get(`/import/templates/${type}`, { responseType: 'blob' }),
+  importAcademicYears: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/import/academic-years', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
   importGrades: (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -173,4 +191,25 @@ export const reportAPI = {
   studentSummary: (id) => api.get(`/reports/teacher/student/${id}`),
   studentSubmissions: () => api.get('/reports/student/my-submissions'),
   exportReport: (type, params) => api.get(`/reports/export/${type}`, { params, responseType: 'blob' })
+};
+
+export const transferAPI = {
+  transferStudent: (data) => api.post('/transfer/student', data),
+  transferBulk: (data) => api.post('/transfer/bulk', data),
+  promoteStudents: (data) => api.post('/transfer/promote', data),
+  getPromotionPreview: (fromYearId, toYearId) =>
+    api.get('/transfer/promotion-preview', { params: { fromAcademicYearId: fromYearId, toAcademicYearId: toYearId } })
+};
+
+export const monitorAPI = {
+  // Parse QR code data
+  parseQR: (qrData) => api.post('/monitor/parse-qr', { qrData }),
+  // Get student monitor data (all subjects + progress)
+  getStudentMonitor: (studentId, params) => api.get(`/monitor/student/${studentId}`, { params }),
+  // Get class monitor data (all students + progress)
+  getClassMonitor: (classId, params) => api.get(`/monitor/class/${classId}`, { params }),
+  // Get subject monitor data (all students in subject + their submissions)
+  getSubjectMonitor: (subjectId, params) => api.get(`/monitor/subject/${subjectId}`, { params }),
+  // Get subject tasks for a specific student
+  getSubjectTasks: (studentId, subjectId) => api.get(`/monitor/student/${studentId}/subject/${subjectId}`)
 };

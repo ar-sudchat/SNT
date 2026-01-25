@@ -32,6 +32,22 @@ enum Role {
   STUDENT
 }
 
+// AcademicYear table (ปีการศึกษา)
+model AcademicYear {
+  id          Int      @id @default(autoincrement())
+  year        String   @unique // เช่น "2567", "2568"
+  name        String?  // ชื่อเต็ม เช่น "ปีการศึกษา 2567"
+  startDate   DateTime?
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classes  Class[]
+  subjects Subject[]
+}
+
 // Grade table (ชั้นปี)
 model Grade {
   id          Int      @id @default(autoincrement())
@@ -41,37 +57,40 @@ model Grade {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  classes Class[]
+  classes  Class[]
+  subjects Subject[]
 }
 
 // Class table (ห้องเรียน)
 model Class {
-  id           Int      @id @default(autoincrement())
-  className    String   @unique
-  gradeId      Int
-  teacherId    Int?     // ครูประจำชั้น
-  academicYear String
-  capacity     Int      @default(40)
-  description  String?
-  status       Status   @default(ACTIVE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  className      String   @unique
+  gradeId        Int
+  teacherId      Int?     // ครูประจำชั้น
+  academicYearId Int?
+  capacity       Int      @default(40)
+  description    String?
+  status         Status   @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  grade        Grade     @relation(fields: [gradeId], references: [id])
-  homeTeacher  Teacher?  @relation("HomeClass", fields: [teacherId], references: [id])
+  grade        Grade         @relation(fields: [gradeId], references: [id])
+  homeTeacher  Teacher?      @relation("HomeClass", fields: [teacherId], references: [id])
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
   students     Student[]
 }
 
 // Student table (นักเรียน)
 model Student {
-  id          Int      @id @default(autoincrement())
-  studentCode String   @unique
-  name        String
-  classId     Int
-  email       String?
-  status      Status   @default(ACTIVE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  studentCode   String   @unique
+  studentNumber Int?     // เลขที่ในห้อง
+  name          String
+  classId       Int
+  email         String?
+  status        Status   @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   class       Class        @relation(fields: [classId], references: [id])
   qrcodes     QRCode[]
@@ -98,38 +117,51 @@ model Teacher {
 
 // Subject table (วิชา)
 model Subject {
-  id          Int      @id @default(autoincrement())
-  subjectCode String   @unique
-  subjectName String
-  teacherId   Int
-  description String?
-  status      Status   @default(ACTIVE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  subjectCode    String   @unique
+  subjectName    String
+  teacherId      Int
+  gradeId        Int?
+  academicYearId Int?
+  description    String?
+  status         Status   @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  teacher Teacher  @relation(fields: [teacherId], references: [id])
-  tasks   Task[]
-  qrcodes QRCode[]
+  teacher      Teacher       @relation(fields: [teacherId], references: [id])
+  grade        Grade?        @relation(fields: [gradeId], references: [id])
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
+  tasks        Task[]
+  qrcodes      QRCode[]
 }
 
 // Task table (งาน)
 model Task {
-  id          Int       @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   subjectId   Int
   taskName    String
   taskNumber  Int
   description String?
   deadline    DateTime?
-  status      Status    @default(ACTIVE)
+  scoringType ScoringType @default(SUBMISSION_ONLY) // ประเภทการให้คะแนน
+  maxScore    Float?      // คะแนนเต็ม (ใช้เมื่อ scoringType = SCORED)
+  status      Status      @default(ACTIVE)
   createdById Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   subject     Subject      @relation(fields: [subjectId], references: [id])
   createdBy   Teacher      @relation("CreatedBy", fields: [createdById], references: [id])
   submissions Submission[]
 
   @@unique([subjectId, taskNumber])
+}
+
+// ประเภทการให้คะแนน
+enum ScoringType {
+  SUBMISSION_ONLY // ส่ง/ไม่ส่ง
+  PASS_FAIL       // ผ่าน/ไม่ผ่าน
+  SCORED          // คิดคะแนน
 }
 
 // QRCode table
@@ -156,6 +188,7 @@ model Submission {
   studentId    Int
   taskId       Int
   status       SubmissionStatus @default(NOT_SUBMITTED)
+  score        Float?           // คะแนนที่ได้ (ใช้เมื่อ task.scoringType = SCORED)
   submitDate   DateTime?
   reviewDate   DateTime?
   reviewedById Int?

@@ -16,3 +16,71 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide unnecessary elements */
+  nav,
+  aside,
+  header,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print\\:block {
+    display: block !important;
+  }
+
+  .print\\:grid {
+    display: grid !important;
+  }
+
+  /* Reset body styles for print */
+  body {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Main content full width */
+  main,
+  .lg\\:ml-64 {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page settings */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* QR Code cards for print */
+  .print\\:grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* Prevent page breaks inside cards */
+  .print\\:break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Better borders for print */
+  .border,
+  .border-2 {
+    border-color: #333 !important;
+  }
+
+  /* Ensure text is black */
+  p, h1, h2, h3, span, div {
+    color: black !important;
+  }
+
+  /* Make sure images print */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+}

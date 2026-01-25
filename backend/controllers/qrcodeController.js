@@ -234,6 +234,96 @@ const qrcodeController = {
     }
   },
 
+  // Search by student code (for manual input)
+  async searchByStudent(req, res) {
+    try {
+      const { studentCode, subjectId } = req.body;
+
+      if (!studentCode) {
+        return res.status(400).json({ error: 'Student code is required' });
+      }
+
+      // Find student by code
+      const student = await prisma.student.findUnique({
+        where: { studentCode },
+        include: {
+          class: {
+            include: { grade: true }
+          }
+        }
+      });
+
+      if (!student) {
+        return res.status(404).json({ error: 'ไม่พบนักเรียนรหัส ' + studentCode });
+      }
+
+      // If subjectId provided, get tasks for that subject
+      if (subjectId) {
+        const subject = await prisma.subject.findUnique({
+          where: { id: parseInt(subjectId) },
+          include: {
+            tasks: {
+              where: { status: 'ACTIVE' },
+              orderBy: { taskNumber: 'asc' }
+            }
+          }
+        });
+
+        if (!subject) {
+          return res.status(404).json({ error: 'ไม่พบวิชา' });
+        }
+
+        // Get submissions
+        const taskIds = subject.tasks.map(t => t.id);
+        const submissions = await prisma.submission.findMany({
+          where: {
+            studentId: student.id,
+            taskId: { in: taskIds }
+          },
+          include: { reviewedBy: true }
+        });
+
+        const submissionMap = {};
+        submissions.forEach(s => {
+          submissionMap[s.taskId] = s;
+        });
+
+        const tasksWithSubmissions = subject.tasks.map(task => ({
+          ...task,
+          submission: submissionMap[task.id] || null
+        }));
+
+        return res.json({
+          student,
+          subject: {
+            id: subject.id,
+            subjectCode: subject.subjectCode,
+            subjectName: subject.subjectName
+          },
+          tasks: tasksWithSubmissions
+        });
+      }
+
+      // If no subjectId, get all subjects for student's grade
+      const subjects = await prisma.subject.findMany({
+        where: {
+          gradeId: student.class.gradeId,
+          academicYearId: student.class.academicYearId,
+          status: 'ACTIVE'
+        },
+        orderBy: { subjectName: 'asc' }
+      });
+
+      res.json({
+        student,
+        subjects
+      });
+    } catch (error) {
+      console.error('Search by student error:', error);
+      res.status(500).json({ error: 'Failed to search student' });
+    }
+  },
+
   // Print QR codes for class
   async printForClass(req, res) {
     try {
@@ -255,10 +345,12 @@ const qrcodeController = {
 
       // Generate print-ready data
       const printData = qrcodes.map(qr => ({
+        id: qr.id,
         studentCode: qr.student.studentCode,
         studentName: qr.student.name,
         subjectName: qr.subject.subjectName,
-        qrcodeImage: qr.qrcodeImage
+        qrcodeImage: qr.qrcodeImage,
+        qrcodeData: qr.qrcodeData
       }));
 
       res.json(printData);

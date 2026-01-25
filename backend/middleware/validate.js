@@ -25,8 +25,8 @@ const validate = (schema) => {
 const schemas = {
   // Auth schemas
   login: Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required()
+    username: Joi.string().required(),
+    password: Joi.string().required()
   }),
 
   register: Joi.object({
@@ -35,6 +35,16 @@ const schemas = {
     role: Joi.string().valid('ADMIN', 'TEACHER', 'STUDENT').required(),
     teacherId: Joi.number().integer().optional(),
     studentId: Joi.number().integer().optional()
+  }),
+
+  // AcademicYear schemas
+  academicYear: Joi.object({
+    year: Joi.string().max(10).required(),
+    name: Joi.string().max(100).optional().allow(''),
+    startDate: Joi.date().iso().optional().allow(null),
+    endDate: Joi.date().iso().optional().allow(null),
+    isCurrent: Joi.boolean().default(false),
+    status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
   }),
 
   // Grade schemas
@@ -49,7 +59,7 @@ const schemas = {
     className: Joi.string().max(50).required(),
     gradeId: Joi.number().integer().required(),
     teacherId: Joi.number().integer().optional().allow(null),
-    academicYear: Joi.string().max(10).required(),
+    academicYearId: Joi.number().integer().optional().allow(null),
     capacity: Joi.number().integer().min(1).default(40),
     description: Joi.string().max(255).optional().allow(''),
     status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
@@ -77,6 +87,7 @@ const schemas = {
     subjectCode: Joi.string().max(20).required(),
     subjectName: Joi.string().max(100).required(),
     teacherId: Joi.number().integer().required(),
+    academicYearId: Joi.number().integer().optional().allow(null),
     description: Joi.string().max(255).optional().allow(''),
     status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
   }),

@@ -27,6 +27,9 @@ const upload = multer({
 // Download templates
 router.get('/templates/:type', authenticate, isAdmin, importController.downloadTemplate);
 
+// Import academic years
+router.post('/academic-years', authenticate, isAdmin, upload.single('file'), importController.importAcademicYears);
+
 // Import grades
 router.post('/grades', authenticate, isAdmin, upload.single('file'), importController.importGrades);
 

@@ -9,6 +9,7 @@ const DataImport = () => {
   const [result, setResult] = useState(null);
 
   const importTypes = [
+    { value: 'academicYear', label: 'ปีการศึกษา (Academic Year)', description: 'นำเข้าข้อมูลปีการศึกษา เช่น 2567, 2568' },
     { value: 'grade', label: 'ชั้นปี (Grade)', description: 'นำเข้าข้อมูลชั้นปี เช่น ม.1, ม.2, ม.3' },
     { value: 'teacher', label: 'ครู (Teacher)', description: 'นำเข้าข้อมูลครู' },
     { value: 'class', label: 'ห้องเรียน (Class)', description: 'นำเข้าข้อมูลห้องเรียน (ต้องมีชั้นปีและครูก่อน)' },
@@ -54,6 +55,9 @@ const DataImport = () => {
     try {
       let response;
       switch (selectedType) {
+        case 'academicYear':
+          response = await importAPI.importAcademicYears(file);
+          break;
         case 'grade':
           response = await importAPI.importGrades(file);
           break;
@@ -226,7 +230,7 @@ const DataImport = () => {
         </ol>
         <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
           <p className="text-sm text-yellow-700">
-            <strong>หมายเหตุ:</strong> ควรนำเข้าข้อมูลตามลำดับ: ชั้นปี &rarr; ครู &rarr; ห้องเรียน &rarr; นักเรียน &rarr; วิชา &rarr; งาน
+            <strong>หมายเหตุ:</strong> ควรนำเข้าข้อมูลตามลำดับ: ปีการศึกษา &rarr; ชั้นปี &rarr; ครู &rarr; ห้องเรียน &rarr; นักเรียน &rarr; วิชา &rarr; งาน
           </p>
         </div>
       </div>

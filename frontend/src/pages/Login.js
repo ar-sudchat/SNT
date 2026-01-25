@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const user = await login(email, password);
+      const user = await login(username, password);
 
       // Redirect based on role
       if (user.role === 'ADMIN') {
@@ -57,19 +57,19 @@ const Login = () => {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                อีเมล
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                รหัสผู้ใช้
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="กรอกอีเมลของคุณ"
+                placeholder="รหัสครู, รหัสนักเรียน หรือ admin"
               />
             </div>
 
@@ -106,6 +106,15 @@ const Login = () => {
             )}
           </button>
         </form>
+
+        {/* Login hints */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 font-medium mb-2">วิธีเข้าสู่ระบบ:</p>
+          <ul className="text-xs text-gray-500 space-y-1">
+            <li>• <strong>ครู:</strong> user: รหัสครู, pass: รหัสผ่าน (ครั้งแรกใช้รหัสครู)</li>
+            <li>• <strong>นักเรียน:</strong> user: รหัสนักเรียน, pass: รหัสนักเรียน</li>
+          </ul>
+        </div>
 
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Version 1.0.0</p>

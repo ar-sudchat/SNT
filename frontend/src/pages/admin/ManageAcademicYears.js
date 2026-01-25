@@ -1,0 +1,337 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { academicYearAPI } from '../../services/api';
+import { SmartTable } from '../../components/ui';
+
+const ManageAcademicYears = () => {
+  const [academicYears, setAcademicYears] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingYear, setEditingYear] = useState(null);
+  const [formData, setFormData] = useState({
+    year: '',
+    name: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    status: 'ACTIVE'
+  });
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await academicYearAPI.getAll();
+      setAcademicYears(response.data);
+    } catch (err) {
+      setError('ไม่สามารถโหลดข้อมูลได้');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...formData,
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null
+      };
+      if (editingYear) {
+        await academicYearAPI.update(editingYear.id, data);
+      } else {
+        await academicYearAPI.create(data);
+      }
+      fetchData();
+      closeModal();
+    } catch (err) {
+      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+    }
+  };
+
+  const handleSetCurrent = async (id) => {
+    try {
+      await academicYearAPI.setCurrent(id);
+      fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || 'ไม่สามารถตั้งปีการศึกษาปัจจุบันได้');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('ต้องการลบปีการศึกษานี้หรือไม่?')) {
+      try {
+        await academicYearAPI.delete(id);
+        fetchData();
+      } catch (err) {
+        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+      }
+    }
+  };
+
+  const openModal = (year = null) => {
+    if (year) {
+      setEditingYear(year);
+      setFormData({
+        year: year.year,
+        name: year.name || '',
+        startDate: year.startDate ? year.startDate.split('T')[0] : '',
+        endDate: year.endDate ? year.endDate.split('T')[0] : '',
+        isCurrent: year.isCurrent,
+        status: year.status
+      });
+    } else {
+      setEditingYear(null);
+      const currentThaiYear = new Date().getFullYear() + 543;
+      setFormData({
+        year: currentThaiYear.toString(),
+        name: `ปีการศึกษา ${currentThaiYear}`,
+        startDate: '',
+        endDate: '',
+        isCurrent: false,
+        status: 'ACTIVE'
+      });
+    }
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingYear(null);
+    setError('');
+  };
+
+  // Table columns
+  const columns = [
+    {
+      key: 'year',
+      label: 'ปีการศึกษา',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900">{value}</span>
+          {row.isCurrent && (
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+              ปัจจุบัน
+            </span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'name',
+      label: 'ชื่อ',
+      render: (value) => value || '-'
+    },
+    {
+      key: 'startDate',
+      label: 'วันเริ่มต้น',
+      render: (value) => value ? new Date(value).toLocaleDateString('th-TH') : '-'
+    },
+    {
+      key: 'endDate',
+      label: 'วันสิ้นสุด',
+      render: (value) => value ? new Date(value).toLocaleDateString('th-TH') : '-'
+    },
+    {
+      key: '_count.classes',
+      label: 'ห้องเรียน',
+      render: (value) => (
+        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+          {value || 0} ห้อง
+        </span>
+      )
+    },
+    {
+      key: '_count.subjects',
+      label: 'วิชา',
+      render: (value) => (
+        <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+          {value || 0} วิชา
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      label: 'สถานะ',
+      render: (value) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          value === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {value === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'จัดการ',
+      exportable: false,
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          {!row.isCurrent && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleSetCurrent(row.id); }}
+              className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded text-sm"
+            >
+              ตั้งเป็นปัจจุบัน
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
+          >
+            ลบ
+          </button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">จัดการปีการศึกษา</h1>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          เพิ่มปีการศึกษา
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Table */}
+      <SmartTable
+        data={academicYears}
+        columns={columns}
+        loading={loading}
+        title="รายการปีการศึกษา"
+        exportFileName="academic_years"
+        searchable
+        exportable
+        pagination
+        emptyMessage="ไม่พบข้อมูลปีการศึกษา"
+        onRowClick={(row) => openModal(row)}
+      />
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">{editingYear ? 'แก้ไขปีการศึกษา' : 'เพิ่มปีการศึกษา'}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ปีการศึกษา (พ.ศ.) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  placeholder="เช่น 2567"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="เช่น ปีการศึกษา 2567"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">วันเริ่มต้น</label>
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">วันสิ้นสุด</label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isCurrent"
+                  checked={formData.isCurrent}
+                  onChange={(e) => setFormData({ ...formData, isCurrent: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="isCurrent" className="text-sm font-medium text-gray-700">
+                  ตั้งเป็นปีการศึกษาปัจจุบัน
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ACTIVE">ใช้งาน</option>
+                  <option value="INACTIVE">ไม่ใช้งาน</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={closeModal} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  ยกเลิก
+                </button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  บันทึก
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ManageAcademicYears;

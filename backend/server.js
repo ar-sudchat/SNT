@@ -8,8 +8,19 @@ dotenv.config();
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -17,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 const authRoutes = require('./routes/auth');
+const academicYearRoutes = require('./routes/academicYears');
 const gradeRoutes = require('./routes/grades');
 const classRoutes = require('./routes/classes');
 const studentRoutes = require('./routes/students');
@@ -27,9 +39,12 @@ const qrcodeRoutes = require('./routes/qrcodes');
 const submissionRoutes = require('./routes/submissions');
 const importRoutes = require('./routes/import');
 const reportRoutes = require('./routes/reports');
+const transferRoutes = require('./routes/transfer');
+const monitorRoutes = require('./routes/monitor');
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/academic-years', academicYearRoutes);
 app.use('/api/grades', gradeRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/students', studentRoutes);
@@ -40,6 +55,8 @@ app.use('/api/qrcodes', qrcodeRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/transfer', transferRoutes);
+app.use('/api/monitor', monitorRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

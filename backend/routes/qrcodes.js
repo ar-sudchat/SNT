@@ -13,6 +13,9 @@ router.post('/generate-bulk', authenticate, isAdmin, validate(schemas.qrcodeBulk
 // Scan QR code (Teacher)
 router.post('/scan', authenticate, isTeacher, qrcodeController.scan);
 
+// Search by student code (Teacher) - for manual input
+router.post('/search-student', authenticate, isTeacher, qrcodeController.searchByStudent);
+
 // Get QR code by ID
 router.get('/:id', authenticate, qrcodeController.getById);
 

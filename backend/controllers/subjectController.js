@@ -4,16 +4,20 @@ const subjectController = {
   // Get all subjects
   async getAll(req, res) {
     try {
-      const { teacherId, status } = req.query;
+      const { teacherId, academicYearId, gradeId, status } = req.query;
 
       const where = {};
       if (teacherId) where.teacherId = parseInt(teacherId);
+      if (academicYearId) where.academicYearId = parseInt(academicYearId);
+      if (gradeId) where.gradeId = parseInt(gradeId);
       if (status) where.status = status;
 
       const subjects = await prisma.subject.findMany({
         where,
         include: {
           teacher: true,
+          academicYear: true,
+          grade: true,
           _count: {
             select: { tasks: true, qrcodes: true }
           }
@@ -37,6 +41,8 @@ const subjectController = {
         where: { id: parseInt(id) },
         include: {
           teacher: true,
+          academicYear: true,
+          grade: true,
           tasks: {
             orderBy: { taskNumber: 'asc' }
           }
@@ -80,7 +86,7 @@ const subjectController = {
   // Create subject
   async create(req, res) {
     try {
-      const { subjectCode, subjectName, teacherId, description, status } = req.body;
+      const { subjectCode, subjectName, teacherId, gradeId, academicYearId, description, status } = req.body;
 
       const existingSubject = await prisma.subject.findUnique({
         where: { subjectCode }
@@ -91,8 +97,8 @@ const subjectController = {
       }
 
       const subject = await prisma.subject.create({
-        data: { subjectCode, subjectName, teacherId, description, status },
-        include: { teacher: true }
+        data: { subjectCode, subjectName, teacherId, gradeId, academicYearId, description, status },
+        include: { teacher: true, academicYear: true, grade: true }
       });
 
       res.status(201).json(subject);
@@ -106,7 +112,7 @@ const subjectController = {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { subjectCode, subjectName, teacherId, description, status } = req.body;
+      const { subjectCode, subjectName, teacherId, gradeId, academicYearId, description, status } = req.body;
 
       const existing = await prisma.subject.findFirst({
         where: {
@@ -121,8 +127,8 @@ const subjectController = {
 
       const subject = await prisma.subject.update({
         where: { id: parseInt(id) },
-        data: { subjectCode, subjectName, teacherId, description, status },
-        include: { teacher: true }
+        data: { subjectCode, subjectName, teacherId, gradeId, academicYearId, description, status },
+        include: { teacher: true, academicYear: true, grade: true }
       });
 
       res.json(subject);

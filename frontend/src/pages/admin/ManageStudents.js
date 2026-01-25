@@ -1,46 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { studentAPI, classAPI } from '../../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { studentAPI, classAPI, gradeAPI } from '../../services/api';
+import { SmartTable, SmartComboBox } from '../../components/ui';
 
 const ManageStudents = () => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
-  const [filterClass, setFilterClass] = useState('');
+  const [filterGrade, setFilterGrade] = useState(null);
+  const [filterClass, setFilterClass] = useState(null);
   const [formData, setFormData] = useState({
     studentCode: '',
+    studentNumber: '',
     name: '',
-    classId: '',
+    classId: null,
     email: '',
     status: 'ACTIVE'
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [filterClass]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const params = filterClass ? { classId: filterClass } : {};
-      const [studentRes, classRes] = await Promise.all([
+      setLoading(true);
+      const params = {};
+      if (filterClass) params.classId = filterClass;
+      if (filterGrade) params.gradeId = filterGrade;
+
+      const classParams = {};
+      if (filterGrade) classParams.gradeId = filterGrade;
+
+      const [studentRes, classRes, gradeRes] = await Promise.all([
         studentAPI.getAll(params),
-        classAPI.getAll()
+        classAPI.getAll(classParams),
+        gradeAPI.getAll()
       ]);
       setStudents(studentRes.data);
       setClasses(classRes.data);
+      setGrades(gradeRes.data);
     } catch (err) {
       setError('ไม่สามารถโหลดข้อมูลได้');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterClass, filterGrade]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = { ...formData, classId: parseInt(formData.classId) };
+      const data = {
+        ...formData,
+        classId: parseInt(formData.classId),
+        studentNumber: formData.studentNumber ? parseInt(formData.studentNumber) : null
+      };
       if (editingStudent) {
         await studentAPI.update(editingStudent.id, data);
       } else {
@@ -69,14 +86,15 @@ const ManageStudents = () => {
       setEditingStudent(student);
       setFormData({
         studentCode: student.studentCode,
+        studentNumber: student.studentNumber || '',
         name: student.name,
-        classId: student.classId?.toString() || '',
+        classId: student.classId,
         email: student.email || '',
         status: student.status
       });
     } else {
       setEditingStudent(null);
-      setFormData({ studentCode: '', name: '', classId: '', email: '', status: 'ACTIVE' });
+      setFormData({ studentCode: '', studentNumber: '', name: '', classId: null, email: '', status: 'ACTIVE' });
     }
     setShowModal(true);
   };
@@ -84,106 +102,250 @@ const ManageStudents = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingStudent(null);
+    setError('');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Table columns configuration
+  const columns = [
+    {
+      key: 'studentNumber',
+      label: 'เลขที่',
+      sortable: true,
+      width: '60px',
+      render: (value) => <span className="text-center">{value || '-'}</span>
+    },
+    {
+      key: 'studentCode',
+      label: 'รหัส',
+      sortable: true,
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'name',
+      label: 'ชื่อ-นามสกุล',
+      sortable: true
+    },
+    {
+      key: 'class.className',
+      label: 'ห้องเรียน',
+      sortable: true
+    },
+    {
+      key: 'email',
+      label: 'อีเมล',
+      render: (value) => value || '-'
+    },
+    {
+      key: 'status',
+      label: 'สถานะ',
+      render: (value) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          value === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {value === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'จัดการ',
+      exportable: false,
+      render: (_, row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+          className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
+        >
+          ลบ
+        </button>
+      )
+    }
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800">จัดการนักเรียน</h1>
-        <button onClick={() => openModal()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ เพิ่มนักเรียน</button>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          เพิ่มนักเรียน
+        </button>
       </div>
 
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
-          <button onClick={() => setError('')} className="float-right">&times;</button>
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 
-      <div className="flex items-center space-x-4">
-        <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="px-3 py-2 border rounded-lg">
-          <option value="">ทุกห้องเรียน</option>
-          {classes.map((c) => (<option key={c.id} value={c.id}>{c.className}</option>))}
-        </select>
-        <span className="text-gray-500">พบ {students.length} คน</span>
+      {/* Filter */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="sm:w-52">
+            <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+            <SmartComboBox
+              options={grades}
+              value={filterGrade}
+              onChange={(val) => {
+                setFilterGrade(val);
+                setFilterClass(null); // Reset class when grade changes
+              }}
+              labelKey="gradeName"
+              valueKey="id"
+              placeholder="ทุกชั้น"
+              clearable
+              searchable
+            />
+          </div>
+          <div className="sm:w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
+            <SmartComboBox
+              options={classes}
+              value={filterClass}
+              onChange={setFilterClass}
+              labelKey="className"
+              valueKey="id"
+              placeholder="ทุกห้องเรียน"
+              clearable
+              searchable
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รหัส</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ห้องเรียน</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">อีเมล</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {students.map((s) => (
-              <tr key={s.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{s.studentCode}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{s.class?.className}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{s.email || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className={`px-2 py-1 text-xs rounded-full ${s.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {s.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                  <button onClick={() => openModal(s)} className="text-blue-600 hover:text-blue-800 mr-3">แก้ไข</button>
-                  <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-800">ลบ</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Smart Table */}
+      <SmartTable
+        data={students}
+        columns={columns}
+        loading={loading}
+        title="รายชื่อนักเรียน"
+        exportFileName="students"
+        searchable
+        exportable
+        pagination
+        pageSize={10}
+        emptyMessage="ไม่พบข้อมูลนักเรียน"
+        onRowClick={(row) => openModal(row)}
+      />
 
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingStudent ? 'แก้ไขนักเรียน' : 'เพิ่มนักเรียน'}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">{editingStudent ? 'แก้ไขนักเรียน' : 'เพิ่มนักเรียน'}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสนักเรียน</label>
-                <input type="text" value={formData.studentCode} onChange={(e) => setFormData({ ...formData, studentCode: e.target.value })} className="w-full px-3 py-2 border rounded-lg" required />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    รหัสนักเรียน <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.studentCode}
+                    onChange={(e) => setFormData({ ...formData, studentCode: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    เลขที่
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.studentNumber}
+                    onChange={(e) => setFormData({ ...formData, studentNumber: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    min="1"
+                    placeholder="เลขที่ในห้อง"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
-                <select value={formData.classId} onChange={(e) => setFormData({ ...formData, classId: e.target.value })} className="w-full px-3 py-2 border rounded-lg" required>
-                  <option value="">เลือกห้องเรียน</option>
-                  {classes.map((c) => (<option key={c.id} value={c.id}>{c.className}</option>))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ห้องเรียน <span className="text-red-500">*</span>
+                </label>
+                <SmartComboBox
+                  options={classes}
+                  value={formData.classId}
+                  onChange={(val) => setFormData({ ...formData, classId: val })}
+                  labelKey="className"
+                  valueKey="id"
+                  placeholder="เลือกห้องเรียน"
+                  searchable
+                  required
+                />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
                   <option value="ACTIVE">ใช้งาน</option>
                   <option value="INACTIVE">ไม่ใช้งาน</option>
                 </select>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={closeModal} className="px-4 py-2 border rounded-lg hover:bg-gray-50">ยกเลิก</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">บันทึก</button>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  บันทึก
+                </button>
               </div>
             </form>
           </div>

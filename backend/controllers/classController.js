@@ -4,17 +4,18 @@ const classController = {
   // Get all classes
   async getAll(req, res) {
     try {
-      const { gradeId, academicYear } = req.query;
+      const { gradeId, academicYearId } = req.query;
 
       const where = {};
       if (gradeId) where.gradeId = parseInt(gradeId);
-      if (academicYear) where.academicYear = academicYear;
+      if (academicYearId) where.academicYearId = parseInt(academicYearId);
 
       const classes = await prisma.class.findMany({
         where,
         include: {
           grade: true,
           homeTeacher: true,
+          academicYear: true,
           _count: {
             select: { students: true }
           }
@@ -76,7 +77,7 @@ const classController = {
   // Create class
   async create(req, res) {
     try {
-      const { className, gradeId, teacherId, academicYear, capacity, description, status } = req.body;
+      const { className, gradeId, teacherId, academicYearId, capacity, description, status } = req.body;
 
       const existingClass = await prisma.class.findUnique({
         where: { className }
@@ -91,14 +92,15 @@ const classController = {
           className,
           gradeId,
           teacherId,
-          academicYear,
+          academicYearId,
           capacity,
           description,
           status
         },
         include: {
           grade: true,
-          homeTeacher: true
+          homeTeacher: true,
+          academicYear: true
         }
       });
 
@@ -113,7 +115,7 @@ const classController = {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { className, gradeId, teacherId, academicYear, capacity, description, status } = req.body;
+      const { className, gradeId, teacherId, academicYearId, capacity, description, status } = req.body;
 
       const existing = await prisma.class.findFirst({
         where: {
@@ -132,14 +134,15 @@ const classController = {
           className,
           gradeId,
           teacherId,
-          academicYear,
+          academicYearId,
           capacity,
           description,
           status
         },
         include: {
           grade: true,
-          homeTeacher: true
+          homeTeacher: true,
+          academicYear: true
         }
       });
 

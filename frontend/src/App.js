@@ -11,6 +11,7 @@ import SubjectSummary from './pages/teacher/SubjectSummary';
 import StudentSummary from './pages/teacher/StudentSummary';
 import StudentPortal from './pages/student/StudentPortal';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageAcademicYears from './pages/admin/ManageAcademicYears';
 import ManageGrades from './pages/admin/ManageGrades';
 import ManageClasses from './pages/admin/ManageClasses';
 import ManageStudents from './pages/admin/ManageStudents';
@@ -19,6 +20,8 @@ import ManageSubjects from './pages/admin/ManageSubjects';
 import ManageTasks from './pages/admin/ManageTasks';
 import QRCodeGenerator from './pages/admin/QRCodeGenerator';
 import DataImport from './pages/admin/DataImport';
+import ClassTransfer from './pages/admin/ClassTransfer';
+import { StudentMonitor, ClassMonitor, SubjectMonitor } from './pages/monitor';
 import Layout from './components/Layout';
 
 // Protected Route Component
@@ -118,6 +121,14 @@ function App() {
               }
             />
             <Route
+              path="admin/academic-years"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <ManageAcademicYears />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="admin/grades"
               element={
                 <ProtectedRoute roles={['ADMIN']}>
@@ -178,6 +189,40 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN']}>
                   <DataImport />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/transfer"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <ClassTransfer />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Monitor Routes */}
+            <Route
+              path="monitor/student/:id"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <StudentMonitor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="monitor/class/:id?"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <ClassMonitor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="monitor/subject"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <SubjectMonitor />
                 </ProtectedRoute>
               }
             />

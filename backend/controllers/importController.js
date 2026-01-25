@@ -10,12 +10,13 @@ const importController = {
       const { type } = req.params;
 
       const templates = {
+        academicYear: 'Year,Name,StartDate,EndDate,IsCurrent,Status\n2567,ปีการศึกษา 2567,2024-05-16,2025-03-31,true,Active\n2568,ปีการศึกษา 2568,2025-05-16,2026-03-31,false,Active',
         grade: 'GradeName,Description,Status\nม.1,มัธยมศึกษาปีที่ 1,Active\nม.2,มัธยมศึกษาปีที่ 2,Active',
         class: 'ClassName,GradeName,TeacherCode,AcademicYear,Capacity,Status\nม.1/1,ม.1,T001,2567,40,Active',
-        student: 'StudentCode,Name,ClassName,Email,Status\n6001,นก ทองคำ,ม.1/1,nok@school.ac.th,Active',
+        student: 'StudentCode,StudentNumber,Name,ClassName,Email,Status\n6001,1,นก ทองคำ,ม.1/1,nok@school.ac.th,Active\n6002,2,ก้อง มั่นคง,ม.1/1,kong@school.ac.th,Active',
         teacher: 'TeacherCode,Name,Email,Status\nT001,นาย ปรีชา สมใจ,preecha@school.ac.th,Active',
-        subject: 'SubjectCode,SubjectName,TeacherCode,Description,Status\n101,คณิตศาสตร์,T001,วิชาคณิตศาสตร์ ม.1,Active',
-        task: 'SubjectCode,TaskName,TaskNumber,Description,Deadline,Status\n101,การบ้านเศษส่วน,1,แสดงวิธีทำโจทย์เศษส่วน,2567-02-10,Active'
+        subject: 'SubjectCode,SubjectName,GradeName,AcademicYear,TeacherCode,Description,Status\nMA101,คณิตศาสตร์ ม.1,ม.1,2567,T001,วิชาคณิตศาสตร์ ม.1,Active',
+        task: 'SubjectCode,TaskName,TaskNumber,Description,Deadline,ScoringType,MaxScore,Status\nMA101,การบ้านเศษส่วน,1,แสดงวิธีทำโจทย์เศษส่วน,2025-02-10,PASS_FAIL,,Active'
       };
 
       if (!templates[type]) {
@@ -57,6 +58,74 @@ const importController = {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     return xlsx.utils.sheet_to_json(sheet);
+  },
+
+  // Import academic years
+  async importAcademicYears(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const data = await importController.parseFile(req.file);
+      const results = { success: [], failed: [] };
+
+      for (const row of data) {
+        try {
+          const year = row.Year || row.year;
+          const name = row.Name || row.name || `ปีการศึกษา ${year}`;
+          const startDate = row.StartDate || row.startDate;
+          const endDate = row.EndDate || row.endDate;
+          const isCurrent = (row.IsCurrent || row.isCurrent || 'false').toString().toLowerCase() === 'true';
+          const status = (row.Status || row.status || 'Active').toUpperCase();
+
+          if (!year) {
+            results.failed.push({ row, reason: 'Year is required' });
+            continue;
+          }
+
+          const existing = await prisma.academicYear.findUnique({
+            where: { year: year.toString() }
+          });
+
+          if (existing) {
+            results.failed.push({ row, reason: 'Academic year already exists' });
+            continue;
+          }
+
+          // If setting as current, unset other current years
+          if (isCurrent) {
+            await prisma.academicYear.updateMany({
+              where: { isCurrent: true },
+              data: { isCurrent: false }
+            });
+          }
+
+          const academicYear = await prisma.academicYear.create({
+            data: {
+              year: year.toString(),
+              name,
+              startDate: startDate ? new Date(startDate) : null,
+              endDate: endDate ? new Date(endDate) : null,
+              isCurrent,
+              status: status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+            }
+          });
+
+          results.success.push(academicYear);
+        } catch (err) {
+          results.failed.push({ row, reason: err.message });
+        }
+      }
+
+      res.json({
+        message: `Imported ${results.success.length} academic years, ${results.failed.length} failed`,
+        results
+      });
+    } catch (error) {
+      console.error('Import academic years error:', error);
+      res.status(500).json({ error: 'Failed to import academic years' });
+    }
   },
 
   // Import grades
@@ -146,6 +215,16 @@ const importController = {
             continue;
           }
 
+          // Find academic year
+          const academicYearRecord = await prisma.academicYear.findUnique({
+            where: { year: academicYear.toString() }
+          });
+
+          if (!academicYearRecord) {
+            results.failed.push({ row, reason: `Academic year ${academicYear} not found` });
+            continue;
+          }
+
           let teacherId = null;
           if (teacherCode) {
             const teacher = await prisma.teacher.findUnique({
@@ -159,7 +238,7 @@ const importController = {
               className,
               gradeId: grade.id,
               teacherId,
-              academicYear,
+              academicYearId: academicYearRecord.id,
               capacity,
               status: status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
             }
@@ -194,6 +273,7 @@ const importController = {
       for (const row of data) {
         try {
           const studentCode = row.StudentCode || row.studentCode;
+          const studentNumber = row.StudentNumber || row.studentNumber;
           const name = row.Name || row.name;
           const className = row.ClassName || row.className;
           const email = row.Email || row.email || null;
@@ -216,6 +296,7 @@ const importController = {
           const student = await prisma.student.create({
             data: {
               studentCode,
+              studentNumber: studentNumber ? parseInt(studentNumber) : null,
               name,
               classId: classData.id,
               email,
@@ -300,12 +381,14 @@ const importController = {
         try {
           const subjectCode = row.SubjectCode || row.subjectCode;
           const subjectName = row.SubjectName || row.subjectName;
+          const gradeName = row.GradeName || row.gradeName;
+          const academicYear = row.AcademicYear || row.academicYear;
           const teacherCode = row.TeacherCode || row.teacherCode;
           const description = row.Description || row.description || '';
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
-          if (!subjectCode || !subjectName || !teacherCode) {
-            results.failed.push({ row, reason: 'SubjectCode, SubjectName, and TeacherCode are required' });
+          if (!subjectCode || !subjectName || !teacherCode || !gradeName || !academicYear) {
+            results.failed.push({ row, reason: 'SubjectCode, SubjectName, GradeName, AcademicYear, and TeacherCode are required' });
             continue;
           }
 
@@ -318,10 +401,30 @@ const importController = {
             continue;
           }
 
+          const grade = await prisma.grade.findUnique({
+            where: { gradeName }
+          });
+
+          if (!grade) {
+            results.failed.push({ row, reason: `Grade ${gradeName} not found` });
+            continue;
+          }
+
+          const academicYearRecord = await prisma.academicYear.findUnique({
+            where: { year: academicYear.toString() }
+          });
+
+          if (!academicYearRecord) {
+            results.failed.push({ row, reason: `Academic year ${academicYear} not found` });
+            continue;
+          }
+
           const subject = await prisma.subject.create({
             data: {
               subjectCode,
               subjectName,
+              gradeId: grade.id,
+              academicYearId: academicYearRecord.id,
               teacherId: teacher.id,
               description,
               status: status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
@@ -361,6 +464,8 @@ const importController = {
           const taskNumber = parseInt(row.TaskNumber || row.taskNumber);
           const description = row.Description || row.description || '';
           const deadline = row.Deadline || row.deadline;
+          const scoringType = (row.ScoringType || row.scoringType || 'PASS_FAIL').toUpperCase();
+          const maxScore = row.MaxScore || row.maxScore;
           const status = (row.Status || row.status || 'Active').toUpperCase();
 
           if (!subjectCode || !taskName || !taskNumber) {
@@ -378,6 +483,10 @@ const importController = {
             continue;
           }
 
+          // Validate scoring type
+          const validScoringTypes = ['SUBMISSION_ONLY', 'PASS_FAIL', 'SCORED'];
+          const finalScoringType = validScoringTypes.includes(scoringType) ? scoringType : 'PASS_FAIL';
+
           const task = await prisma.task.create({
             data: {
               subjectId: subject.id,
@@ -385,6 +494,8 @@ const importController = {
               taskNumber,
               description,
               deadline: deadline ? new Date(deadline) : null,
+              scoringType: finalScoringType,
+              maxScore: maxScore ? parseInt(maxScore) : null,
               createdById: subject.teacherId,
               status: status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
             }
@@ -417,11 +528,12 @@ const importController = {
       const data = await importController.parseFile(req.file);
 
       const requiredFields = {
+        academicYear: ['Year'],
         grade: ['GradeName'],
         class: ['ClassName', 'GradeName', 'AcademicYear'],
         student: ['StudentCode', 'Name', 'ClassName'],
         teacher: ['TeacherCode', 'Name'],
-        subject: ['SubjectCode', 'SubjectName', 'TeacherCode'],
+        subject: ['SubjectCode', 'SubjectName', 'GradeName', 'AcademicYear', 'TeacherCode'],
         task: ['SubjectCode', 'TaskName', 'TaskNumber']
       };
 

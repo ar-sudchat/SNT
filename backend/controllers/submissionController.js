@@ -67,7 +67,7 @@ const submissionController = {
   // Create or update submission
   async createOrUpdate(req, res) {
     try {
-      const { studentId, taskId, status, notes } = req.body;
+      const { studentId, taskId, status, notes, score } = req.body;
 
       // Get teacher ID from user
       const reviewedById = req.user.teacherId || req.user.teacher?.id;
@@ -79,17 +79,25 @@ const submissionController = {
 
       let submission;
 
+      const updateData = {
+        status,
+        notes,
+        score: score !== undefined ? parseFloat(score) : undefined,
+        reviewedById,
+        reviewDate: new Date(),
+        submitDate: status !== 'NOT_SUBMITTED' ? (existing?.submitDate || new Date()) : null
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key =>
+        updateData[key] === undefined && delete updateData[key]
+      );
+
       if (existing) {
         // Update existing submission
         submission = await prisma.submission.update({
           where: { id: existing.id },
-          data: {
-            status,
-            notes,
-            reviewedById,
-            reviewDate: new Date(),
-            submitDate: status !== 'NOT_SUBMITTED' ? (existing.submitDate || new Date()) : null
-          },
+          data: updateData,
           include: {
             student: true,
             task: true,
@@ -102,10 +110,7 @@ const submissionController = {
           data: {
             studentId,
             taskId,
-            status,
-            notes,
-            reviewedById,
-            reviewDate: new Date(),
+            ...updateData,
             submitDate: status !== 'NOT_SUBMITTED' ? new Date() : null
           },
           include: {
@@ -126,7 +131,7 @@ const submissionController = {
   // Bulk update submissions
   async bulkUpdate(req, res) {
     try {
-      const { submissions } = req.body; // Array of { studentId, taskId, status, notes }
+      const { submissions } = req.body; // Array of { studentId, taskId, status, notes, score }
 
       const reviewedById = req.user.teacherId || req.user.teacher?.id;
       const results = {
@@ -145,26 +150,31 @@ const submissionController = {
 
           let submission;
 
+          const updateData = {
+            status: sub.status,
+            notes: sub.notes,
+            score: sub.score !== undefined ? parseFloat(sub.score) : undefined,
+            reviewedById,
+            reviewDate: new Date(),
+            submitDate: sub.status !== 'NOT_SUBMITTED' ? (existing?.submitDate || new Date()) : null
+          };
+
+          // Remove undefined values
+          Object.keys(updateData).forEach(key =>
+            updateData[key] === undefined && delete updateData[key]
+          );
+
           if (existing) {
             submission = await prisma.submission.update({
               where: { id: existing.id },
-              data: {
-                status: sub.status,
-                notes: sub.notes,
-                reviewedById,
-                reviewDate: new Date(),
-                submitDate: sub.status !== 'NOT_SUBMITTED' ? (existing.submitDate || new Date()) : null
-              }
+              data: updateData
             });
           } else {
             submission = await prisma.submission.create({
               data: {
                 studentId: sub.studentId,
                 taskId: sub.taskId,
-                status: sub.status,
-                notes: sub.notes,
-                reviewedById,
-                reviewDate: new Date(),
+                ...updateData,
                 submitDate: sub.status !== 'NOT_SUBMITTED' ? new Date() : null
               }
             });
