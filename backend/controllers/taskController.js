@@ -101,7 +101,17 @@ const taskController = {
   // Create task
   async create(req, res) {
     try {
-      const { subjectId, taskName, taskNumber, description, deadline, status } = req.body;
+      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
+
+      // Get subject to find the responsible teacher
+      const subject = await prisma.subject.findUnique({
+        where: { id: subjectId },
+        select: { teacherId: true }
+      });
+
+      if (!subject) {
+        return res.status(400).json({ error: 'ไม่พบข้อมูลวิชา' });
+      }
 
       // Check for duplicate task number in subject
       const existingTask = await prisma.task.findFirst({
@@ -117,12 +127,8 @@ const taskController = {
         });
       }
 
-      // Get teacher ID from user
-      const createdById = req.user.teacherId || req.user.teacher?.id;
-
-      if (!createdById) {
-        return res.status(400).json({ error: 'ไม่พบข้อมูลครูผู้ใช้งานระบบ' });
-      }
+      // Use the subject's teacher as the task owner
+      const createdById = subject.teacherId;
 
       const task = await prisma.task.create({
         data: {
@@ -132,6 +138,8 @@ const taskController = {
           description,
           deadline: deadline ? new Date(deadline) : null,
           status,
+          scoringType: scoringType || 'SUBMISSION_ONLY',
+          maxScore: maxScore || null,
           createdById
         },
         include: {
@@ -151,7 +159,7 @@ const taskController = {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { subjectId, taskName, taskNumber, description, deadline, status } = req.body;
+      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
 
       // Check for duplicate task number in subject
       const existingTask = await prisma.task.findFirst({
@@ -176,7 +184,9 @@ const taskController = {
           taskNumber,
           description,
           deadline: deadline ? new Date(deadline) : null,
-          status
+          status,
+          scoringType: scoringType || 'SUBMISSION_ONLY',
+          maxScore: maxScore || null
         },
         include: {
           subject: true,
