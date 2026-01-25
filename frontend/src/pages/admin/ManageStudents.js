@@ -7,10 +7,10 @@ const ManageStudents = () => {
   const [classes, setClasses] = useState([]);
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null });
+  const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [filterGrade, setFilterGrade] = useState(null);
   const [filterClass, setFilterClass] = useState(null);
   const [formData, setFormData] = useState({
@@ -41,7 +41,7 @@ const ManageStudents = () => {
       setClasses(classRes.data);
       setGrades(gradeRes.data);
     } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
+      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ const ManageStudents = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
     }
   };
 
@@ -81,7 +81,7 @@ const ManageStudents = () => {
         await studentAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
       }
     }
   };
@@ -107,7 +107,6 @@ const ManageStudents = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingStudent(null);
-    setError('');
   };
 
   // Table columns configuration
@@ -181,18 +180,6 @@ const ManageStudents = () => {
           เพิ่มนักเรียน
         </button>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -367,6 +354,17 @@ const ManageStudents = () => {
         confirmText="ลบ"
         cancelText="ยกเลิก"
         type="danger"
+      />
+
+      {/* Error Alert Dialog */}
+      <ConfirmDialog
+        isOpen={errorAlert.show}
+        onClose={() => setErrorAlert({ show: false, message: '' })}
+        title="เกิดข้อผิดพลาด"
+        message={errorAlert.message}
+        confirmText="ตกลง"
+        type="danger"
+        mode="alert"
       />
     </div>
   );

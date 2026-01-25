@@ -8,10 +8,10 @@ const ManageSubjects = () => {
   const [academicYears, setAcademicYears] = useState([]);
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null });
+  const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
   const [filterGrade, setFilterGrade] = useState(null);
   const [formData, setFormData] = useState({
@@ -47,7 +47,7 @@ const ManageSubjects = () => {
         }
         initialLoadDone.current = true;
       } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลได้');
+        setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
         initialLoadDone.current = true;
       }
     };
@@ -66,7 +66,7 @@ const ManageSubjects = () => {
       const subjectRes = await subjectAPI.getAll(params);
       setSubjects(subjectRes.data);
     } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
+      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ const ManageSubjects = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
     }
   };
 
@@ -107,7 +107,7 @@ const ManageSubjects = () => {
         await subjectAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
       }
     }
   };
@@ -145,7 +145,6 @@ const ManageSubjects = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingSubject(null);
-    setError('');
   };
 
   // Table columns
@@ -229,18 +228,6 @@ const ManageSubjects = () => {
           เพิ่มวิชา
         </button>
       </div>
-
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -420,6 +407,17 @@ const ManageSubjects = () => {
         confirmText="ลบ"
         cancelText="ยกเลิก"
         type="danger"
+      />
+
+      {/* Error Alert Dialog */}
+      <ConfirmDialog
+        isOpen={errorAlert.show}
+        onClose={() => setErrorAlert({ show: false, message: '' })}
+        title="เกิดข้อผิดพลาด"
+        message={errorAlert.message}
+        confirmText="ตกลง"
+        type="danger"
+        mode="alert"
       />
     </div>
   );

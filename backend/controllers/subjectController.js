@@ -28,7 +28,7 @@ const subjectController = {
       res.json(subjects);
     } catch (error) {
       console.error('Get subjects error:', error);
-      res.status(500).json({ error: 'Failed to fetch subjects' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลวิชาได้' });
     }
   },
 
@@ -50,13 +50,13 @@ const subjectController = {
       });
 
       if (!subject) {
-        return res.status(404).json({ error: 'Subject not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลวิชา' });
       }
 
       res.json(subject);
     } catch (error) {
       console.error('Get subject error:', error);
-      res.status(500).json({ error: 'Failed to fetch subject' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลวิชาได้' });
     }
   },
 
@@ -79,7 +79,7 @@ const subjectController = {
       res.json(tasks);
     } catch (error) {
       console.error('Get subject tasks error:', error);
-      res.status(500).json({ error: 'Failed to fetch tasks' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลงานได้' });
     }
   },
 
@@ -93,7 +93,7 @@ const subjectController = {
       });
 
       if (existingSubject) {
-        return res.status(400).json({ error: 'Subject code already exists' });
+        return res.status(400).json({ error: 'รหัสวิชานี้มีอยู่แล้วในระบบ' });
       }
 
       const subject = await prisma.subject.create({
@@ -104,7 +104,7 @@ const subjectController = {
       res.status(201).json(subject);
     } catch (error) {
       console.error('Create subject error:', error);
-      res.status(500).json({ error: 'Failed to create subject' });
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มวิชาได้' });
     }
   },
 
@@ -122,7 +122,7 @@ const subjectController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Subject code already exists' });
+        return res.status(400).json({ error: 'รหัสวิชานี้มีอยู่แล้วในระบบ' });
       }
 
       const subject = await prisma.subject.update({
@@ -134,7 +134,7 @@ const subjectController = {
       res.json(subject);
     } catch (error) {
       console.error('Update subject error:', error);
-      res.status(500).json({ error: 'Failed to update subject' });
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลวิชาได้' });
     }
   },
 
@@ -150,7 +150,7 @@ const subjectController = {
 
       if (taskCount > 0) {
         return res.status(400).json({
-          error: 'Cannot delete subject with existing tasks'
+          error: 'ไม่สามารถลบวิชาที่มีงานอยู่ได้'
         });
       }
 
@@ -163,10 +163,10 @@ const subjectController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Subject deleted successfully' });
+      res.json({ message: 'ลบวิชาเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete subject error:', error);
-      res.status(500).json({ error: 'Failed to delete subject' });
+      res.status(500).json({ error: 'ไม่สามารถลบวิชาได้' });
     }
   }
 };

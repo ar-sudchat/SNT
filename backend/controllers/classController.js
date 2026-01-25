@@ -26,7 +26,7 @@ const classController = {
       res.json(classes);
     } catch (error) {
       console.error('Get classes error:', error);
-      res.status(500).json({ error: 'Failed to fetch classes' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลห้องเรียนได้' });
     }
   },
 
@@ -47,13 +47,13 @@ const classController = {
       });
 
       if (!classData) {
-        return res.status(404).json({ error: 'Class not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลห้องเรียน' });
       }
 
       res.json(classData);
     } catch (error) {
       console.error('Get class error:', error);
-      res.status(500).json({ error: 'Failed to fetch class' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลห้องเรียนได้' });
     }
   },
 
@@ -70,7 +70,7 @@ const classController = {
       res.json(students);
     } catch (error) {
       console.error('Get class students error:', error);
-      res.status(500).json({ error: 'Failed to fetch students' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' });
     }
   },
 
@@ -84,7 +84,7 @@ const classController = {
       });
 
       if (existingClass) {
-        return res.status(400).json({ error: 'Class name already exists' });
+        return res.status(400).json({ error: 'ชื่อห้องเรียนนี้มีอยู่แล้วในระบบ' });
       }
 
       const classData = await prisma.class.create({
@@ -107,7 +107,7 @@ const classController = {
       res.status(201).json(classData);
     } catch (error) {
       console.error('Create class error:', error);
-      res.status(500).json({ error: 'Failed to create class' });
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มห้องเรียนได้' });
     }
   },
 
@@ -125,7 +125,7 @@ const classController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Class name already exists' });
+        return res.status(400).json({ error: 'ชื่อห้องเรียนนี้มีอยู่แล้วในระบบ' });
       }
 
       const classData = await prisma.class.update({
@@ -149,7 +149,7 @@ const classController = {
       res.json(classData);
     } catch (error) {
       console.error('Update class error:', error);
-      res.status(500).json({ error: 'Failed to update class' });
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลห้องเรียนได้' });
     }
   },
 
@@ -165,7 +165,7 @@ const classController = {
 
       if (studentCount > 0) {
         return res.status(400).json({
-          error: 'Cannot delete class with existing students'
+          error: 'ไม่สามารถลบห้องเรียนที่มีนักเรียนอยู่ได้'
         });
       }
 
@@ -173,10 +173,10 @@ const classController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Class deleted successfully' });
+      res.json({ message: 'ลบห้องเรียนเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete class error:', error);
-      res.status(500).json({ error: 'Failed to delete class' });
+      res.status(500).json({ error: 'ไม่สามารถลบห้องเรียนได้' });
     }
   }
 };

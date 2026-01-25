@@ -43,7 +43,7 @@ const taskController = {
       res.json(tasks);
     } catch (error) {
       console.error('Get tasks error:', error);
-      res.status(500).json({ error: 'Failed to fetch tasks' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลงานได้' });
     }
   },
 
@@ -63,13 +63,13 @@ const taskController = {
       });
 
       if (!task) {
-        return res.status(404).json({ error: 'Task not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลงาน' });
       }
 
       res.json(task);
     } catch (error) {
       console.error('Get task error:', error);
-      res.status(500).json({ error: 'Failed to fetch task' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลงานได้' });
     }
   },
 
@@ -94,7 +94,7 @@ const taskController = {
       res.json(submissions);
     } catch (error) {
       console.error('Get task submissions error:', error);
-      res.status(500).json({ error: 'Failed to fetch submissions' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลการส่งงานได้' });
     }
   },
 
@@ -113,7 +113,7 @@ const taskController = {
 
       if (existingTask) {
         return res.status(400).json({
-          error: `Task number ${taskNumber} already exists for this subject`
+          error: `งานที่ ${taskNumber} มีอยู่แล้วในวิชานี้`
         });
       }
 
@@ -121,7 +121,7 @@ const taskController = {
       const createdById = req.user.teacherId || req.user.teacher?.id;
 
       if (!createdById) {
-        return res.status(400).json({ error: 'Teacher ID not found for current user' });
+        return res.status(400).json({ error: 'ไม่พบข้อมูลครูผู้ใช้งานระบบ' });
       }
 
       const task = await prisma.task.create({
@@ -143,7 +143,7 @@ const taskController = {
       res.status(201).json(task);
     } catch (error) {
       console.error('Create task error:', error);
-      res.status(500).json({ error: 'Failed to create task' });
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มงานได้' });
     }
   },
 
@@ -164,7 +164,7 @@ const taskController = {
 
       if (existingTask) {
         return res.status(400).json({
-          error: `Task number ${taskNumber} already exists for this subject`
+          error: `งานที่ ${taskNumber} มีอยู่แล้วในวิชานี้`
         });
       }
 
@@ -187,7 +187,7 @@ const taskController = {
       res.json(task);
     } catch (error) {
       console.error('Update task error:', error);
-      res.status(500).json({ error: 'Failed to update task' });
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลงานได้' });
     }
   },
 
@@ -205,10 +205,10 @@ const taskController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Task deleted successfully' });
+      res.json({ message: 'ลบงานเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete task error:', error);
-      res.status(500).json({ error: 'Failed to delete task' });
+      res.status(500).json({ error: 'ไม่สามารถลบงานได้' });
     }
   }
 };

@@ -21,7 +21,7 @@ const teacherController = {
       res.json(teachers);
     } catch (error) {
       console.error('Get teachers error:', error);
-      res.status(500).json({ error: 'Failed to fetch teachers' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลครูได้' });
     }
   },
 
@@ -41,13 +41,13 @@ const teacherController = {
       });
 
       if (!teacher) {
-        return res.status(404).json({ error: 'Teacher not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลครู' });
       }
 
       res.json(teacher);
     } catch (error) {
       console.error('Get teacher error:', error);
-      res.status(500).json({ error: 'Failed to fetch teacher' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลครูได้' });
     }
   },
 
@@ -69,7 +69,7 @@ const teacherController = {
       res.json(subjects);
     } catch (error) {
       console.error('Get teacher subjects error:', error);
-      res.status(500).json({ error: 'Failed to fetch subjects' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลวิชาได้' });
     }
   },
 
@@ -83,7 +83,7 @@ const teacherController = {
       });
 
       if (existingTeacher) {
-        return res.status(400).json({ error: 'Teacher code already exists' });
+        return res.status(400).json({ error: 'รหัสครูนี้มีอยู่แล้วในระบบ' });
       }
 
       const teacher = await prisma.teacher.create({
@@ -93,7 +93,7 @@ const teacherController = {
       res.status(201).json(teacher);
     } catch (error) {
       console.error('Create teacher error:', error);
-      res.status(500).json({ error: 'Failed to create teacher' });
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มครูได้' });
     }
   },
 
@@ -111,7 +111,7 @@ const teacherController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Teacher code already exists' });
+        return res.status(400).json({ error: 'รหัสครูนี้มีอยู่แล้วในระบบ' });
       }
 
       const teacher = await prisma.teacher.update({
@@ -122,7 +122,7 @@ const teacherController = {
       res.json(teacher);
     } catch (error) {
       console.error('Update teacher error:', error);
-      res.status(500).json({ error: 'Failed to update teacher' });
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลครูได้' });
     }
   },
 
@@ -138,7 +138,7 @@ const teacherController = {
 
       if (subjectCount > 0) {
         return res.status(400).json({
-          error: 'Cannot delete teacher with existing subjects'
+          error: 'ไม่สามารถลบครูที่มีวิชาสอนอยู่ได้'
         });
       }
 
@@ -149,7 +149,7 @@ const teacherController = {
       res.json({ message: 'Teacher deleted successfully' });
     } catch (error) {
       console.error('Delete teacher error:', error);
-      res.status(500).json({ error: 'Failed to delete teacher' });
+      res.status(500).json({ error: 'ไม่สามารถลบครูได้' });
     }
   }
 };

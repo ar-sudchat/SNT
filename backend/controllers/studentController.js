@@ -28,7 +28,7 @@ const studentController = {
       res.json(students);
     } catch (error) {
       console.error('Get students error:', error);
-      res.status(500).json({ error: 'Failed to fetch students' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' });
     }
   },
 
@@ -50,13 +50,13 @@ const studentController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       res.json(student);
     } catch (error) {
       console.error('Get student error:', error);
-      res.status(500).json({ error: 'Failed to fetch student' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' });
     }
   },
 
@@ -89,7 +89,7 @@ const studentController = {
       res.json(submissions);
     } catch (error) {
       console.error('Get student submissions error:', error);
-      res.status(500).json({ error: 'Failed to fetch submissions' });
+      res.status(500).json({ error: 'ไม่สามารถโหลดข้อมูลการส่งงานได้' });
     }
   },
 
@@ -103,7 +103,7 @@ const studentController = {
       });
 
       if (existingStudent) {
-        return res.status(400).json({ error: 'Student code already exists' });
+        return res.status(400).json({ error: 'รหัสนักเรียนนี้มีอยู่แล้วในระบบ' });
       }
 
       const student = await prisma.student.create({
@@ -118,7 +118,7 @@ const studentController = {
       res.status(201).json(student);
     } catch (error) {
       console.error('Create student error:', error);
-      res.status(500).json({ error: 'Failed to create student' });
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มนักเรียนได้' });
     }
   },
 
@@ -136,7 +136,7 @@ const studentController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Student code already exists' });
+        return res.status(400).json({ error: 'รหัสนักเรียนนี้มีอยู่แล้วในระบบ' });
       }
 
       const student = await prisma.student.update({
@@ -152,7 +152,7 @@ const studentController = {
       res.json(student);
     } catch (error) {
       console.error('Update student error:', error);
-      res.status(500).json({ error: 'Failed to update student' });
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลนักเรียนได้' });
     }
   },
 
@@ -174,10 +174,10 @@ const studentController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Student deleted successfully' });
+      res.json({ message: 'ลบนักเรียนเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete student error:', error);
-      res.status(500).json({ error: 'Failed to delete student' });
+      res.status(500).json({ error: 'ไม่สามารถลบนักเรียนได้' });
     }
   }
 };

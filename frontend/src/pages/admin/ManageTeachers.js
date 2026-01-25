@@ -5,10 +5,10 @@ import { SmartTable, ConfirmDialog } from '../../components/ui';
 const ManageTeachers = () => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, teacher: null });
+  const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [formData, setFormData] = useState({
     teacherCode: '',
     name: '',
@@ -22,7 +22,7 @@ const ManageTeachers = () => {
       const response = await teacherAPI.getAll();
       setTeachers(response.data);
     } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถโหลดข้อมูลได้' });
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ const ManageTeachers = () => {
       fetchTeachers();
       closeModal();
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
     }
   };
 
@@ -57,7 +57,7 @@ const ManageTeachers = () => {
         await teacherAPI.delete(deleteConfirm.teacher.id);
         fetchTeachers();
       } catch (err) {
-        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
       }
     }
   };
@@ -81,7 +81,6 @@ const ManageTeachers = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingTeacher(null);
-    setError('');
   };
 
   // Table columns configuration
@@ -152,18 +151,6 @@ const ManageTeachers = () => {
           เพิ่มครู
         </button>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Smart Table */}
       <SmartTable
@@ -272,6 +259,17 @@ const ManageTeachers = () => {
         confirmText="ลบ"
         cancelText="ยกเลิก"
         type="danger"
+      />
+
+      {/* Error Alert Dialog */}
+      <ConfirmDialog
+        isOpen={errorAlert.show}
+        onClose={() => setErrorAlert({ show: false, message: '' })}
+        title="เกิดข้อผิดพลาด"
+        message={errorAlert.message}
+        confirmText="ตกลง"
+        type="danger"
+        mode="alert"
       />
     </div>
   );
