@@ -21,7 +21,10 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  // Cache CORS preflight 24h so cross-origin API calls don't pay an extra
+  // round-trip every request (matters on a high-latency Thailand<->EU link)
+  maxAge: 86400
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

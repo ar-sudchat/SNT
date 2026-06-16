@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../config/database');
 
 const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'root123';
+const ADMIN_PASSWORD = '1234';
 
 const authController = {
   // Login - supports admin, teacher code, or student code

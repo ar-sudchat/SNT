@@ -361,7 +361,7 @@ async function main() {
   console.log('─────────────────────────────────────────');
   console.log('Admin:');
   console.log('  username: admin');
-  console.log('  password: root123');
+  console.log('  password: 1234');
   console.log('');
   console.log('Teachers (ใช้รหัสครูเป็นทั้ง username และ password ครั้งแรก):');
   for (const t of teachers) {
