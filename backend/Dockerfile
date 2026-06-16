@@ -11,7 +11,9 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
 # Install dependencies (devDeps included so the prisma CLI is available for
 # `prisma generate` and `migrate deploy`)
 COPY package*.json ./
-RUN npm ci
+# npm install (not ci) — the committed package-lock.json is out of sync with
+# package.json (the old Koyeb setup used npm install), which makes npm ci fail.
+RUN npm install
 
 # App source
 COPY . .

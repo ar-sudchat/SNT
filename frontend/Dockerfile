@@ -6,7 +6,9 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+# npm install (not ci) — committed package-lock.json is out of sync with
+# package.json (old Koyeb setup used npm install), so npm ci errors with EUSAGE.
+RUN npm install
 
 COPY . .
 
