@@ -27,6 +27,7 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||5001)+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-# Apply DB migrations on boot, then start the server.
-# (Safe/idempotent: with the Neon data restored, migrations are already marked applied.)
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# This project manages schema with `prisma db push` (no migrations folder).
+# db push is idempotent: with the restored schema already in sync it's a no-op,
+# and it never drops data unless --accept-data-loss is passed. Then start server.
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
