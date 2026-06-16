@@ -10,10 +10,10 @@ RUN npm ci
 
 COPY . .
 
-# CRA bakes env at build time. Coolify must pass this as a build arg so the
-# compiled bundle points at the real backend, e.g.
-#   REACT_APP_API_URL=https://snt-api.<...>.sslip.io/api
-ARG REACT_APP_API_URL
+# Single-domain setup: the SPA calls a relative /api, which nginx proxies to
+# the backend container (see nginx.conf). Same-origin -> no CORS, no preflight.
+# Defaults to /api so it works even without a Coolify build arg.
+ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 RUN npm run build
 
