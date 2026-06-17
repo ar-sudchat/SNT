@@ -84,8 +84,10 @@ const authController = {
           include: { teacher: true }
         });
 
+        // Use the role stored on the User row (DB-managed), so a teacher whose
+        // role was set to ADMIN in the database logs in with admin privileges.
         const token = jwt.sign(
-          { userId: user.id, role: 'TEACHER' },
+          { userId: user.id, role: user.role },
           process.env.JWT_SECRET,
           { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
@@ -95,7 +97,7 @@ const authController = {
           user: {
             id: user.id,
             email: user.email,
-            role: 'TEACHER',
+            role: user.role,
             teacher: user.teacher,
             name: teacher.name
           }
