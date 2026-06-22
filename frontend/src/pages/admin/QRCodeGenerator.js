@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { qrcodeAPI, classAPI, subjectAPI } from '../../services/api';
+import { qrcodeAPI, classAPI, subjectAPI, academicYearAPI } from '../../services/api';
 import { SmartTable, SmartComboBox } from '../../components/ui';
 
 const QRCodeGenerator = () => {
+  const [academicYears, setAcademicYears] = useState([]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState(null);
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,9 +20,53 @@ const QRCodeGenerator = () => {
   const [existingQRCodes, setExistingQRCodes] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
 
+  // Load academic years on mount, default to the current year
   useEffect(() => {
-    fetchData();
+    const init = async () => {
+      try {
+        const ayRes = await academicYearAPI.getAll();
+        setAcademicYears(ayRes.data);
+        const current = ayRes.data.find((y) => y.isCurrent) || ayRes.data[0];
+        setSelectedAcademicYear(current ? current.id : null);
+      } catch (err) {
+        setError('ไม่สามารถโหลดปีการศึกษาได้');
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
+
+  // Reload classes + subjects (scoped to the selected academic year) whenever it changes
+  useEffect(() => {
+    setSelectedClass(null);
+    setSelectedSubject(null);
+    setStudents([]);
+    setSelectedStudents([]);
+    setExistingQRCodes([]);
+    setGeneratedQRCodes([]);
+
+    if (!selectedAcademicYear) {
+      setClasses([]);
+      setSubjects([]);
+      return;
+    }
+
+    const loadForYear = async () => {
+      try {
+        const params = { academicYearId: selectedAcademicYear };
+        const [classRes, subjectRes] = await Promise.all([
+          classAPI.getAll(params),
+          subjectAPI.getAll(params)
+        ]);
+        setClasses(classRes.data);
+        setSubjects(subjectRes.data);
+      } catch (err) {
+        setError('ไม่สามารถโหลดข้อมูลห้องเรียน/วิชาได้');
+      }
+    };
+    loadForYear();
+  }, [selectedAcademicYear]);
 
   const fetchStudents = useCallback(async () => {
     if (selectedClass) {
@@ -39,21 +85,6 @@ const QRCodeGenerator = () => {
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
-
-  const fetchData = async () => {
-    try {
-      const [classRes, subjectRes] = await Promise.all([
-        classAPI.getAll(),
-        subjectAPI.getAll()
-      ]);
-      setClasses(classRes.data);
-      setSubjects(subjectRes.data);
-    } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGenerate = async () => {
     if (!selectedSubject || selectedStudents.length === 0) {
@@ -192,7 +223,19 @@ const QRCodeGenerator = () => {
 
       {/* Selection Panel */}
       <div className="bg-white rounded-lg shadow p-6 print:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+            <SmartComboBox
+              options={academicYears}
+              value={selectedAcademicYear}
+              onChange={(val) => setSelectedAcademicYear(val)}
+              labelKey="year"
+              valueKey="id"
+              placeholder="เลือกปีการศึกษา"
+              searchable
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
             <SmartComboBox
