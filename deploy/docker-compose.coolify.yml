@@ -1,0 +1,72 @@
+# KruScan — self-hosted stack for Coolify (Docker Compose build pack)
+# Coolify: New Resource -> Docker Compose -> repo branch responsive-ui,
+#          compose path: /deploy/docker-compose.coolify.yml
+# Only "frontend" gets a public URL (SERVICE_FQDN_FRONTEND_80). postgres and
+# backend have no "ports:" -> reachable only on the internal compose network.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kruscan}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}   # Coolify generates this
+      POSTGRES_DB: ${POSTGRES_DB:-kruscan}
+    volumes:
+      - kruscan-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kruscan}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-kruscan}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER:-kruscan}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-kruscan}?schema=public
+      JWT_SECRET: ${SERVICE_BASE64_64_JWT}                 # Coolify generates this
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?set ADMIN_PASSWORD_HASH}
+      PARENT_LINK_SECRET: ${SERVICE_BASE64_64_PARENTLINK}  # Coolify generates this
+      PARENT_LINK_DAYS: ${PARENT_LINK_DAYS:-}
+      PARENT_LINK_BASE_URL: ${SERVICE_FQDN_FRONTEND}
+      FRONTEND_URL: ${SERVICE_FQDN_FRONTEND}
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_MODEL: ${AI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LOGIN_MAX_FAILS: ${LOGIN_MAX_FAILS:-5}
+      LOGIN_WINDOW_MS: ${LOGIN_WINDOW_MS:-900000}
+    expose:
+      - "5001"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Coolify magic var: generates a URL (sslip.io when no domain) routed by
+      # its Traefik proxy to port 80 of this container, with auto TLS if https.
+      - SERVICE_FQDN_FRONTEND_80
+    expose:
+      - "80"
+
+volumes:
+  kruscan-pgdata:
