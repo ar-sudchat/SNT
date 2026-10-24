@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, classAPI, subjectAPI } from '../../services/api';
 import { SmartComboBox, ConfirmDialog } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import SmartImport from './SmartImport';
 import ConversationList from './ConversationList';
 import { useAuth } from '../../context/AuthContext';
@@ -750,11 +751,16 @@ const DraftTab = ({ disabled, subjects }) => {
               <input id="ai-grade" type="text" value={gradeName} onChange={(e) => setGradeName(e.target.value)} disabled={disabled} className={inputClass} placeholder="เช่น ม.2" />
             </div>
             <div>
-              <label htmlFor="ai-scoring" className="block text-sm font-medium text-gray-700 mb-1">การให้คะแนน</label>
-              <select id="ai-scoring" value={scoringType} onChange={(e) => setScoringType(e.target.value)} disabled={disabled} className={inputClass}>
-                <option value="">ให้ AI แนะนำ</option>
-                {Object.entries(SCORING_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              <span className="block text-sm font-medium text-gray-700 mb-1">การให้คะแนน</span>
+              <SmartComboBox
+                options={[{ value: '', label: 'ให้ AI แนะนำ' }, ...Object.entries(SCORING_LABELS).map(([value, label]) => ({ value, label }))]}
+                value={scoringType}
+                onChange={(v) => setScoringType(v ?? '')}
+                disabled={disabled}
+                searchable={false}
+                clearable={false}
+                ariaLabel="การให้คะแนน"
+              />
             </div>
           </div>
         </details>
@@ -854,15 +860,14 @@ const AIAssistant = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-800">ผู้ช่วย AI</h1>
+      <PageHeader title="ผู้ช่วย AI">
         {enabled && (
-          <span title={[PROVIDER_LABELS[status.provider] || status.provider, status.model].filter(Boolean).join(' · ')} className="inline-flex items-center gap-2 self-start text-xs sm:text-sm px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+          <span title={[PROVIDER_LABELS[status.provider] || status.provider, status.model].filter(Boolean).join(' · ')} className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
             <span className="w-2 h-2 rounded-full bg-green-500" />
             พร้อมใช้งาน
           </span>
         )}
-      </div>
+      </PageHeader>
 
       {statusLoading && (
         <div className="flex items-center gap-2 text-sm text-gray-500"><Spinner className="h-4 w-4" /> กำลังตรวจสอบสถานะ AI...</div>

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { qrcodeAPI, classAPI, subjectAPI, academicYearAPI } from '../../services/api';
 import { SmartTable, SmartComboBox } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
+import QRResultModal, { QRHistoryModal, readHistory, saveRun, clearHistory } from './QRResultModal';
 
 const QRCodeGenerator = () => {
   const [academicYears, setAcademicYears] = useState([]);
@@ -12,14 +14,17 @@ const QRCodeGenerator = () => {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [generatedQRCodes, setGeneratedQRCodes] = useState([]);
-  const [failedResults, setFailedResults] = useState([]);
-  const [existingQRCodes, setExistingQRCodes] = useState([]);
+  // แผ่นที่พร้อมพิมพ์ (จาก popup ผลการสร้าง หรือ "ดู QR Code ที่มีอยู่")
+  const [sheet, setSheet] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [run, setRun] = useState(null);
+  const [history, setHistory] = useState(() => readHistory());
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Load academic years on mount, default to the current year
   useEffect(() => {
@@ -40,12 +45,12 @@ const QRCodeGenerator = () => {
 
   // Reload classes + subjects (scoped to the selected academic year) whenever it changes
   useEffect(() => {
+    setSelectedGrade(null);
     setSelectedClass(null);
     setSelectedSubject(null);
     setStudents([]);
     setSelectedStudents([]);
-    setExistingQRCodes([]);
-    setGeneratedQRCodes([]);
+    setSheet(null);
 
     if (!selectedAcademicYear) {
       setClasses([]);
@@ -96,7 +101,6 @@ const QRCodeGenerator = () => {
     setGenerating(true);
     setError('');
     setSuccess('');
-    setFailedResults([]);
 
     try {
       const response = await qrcodeAPI.generateBulk({
@@ -105,28 +109,22 @@ const QRCodeGenerator = () => {
       });
 
       const { success, failed } = response.data.results;
-
-      if (success.length > 0) {
-        setSuccess(`สร้าง QR Code สำเร็จ ${success.length} รายการ`);
-        setGeneratedQRCodes(success);
-      }
-
-      if (failed.length > 0) {
-        // Map failed results with student names
-        const failedWithNames = failed.map(f => {
-          const student = students.find(s => s.id === f.studentId);
-          return {
-            ...f,
-            studentName: student?.name || '-',
-            studentCode: student?.studentCode || '-'
-          };
-        });
-        setFailedResults(failedWithNames);
-
-        if (success.length === 0) {
-          setError(`ไม่สามารถสร้างได้ทั้งหมด ${failed.length} รายการ (อาจมี QR Code อยู่แล้ว)`);
-        }
-      }
+      const person = (studentId) => {
+        const st = students.find(s => s.id === studentId);
+        return { studentId, studentCode: st?.studentCode || '-', studentNumber: st?.studentNumber || null, name: st?.name || '-' };
+      };
+      const newRun = {
+        id: `${Date.now()}`,
+        at: new Date().toISOString(),
+        classId: selectedClass,
+        className: classes.find(c => c.id === selectedClass)?.className || '-',
+        subjectId: parseInt(selectedSubject),
+        subjectName: subjects.find(s => s.id === parseInt(selectedSubject))?.subjectName || '-',
+        success: success.map(q => ({ ...person(q.studentId), qrcodeImage: q.qrcodeImage })),
+        failed: failed.map(f => ({ ...person(f.studentId), reason: f.reason }))
+      };
+      setHistory(saveRun(newRun));
+      setRun(newRun);
     } catch (err) {
       setError(err.response?.data?.error || 'เกิดข้อผิดพลาดในการสร้าง QR Code');
     } finally {
@@ -138,6 +136,16 @@ const QRCodeGenerator = () => {
     window.print();
   };
 
+  const printSheet = (items, subjectName) => {
+    setSheet({ title: `QR Code พร้อมพิมพ์ (${items.length} รายการ)`, subjectName, items });
+    setTimeout(() => window.print(), 50);
+  };
+
+  const handleRunChange = useCallback((next, { save }) => {
+    setRun(next);
+    if (save) setHistory(saveRun(next));
+  }, []);
+
   const handleLoadExisting = async () => {
     if (!selectedClass || !selectedSubject) {
       setError('กรุณาเลือกห้องเรียนและวิชา');
@@ -146,14 +154,16 @@ const QRCodeGenerator = () => {
 
     setLoadingExisting(true);
     setError('');
-    setExistingQRCodes([]);
-    setGeneratedQRCodes([]);
+    setSheet(null);
 
     try {
       const response = await qrcodeAPI.printForClass(selectedClass, selectedSubject);
       if (response.data.length > 0) {
-        setExistingQRCodes(response.data);
-        setSuccess(`พบ QR Code ${response.data.length} รายการ`);
+        setSheet({
+          title: `QR Codes ที่มีอยู่ (${response.data.length} รายการ)`,
+          subjectName: response.data[0].subjectName,
+          items: response.data.map(qr => ({ studentId: qr.id, name: qr.studentName, studentCode: qr.studentCode, qrcodeImage: qr.qrcodeImage }))
+        });
       } else {
         setError('ไม่พบ QR Code สำหรับห้องและวิชานี้');
       }
@@ -163,6 +173,17 @@ const QRCodeGenerator = () => {
       setLoadingExisting(false);
     }
   };
+
+  // ชั้นจากห้องของปีที่เลือก · ห้องกรองตามชั้น
+  const grades = useMemo(() => {
+    const map = new Map();
+    classes.forEach(c => { if (c.grade && !map.has(c.gradeId)) map.set(c.gradeId, { id: c.gradeId, gradeName: c.grade.gradeName }); });
+    return [...map.values()].sort((a, b) => a.gradeName.localeCompare(b.gradeName, 'th'));
+  }, [classes]);
+  const gradeClasses = useMemo(
+    () => (selectedGrade ? classes.filter(c => c.gradeId === selectedGrade) : classes),
+    [classes, selectedGrade]
+  );
 
   // วิชาที่ใช้ได้กับห้องที่เลือก: วิชาของระดับชั้นเดียวกัน หรือวิชาที่ไม่ได้ระบุระดับชั้น
   const classSubjects = useMemo(() => {
@@ -176,8 +197,7 @@ const QRCodeGenerator = () => {
   useEffect(() => {
     if (selectedSubject && !classSubjects.some((s) => s.id === parseInt(selectedSubject))) {
       setSelectedSubject(null);
-      setExistingQRCodes([]);
-      setGeneratedQRCodes([]);
+      setSheet(null);
     }
   }, [classSubjects, selectedSubject]);
 
@@ -215,8 +235,19 @@ const QRCodeGenerator = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 print:hidden">สร้าง QR Code</h1>
+    <div className="space-y-4">
+      <PageHeader title="สร้าง QR Code" className="print:hidden">
+        <button
+          type="button"
+          onClick={() => { setHistory(readHistory()); setHistoryOpen(true); }}
+          className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          ประวัติการสร้าง{history.length > 0 ? ` (${history.length})` : ''}
+        </button>
+      </PageHeader>
 
       {/* Error */}
       {error && (
@@ -244,7 +275,7 @@ const QRCodeGenerator = () => {
 
       {/* Selection Panel */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 print:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
             <SmartComboBox
@@ -258,9 +289,28 @@ const QRCodeGenerator = () => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+            <SmartComboBox
+              options={grades}
+              value={selectedGrade}
+              onChange={(val) => {
+                setSelectedGrade(val);
+                if (val && selectedClass && classes.find(c => c.id === selectedClass)?.gradeId !== val) {
+                  setSelectedClass(null);
+                  setSelectedStudents([]);
+                }
+              }}
+              labelKey="gradeName"
+              valueKey="id"
+              placeholder="ทุกชั้น"
+              searchable
+              clearable
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
             <SmartComboBox
-              options={classes}
+              options={gradeClasses}
               value={selectedClass}
               onChange={(val) => {
                 setSelectedClass(val);
@@ -280,8 +330,7 @@ const QRCodeGenerator = () => {
               value={selectedSubject}
               onChange={(val) => {
                 setSelectedSubject(val);
-                setExistingQRCodes([]);
-                setGeneratedQRCodes([]);
+                setSheet(null);
               }}
               labelKey="subjectName"
               valueKey="id"
@@ -385,35 +434,11 @@ const QRCodeGenerator = () => {
         )}
       </div>
 
-      {/* Failed Results */}
-      {failedResults.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print:hidden">
-          <h3 className="font-medium text-yellow-800 mb-2">
-            รายการที่ไม่สามารถสร้างได้ ({failedResults.length} รายการ)
-          </h3>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {failedResults.map((item, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm bg-white p-2 rounded">
-                <span className="text-gray-700">
-                  {item.studentCode} - {item.studentName}
-                </span>
-                <span className="text-yellow-700">
-                  {item.reason === 'QR code already exists' ? 'มี QR Code อยู่แล้ว' : item.reason}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-yellow-600 mt-2">
-            หมายเหตุ: นักเรียนเหล่านี้มี QR Code สำหรับวิชานี้อยู่แล้ว ไม่จำเป็นต้องสร้างใหม่
-          </p>
-        </div>
-      )}
-
-      {/* Generated QR Codes */}
-      {generatedQRCodes.length > 0 && (
+      {/* แผ่นพร้อมพิมพ์ */}
+      {sheet && sheet.items.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 print:hidden">
-            <h2 className="text-lg font-semibold">QR Codes ที่สร้างแล้ว ({generatedQRCodes.length} รายการ)</h2>
+            <h2 className="text-lg font-semibold">{sheet.title}</h2>
             <button
               onClick={handlePrint}
               className="px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
@@ -428,7 +453,7 @@ const QRCodeGenerator = () => {
           {/* Print Header - Only visible when printing */}
           <div className="hidden print:block mb-6 text-center border-b-2 border-gray-800 pb-4">
             <h1 className="text-2xl font-bold">KruScan — ครูสแกน</h1>
-            <p className="text-lg mt-1">QR Code สำหรับวิชา: {subjects.find(s => s.id === parseInt(selectedSubject))?.subjectName}</p>
+            <p className="text-lg mt-1">QR Code สำหรับวิชา: {sheet.subjectName}</p>
             <p className="text-sm text-gray-600 mt-1">
               พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
@@ -436,117 +461,25 @@ const QRCodeGenerator = () => {
 
           {/* Screen view */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
-            {generatedQRCodes.map((qr) => {
-              const student = students.find(s => s.id === qr.studentId);
-              return (
-                <div key={qr.id} className="border rounded-lg p-4 text-center">
-                  <img
-                    src={qr.qrcodeImage}
-                    alt="QR Code"
-                    className="mx-auto mb-2"
-                    style={{ width: 150, height: 150 }}
-                  />
-                  <p className="text-sm font-medium truncate">{student?.name || '-'}</p>
-                  <p className="text-xs text-gray-500">{student?.studentCode || '-'}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Print view - Better layout for printing */}
-          <div className="hidden print:grid print:grid-cols-3 print:gap-4">
-            {generatedQRCodes.map((qr) => {
-              const student = students.find(s => s.id === qr.studentId);
-              const subjectName = subjects.find(s => s.id === parseInt(selectedSubject))?.subjectName;
-              return (
-                <div
-                  key={qr.id}
-                  className="border-2 border-gray-300 rounded-lg p-3 text-center"
-                  style={{ pageBreakInside: 'avoid' }}
-                >
-                  <img
-                    src={qr.qrcodeImage}
-                    alt="QR Code"
-                    className="mx-auto"
-                    style={{ width: 120, height: 120 }}
-                  />
-                  <div className="mt-2 border-t pt-2">
-                    <p className="text-base font-bold">{student?.name || '-'}</p>
-                    <p className="text-sm">{student?.studentCode || '-'}</p>
-                    <p className="text-xs text-gray-600 mt-1">{subjectName}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Print Footer */}
-          <div className="hidden print:block mt-6 pt-4 border-t text-center text-xs text-gray-500">
-            <p>KruScan — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</p>
-          </div>
-        </div>
-      )}
-
-      {/* Existing QR Codes */}
-      {existingQRCodes.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 print:hidden">
-            <h2 className="text-lg font-semibold">QR Codes ที่มีอยู่ ({existingQRCodes.length} รายการ)</h2>
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              พิมพ์ QR Code
-            </button>
-          </div>
-
-          {/* Print Header - Only visible when printing */}
-          <div className="hidden print:block mb-6 text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-2xl font-bold">KruScan — ครูสแกน</h1>
-            <p className="text-lg mt-1">QR Code สำหรับวิชา: {existingQRCodes[0]?.subjectName}</p>
-            <p className="text-sm text-gray-600 mt-1">
-              พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
-
-          {/* Screen view */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
-            {existingQRCodes.map((qr, idx) => (
-              <div key={idx} className="border rounded-lg p-4 text-center">
-                <img
-                  src={qr.qrcodeImage}
-                  alt="QR Code"
-                  className="mx-auto mb-2"
-                  style={{ width: 150, height: 150 }}
-                />
-                <p className="text-sm font-medium truncate">{qr.studentName}</p>
+            {sheet.items.map((qr) => (
+              <div key={qr.studentId} className="border rounded-lg p-4 text-center">
+                <img src={qr.qrcodeImage} alt="QR Code" className="mx-auto mb-2" style={{ width: 150, height: 150 }} />
+                <p className="text-sm font-medium truncate">{qr.name}</p>
                 <p className="text-xs text-gray-500">{qr.studentCode}</p>
-                <p className="text-xs text-brand-600 mt-1">{qr.subjectName}</p>
+                <p className="text-xs text-brand-600 mt-1">{sheet.subjectName}</p>
               </div>
             ))}
           </div>
 
           {/* Print view - Better layout for printing */}
           <div className="hidden print:grid print:grid-cols-3 print:gap-4">
-            {existingQRCodes.map((qr, idx) => (
-              <div
-                key={idx}
-                className="border-2 border-gray-300 rounded-lg p-3 text-center"
-                style={{ pageBreakInside: 'avoid' }}
-              >
-                <img
-                  src={qr.qrcodeImage}
-                  alt="QR Code"
-                  className="mx-auto"
-                  style={{ width: 120, height: 120 }}
-                />
+            {sheet.items.map((qr) => (
+              <div key={qr.studentId} className="border-2 border-gray-300 rounded-lg p-3 text-center" style={{ pageBreakInside: 'avoid' }}>
+                <img src={qr.qrcodeImage} alt="QR Code" className="mx-auto" style={{ width: 120, height: 120 }} />
                 <div className="mt-2 border-t pt-2">
-                  <p className="text-base font-bold">{qr.studentName}</p>
+                  <p className="text-base font-bold">{qr.name}</p>
                   <p className="text-sm">{qr.studentCode}</p>
-                  <p className="text-xs text-gray-600 mt-1">{qr.subjectName}</p>
+                  <p className="text-xs text-gray-600 mt-1">{sheet.subjectName}</p>
                 </div>
               </div>
             ))}
@@ -558,6 +491,15 @@ const QRCodeGenerator = () => {
           </div>
         </div>
       )}
+
+      <QRResultModal run={run} onClose={() => setRun(null)} onPrint={printSheet} onChange={handleRunChange} />
+      <QRHistoryModal
+        open={historyOpen}
+        runs={history}
+        onClose={() => setHistoryOpen(false)}
+        onOpenRun={(r) => { setHistoryOpen(false); setRun(r); }}
+        onClear={() => { clearHistory(); setHistory([]); }}
+      />
     </div>
   );
 };

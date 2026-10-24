@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { classAPI, studentAPI, academicYearAPI, transferAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 
 const ClassTransfer = () => {
@@ -196,8 +197,8 @@ const ClassTransfer = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">ย้ายชั้นเรียน</h1>
+    <div className="space-y-4">
+      <PageHeader title="ย้ายชั้นเรียน" />
 
       {/* Alerts */}
       {error && (

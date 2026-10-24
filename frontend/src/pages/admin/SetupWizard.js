@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { academicYearAPI, gradeAPI, classAPI, studentAPI, subjectAPI, teacherAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useDialog } from '../../components/ui/DialogProvider';
+import { SmartComboBox } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import SmartImport from '../ai/SmartImport';
 
 const STEPS = [
@@ -404,20 +406,27 @@ export default function SetupWizard() {
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1">
+          <div className="block space-y-1">
             <span className="text-sm font-medium text-gray-700">ชั้นปี (ไม่บังคับ)</span>
-            <select className={inputCls} value={subjectGrade} onChange={(e) => setSubjectGrade(e.target.value)}>
-              <option value="">ไม่ระบุ</option>
-              {grades.map((g) => <option key={g.id} value={g.id}>{g.gradeName}</option>)}
-            </select>
-          </label>
-          <label className="block space-y-1">
+            <SmartComboBox
+              options={grades.map((g) => ({ value: String(g.id), label: g.gradeName }))}
+              value={subjectGrade}
+              onChange={(v) => setSubjectGrade(v ?? '')}
+              placeholder="ไม่ระบุ"
+              ariaLabel="ชั้นปี"
+            />
+          </div>
+          <div className="block space-y-1">
             <span className="text-sm font-medium text-gray-700">ครูผู้สอน</span>
-            <select className={inputCls} value={teacherValue} onChange={(e) => setSubjectTeacher(e.target.value)}>
-              <option value="">เลือกครู</option>
-              {teacherOptions.map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === myTeacherId ? ' (ฉัน)' : ''}</option>)}
-            </select>
-          </label>
+            <SmartComboBox
+              options={teacherOptions.map((t) => ({ value: String(t.id), label: `${t.name}${t.id === myTeacherId ? ' (ฉัน)' : ''}` }))}
+              value={teacherValue}
+              onChange={(v) => v && setSubjectTeacher(v)}
+              placeholder="เลือกครู"
+              clearable={false}
+              ariaLabel="ครูผู้สอน"
+            />
+          </div>
         </div>
         {parsedSubjects.rows.length > 0 && <p className="text-sm text-gray-600">จะเพิ่ม {parsedSubjects.rows.length} วิชา</p>}
         {parsedSubjects.bad > 0 && <Notice kind="err">{parsedSubjects.bad} บรรทัดไม่มีชื่อวิชา จะถูกข้าม</Notice>}
@@ -463,10 +472,7 @@ export default function SetupWizard() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-24 sm:pb-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">เริ่มต้นใช้งาน</h1>
-        <p className="text-sm text-gray-500">ตั้งค่าทีละขั้นในหน้าเดียว ขั้นไหนไม่พร้อมกด “ข้าม” แล้วกลับมาทำทีหลังได้</p>
-      </div>
+      <PageHeader title="เริ่มต้นใช้งาน" subtitle="ตั้งค่าทีละขั้นในหน้าเดียว ขั้นไหนไม่พร้อมกด “ข้าม” แล้วกลับมาทำทีหลังได้" />
       {stepper}
       <section className="space-y-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100" aria-live="polite">
         {body}

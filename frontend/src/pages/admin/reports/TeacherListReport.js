@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import PageHeader from '../../../components/ui/PageHeader';
 
 const TeacherListReport = () => {
   const [teachers, setTeachers] = useState([]);
@@ -33,12 +34,9 @@ const TeacherListReport = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">รายชื่อครู</h1>
-        </div>
+      <PageHeader title="รายชื่อครู">
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
@@ -48,7 +46,7 @@ const TeacherListReport = () => {
           </svg>
           พิมพ์รายงาน
         </button>
-      </div>
+      </PageHeader>
 
       {/* Report Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden print:overflow-visible">

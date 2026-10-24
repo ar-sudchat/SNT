@@ -52,6 +52,7 @@ const SmartComboBox = ({
   required = false,
   name = '',
   id = '',
+  ariaLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -198,6 +199,8 @@ const SmartComboBox = ({
 
       case 'Escape':
         e.preventDefault();
+        // ปิดแค่รายการ ไม่ให้ Esc ทะลุไปปิด WindowModal
+        if (isOpen) e.stopPropagation();
         setIsOpen(false);
         setSearchTerm('');
         break;
@@ -427,6 +430,7 @@ const SmartComboBox = ({
         onKeyDown={handleKeyDown}
         tabIndex={disabled ? -1 : 0}
         role="combobox"
+        aria-label={ariaLabel}
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"

@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { monitorAPI, submissionAPI } from '../../services/api';
 import Logo from '../../components/brand/Logo';
 import ParentLinkPanel from './ParentLinkPanel';
+import { SmartComboBox } from '../../components/ui';
 import {
   STATUS_META, STATUS_ORDER, statusOf, isMissing, fmtDate, isOverdue, buildParentMessage, copyText
 } from './studentMonitorHelpers';
@@ -177,13 +178,18 @@ const StudentMonitor = () => {
           ย้อนกลับ
         </button>
         {allSubjects.length > 1 && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
             <span className="sr-only sm:not-sr-only">วิชา</span>
-            <select value={subjectFilter} onChange={e => setSubjectFilter(e.target.value)} className="min-h-[44px] max-w-[14rem] rounded-lg border border-gray-300 bg-white px-2 text-sm focus:ring-2 focus:ring-brand-500">
-              <option value="">ทุกวิชา (รวมวิชาครูท่านอื่น)</option>
-              {allSubjects.map(s => <option key={s.id} value={String(s.id)}>{s.subjectName}</option>)}
-            </select>
-          </label>
+            <SmartComboBox
+              options={[{ value: '', label: 'ทุกวิชา (รวมวิชาครูท่านอื่น)' }, ...allSubjects.map(s => ({ value: String(s.id), label: s.subjectName }))]}
+              value={subjectFilter}
+              onChange={v => setSubjectFilter(v ?? '')}
+              clearable={false}
+              searchable={allSubjects.length > 5}
+              ariaLabel="วิชา"
+              className="w-[14rem] max-w-full"
+            />
+          </div>
         )}
         <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
           <button onClick={() => window.print()} className={`${btn} bg-brand-600 text-white hover:bg-brand-700`}>พิมพ์ / บันทึก PDF</button>

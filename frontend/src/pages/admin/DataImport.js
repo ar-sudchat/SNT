@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { importAPI, aiAPI } from '../../services/api';
 import { ConfirmDialog } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import SmartImport from '../ai/SmartImport';
 import { useAuth } from '../../context/AuthContext';
 import { ImportFile } from '../../components/illustrations';
@@ -183,8 +184,8 @@ const DataImport = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">นำเข้าข้อมูล</h1>
+    <div className="space-y-4">
+      <PageHeader title="นำเข้าข้อมูล" />
 
       <section className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4">
         <h2 className="text-lg font-semibold">นำเข้ารายชื่อนักเรียน (แนะนำ)</h2>

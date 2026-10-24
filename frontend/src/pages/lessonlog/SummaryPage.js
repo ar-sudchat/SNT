@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
+import PageHeader, { CRUMB_LINK } from '../../components/ui/PageHeader';
 import useLessonContext from './useLessonContext';
+import LessonContextBar from './LessonContextBar';
 import { isWeakLevel, responseOf } from './lessonLogCore';
 
 const LINK = 'inline-flex items-center min-h-[44px] text-sm text-brand-700 underline';
@@ -23,7 +25,8 @@ const Level = ({ rec, r }) => {
 };
 
 export default function SummaryPage() {
-  const { classId, subjectId, cls, subject, loading: ctxLoading, error: ctxError } = useLessonContext();
+  const ctx = useLessonContext();
+  const { classId, subjectId, cls, subject, loading: ctxLoading, error: ctxError } = ctx;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -59,23 +62,12 @@ export default function SummaryPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Link to="/lesson-log" className={LINK}>‹ บันทึกหลังแผน</Link>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">สรุปผลรายคน</h1>
-      </div>
+      <PageHeader title="สรุปผลรายคน" crumb={<Link to="/lesson-log" className={CRUMB_LINK}>‹ บันทึกหลังแผน</Link>} />
 
       {ctxError && <div className="rounded-xl bg-fail/10 p-3 text-sm text-fail" role="alert">{ctxError}</div>}
       {error && <div className="rounded-xl bg-fail/10 p-3 text-sm text-fail" role="alert">{error}</div>}
 
-      {cls && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
-          <div className="min-w-0">
-            <div className="text-xs text-gray-500">กำลังดู</div>
-            <div className="font-medium text-gray-800 truncate">{contextLabel}</div>
-          </div>
-          <Link to="/lesson-log" className={`${LINK} shrink-0`}>เปลี่ยน</Link>
-        </div>
-      )}
+      {cls && <LessonContextBar ctx={ctx} />}
 
       {!ctxLoading && !cls && !ctxError && (
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 space-y-1">

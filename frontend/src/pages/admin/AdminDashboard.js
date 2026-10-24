@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { reportAPI, academicYearAPI, subjectAPI, teacherAPI, classAPI } from '../../services/api';
+import PageHeader from '../../components/ui/PageHeader';
 
 // หน้าแรกแอดมิน: ภาพรวมกลุ่ม · ตัวเลขหลัก · วิชาที่ต้องติดตาม · ความพร้อมของระบบ
 const fmt = (n) => (Number(n) || 0).toLocaleString('th-TH');
@@ -43,7 +44,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="กำลังโหลด">
+      <div className="space-y-4 animate-pulse" aria-busy="true" aria-label="กำลังโหลด">
         <div className="h-8 w-56 bg-gray-200 rounded" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-28 bg-gray-200 rounded-xl" />)}
@@ -126,11 +127,8 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมกลุ่ม</h1>
-        <p className="text-sm text-gray-500">{year ? year.name : 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน'}</p>
-      </header>
+    <div className="space-y-4">
+      <PageHeader title="ภาพรวมกลุ่ม" subtitle={year ? year.name : 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน'} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between gap-3">

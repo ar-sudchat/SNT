@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { tenantDataAPI } from '../../services/api';
 import { ConfirmDialog } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 
 const ACTION_LABEL = {
   'tenant.export': 'ส่งออกข้อมูลกลุ่ม',
@@ -56,10 +57,7 @@ const DataPrivacy = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ข้อมูลและความเป็นส่วนตัว (PDPA)</h1>
-        <p className="text-sm text-gray-500">ส่งออกหรือลบข้อมูลของกลุ่ม และดูประวัติการใช้งานสำคัญ — เจ้าของกลุ่มเท่านั้น</p>
-      </div>
+      <PageHeader title="ข้อมูลและความเป็นส่วนตัว (PDPA)" subtitle="ส่งออกหรือลบข้อมูลของกลุ่ม และดูประวัติการใช้งานสำคัญ — เจ้าของกลุ่มเท่านั้น" />
       {error && <div className="rounded-xl bg-fail/10 p-3 text-sm text-fail" role="alert">{error}</div>}
       {msg && <div className="rounded-xl bg-pass/10 p-3 text-sm text-pass" role="status">{msg}</div>}
 

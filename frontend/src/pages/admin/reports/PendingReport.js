@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import PageHeader from '../../../components/ui/PageHeader';
+import { SmartComboBox } from '../../../components/ui';
 
 const PendingReport = () => {
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
@@ -56,13 +58,9 @@ const PendingReport = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">นักเรียนค้างส่งงาน</h1>
-          <p className="text-sm text-gray-500">รวมงานที่ยังไม่ส่งและไม่ผ่าน</p>
-        </div>
+      <PageHeader title="นักเรียนค้างส่งงาน" subtitle="รวมงานที่ยังไม่ส่งและไม่ผ่าน">
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
@@ -72,23 +70,21 @@ const PendingReport = () => {
           </svg>
           พิมพ์รายงาน
         </button>
-      </div>
+      </PageHeader>
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow p-4 print:hidden">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           กรองตามห้องเรียน
         </label>
-        <select
+        <SmartComboBox
+          options={[{ value: '', label: 'ทั้งหมด' }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
           value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 min-h-[44px] border rounded-lg focus:ring-2 focus:ring-brand-500"
-        >
-          <option value="">ทั้งหมด</option>
-          {classes.map(c => (
-            <option key={c.id} value={c.id}>{c.className}</option>
-          ))}
-        </select>
+          onChange={(v) => setSelectedClass(v ?? '')}
+          clearable={false}
+          ariaLabel="กรองตามห้องเรียน"
+          className="w-full sm:w-64"
+        />
       </div>
 
       {/* Summary */}

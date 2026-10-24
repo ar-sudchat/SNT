@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assessmentAPI, subjectAPI } from '../../services/api';
 import { useDialog } from '../ui/DialogProvider';
+import SmartComboBox from '../ui/SmartComboBox';
 import { scoreOf, toneOf, cycleDown, isWeakLevel, responseOf, maxPoints } from '../../pages/lessonlog/lessonLogCore';
 
 // ประเมินรายคน (RUBRIC): มือถือ = การ์ดรายคน แตะช่องเพื่อเปลี่ยน · md+ = ตารางพร้อมคีย์บอร์ด
@@ -321,39 +322,34 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
 
   return (
     <div className="space-y-4">
-      {/* สรุประดับคุณภาพ (สด) */}
-      {showLevels && <div className="flex flex-wrap gap-2" aria-label="สรุประดับคุณภาพ">
-        {(record.levels || []).map(l => {
+      {/* สรุประดับคุณภาพ (สด) + คำแนะนำ + ความหมายช่อง รวมแถวเดียว */}
+      <div className="flex flex-wrap items-center gap-2">
+        {showLevels && (record.levels || []).map(l => {
           const weak = isWeakLevel(l.label);
           const count = levelCounts[l.label] || 0;
           return (
             <span key={l.label}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 min-h-[36px] text-sm ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 min-h-[32px] text-sm ${
                 weak ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-brand-50 text-brand-800 border-brand-200'}`}>
               {l.label}
-              <b className="tabular-nums">{count} คน</b>
+              <b className="tabular-nums">{count}</b>
             </span>
           );
         })}
-      </div>}
-
-      {canEdit && (
-        <p className="text-sm text-gray-600">{HINT}</p>
-      )}
-      {!canEdit && (
-        <p className="text-sm text-gray-600">ดูได้อย่างเดียว แก้ไขได้เฉพาะผู้สร้างบันทึกหรือผู้จัดการกลุ่ม</p>
-      )}
-
-      <details className="rounded-lg border border-gray-200 bg-white">
-        <summary className="cursor-pointer select-none min-h-[44px] flex items-center px-3 text-sm text-gray-700">
-          ความหมายของแต่ละช่อง
-        </summary>
-        <ul className="px-3 pb-3 space-y-1 text-sm text-gray-700">
-          {criteria.map((c, i) => (
-            <li key={i}><b>{c.short || c.label}</b> = {c.label}</li>
-          ))}
-        </ul>
-      </details>
+        <span className="text-xs text-gray-500">{canEdit ? HINT : 'ดูได้อย่างเดียว แก้ไขได้เฉพาะผู้สร้างบันทึกหรือผู้จัดการกลุ่ม'}</span>
+        {criteria.some(c => c.short && c.short !== c.label) && (
+          <details className="relative ml-auto">
+            <summary className="flex min-h-[36px] cursor-pointer select-none items-center rounded-lg px-2 text-sm text-brand-700 hover:bg-brand-50">
+              ความหมายของแต่ละช่อง
+            </summary>
+            <ul className="absolute right-0 z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] space-y-1 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 shadow-lg">
+              {criteria.map((c, i) => (
+                <li key={i}><b>{c.short || c.label}</b> = {c.label}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
 
       {/* ดึงคะแนนจากการสแกน */}
       {canEdit && scanIdx.length > 0 && (
@@ -367,9 +363,9 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                 </button>
                 {fillOpen === idx && (
                   <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50/50 p-3 space-y-3">
-                    <label className="block text-sm text-gray-700" htmlFor={`fill-task-${idx}`}>
+                    <p className="block text-sm text-gray-700">
                       เลือกงานของวิชา {record.subject.subjectName}
-                    </label>
+                    </p>
                     {tasksLoading && <p className="text-sm text-gray-600">กำลังโหลดรายการงาน…</p>}
                     {tasksError && <p className="text-sm text-red-700">{tasksError}</p>}
                     {tasks && tasks.length === 0 && (
@@ -377,13 +373,13 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                     )}
                     {tasks && tasks.length > 0 && (
                       <>
-                        <select id={`fill-task-${idx}`} value={pickedTask} onChange={e => setPickedTask(e.target.value)}
-                          className="w-full min-h-[44px] rounded-lg border border-gray-300 bg-white px-3 text-base focus:ring-2 focus:ring-brand-500 focus:border-transparent">
-                          <option value="">เลือกงาน…</option>
-                          {tasks.map(t => (
-                            <option key={t.id} value={t.id}>งานที่ {t.taskNumber} {t.taskName}</option>
-                          ))}
-                        </select>
+                        <SmartComboBox
+                          options={tasks.map(t => ({ value: String(t.id), label: `งานที่ ${t.taskNumber} ${t.taskName}` }))}
+                          value={pickedTask}
+                          onChange={v => setPickedTask(v ?? '')}
+                          placeholder="เลือกงาน…"
+                          ariaLabel={`เลือกงานของวิชา ${record.subject.subjectName}`}
+                        />
                         <p className="text-xs text-gray-600">
                           {FILL.rule}
                         </p>

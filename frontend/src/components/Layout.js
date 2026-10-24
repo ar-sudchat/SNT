@@ -7,6 +7,7 @@ import ThemePicker from './ThemePicker';
 import TenantSwitcher from './TenantSwitcher';
 import Avatar, { displayNameOf } from './Avatar';
 import { ICON, settingsFor, Icon } from './navConfig';
+import { CRUMB_LINK } from './ui/PageHeader';
 
 const SCAN_PATH = '/teacher/scan';
 const GUIDE_URL = '/guide/';
@@ -142,10 +143,12 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className={`min-w-0 p-3 sm:p-4 lg:p-6 ${isStaff ? 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-6' : ''}`}>
+        {/* บนคอมขอบบน 16px (เดิม 24px) · แถบล่างของมือถือ/แท็บเล็ตต้องเว้นท้ายเสมอ จึงแยก pb ตามบทบาท */}
+        <main className={`min-w-0 px-3 pt-3 sm:px-4 sm:pt-4 lg:px-6 ${isStaff ? 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-6' : 'pb-3 sm:pb-4 lg:pb-6'}`}>
+          {/* breadcrumb สูงบรรทัดเดียว ติดเหนือชื่อหน้า (พื้นที่กดยัง 44px ด้วย ::after) */}
           {settingsItem && (
-            <nav aria-label="breadcrumb" className="mb-2 flex items-center gap-1 text-sm print:hidden">
-              <Link to="/admin/settings" className="flex min-h-[44px] items-center gap-1 text-brand-700 hover:text-brand-900">
+            <nav aria-label="breadcrumb" className="mb-0.5 flex items-center gap-1 text-sm leading-5 print:hidden">
+              <Link to="/admin/settings" className={CRUMB_LINK}>
                 <Icon d="M15 19l-7-7 7-7" className="h-4 w-4" /> ตั้งค่าระบบ
               </Link>
               <span className="text-gray-400">›</span>

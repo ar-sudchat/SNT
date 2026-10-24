@@ -41,11 +41,11 @@ export default function OpsTenants() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+    <div className="mx-auto max-w-6xl">
       <h1 className="font-display text-2xl font-bold text-title">ผู้ดูแลแพลตฟอร์ม · กลุ่มทั้งหมด</h1>
       {error && <p role="alert" className="mt-4 rounded-xl bg-fail/10 px-4 py-3 text-fail">{error}</p>}
-      {rows === null ? <p className="mt-6 text-ink/60">กำลังโหลด…</p> : (rows.length === 0 && error) ? null : (
-        <div className="mt-6 overflow-x-auto rounded-2xl bg-card ring-1 ring-ink/10">
+      {rows === null ? <p className="mt-4 text-ink/60">กำลังโหลด…</p> : (rows.length === 0 && error) ? null : (
+        <div className="mt-4 overflow-x-auto rounded-2xl bg-card ring-1 ring-ink/10">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-th text-th-fg">
               <tr>{['กลุ่ม', 'รหัสอ้างอิง', 'แพ็กเกจ', 'สถานะ', 'นักเรียน', 'ครู', 'สร้างเมื่อ', ''].map(h => <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}</tr>

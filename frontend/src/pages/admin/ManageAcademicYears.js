@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { academicYearAPI } from '../../services/api';
-import { SmartTable, ConfirmDialog, WindowModal } from '../../components/ui';
+import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 
 const shortDate = (v) => (v ? new Date(v).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
 
@@ -211,11 +212,9 @@ const ManageAcademicYears = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มปีการศึกษา" />
+    <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">ปีการศึกษา</h1>
+      <PageHeader title="ปีการศึกษา">
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
@@ -225,7 +224,8 @@ const ManageAcademicYears = () => {
           </svg>
           เพิ่มปีการศึกษา
         </button>
-      </div>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มปีการศึกษา" />
 
       {/* Error */}
       {error && (
@@ -349,14 +349,14 @@ const ManageAcademicYears = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                 </div>
               </details>

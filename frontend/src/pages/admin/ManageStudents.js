@@ -4,6 +4,7 @@ import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../com
 import useFormErrors from '../../utils/useFormErrors';
 import { useNavigate } from 'react-router-dom';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
@@ -288,11 +289,9 @@ const ManageStudents = () => {
   );
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มนักเรียน" />
+    <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">นักเรียน</h1>
+      <PageHeader title="นักเรียน">
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
@@ -302,7 +301,8 @@ const ManageStudents = () => {
           </svg>
           เพิ่มนักเรียน
         </button>
-      </div>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มนักเรียน" />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -446,14 +446,14 @@ const ManageStudents = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                 </div>
               </details>

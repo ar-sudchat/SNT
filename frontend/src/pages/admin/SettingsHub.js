@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { settingsFor, Icon } from '../../components/navConfig';
 import { useAuth } from '../../context/AuthContext';
+import PageHeader from '../../components/ui/PageHeader';
 import InvitePanel from '../signup/InvitePanel';
 
 const SETUP_ICON = 'M13 10V3L4 14h7v7l9-11h-7z';
@@ -11,10 +12,10 @@ const SettingsHub = () => {
   const canManage = user?.role === 'ADMIN' || !!user?.canManage;
   return (
   <div className="space-y-4">
-    <div>
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{canManage ? 'ตั้งค่าระบบ' : 'ห้องและนักเรียน'}</h1>
-      <p className="text-sm text-gray-500">{canManage ? 'ข้อมูลหลักของกลุ่ม ทำครั้งเดียวตอนต้นปี แล้วแก้เมื่อมีการเปลี่ยนแปลง' : 'ครูทุกคนในกลุ่มจัดการชั้นปี ห้องเรียน และรายชื่อนักเรียนได้เอง'}</p>
-    </div>
+    <PageHeader
+      title={canManage ? 'ตั้งค่าระบบ' : 'ห้องและนักเรียน'}
+      subtitle={canManage ? 'ข้อมูลหลักของกลุ่ม ทำครั้งเดียวตอนต้นปี แล้วแก้เมื่อมีการเปลี่ยนแปลง' : 'ครูทุกคนในกลุ่มจัดการชั้นปี ห้องเรียน และรายชื่อนักเรียนได้เอง'}
+    />
     <Link to="/admin/setup" className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl bg-brand-600 p-4 text-white shadow-sm hover:bg-brand-700">
       <span className="flex items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20"><Icon d={SETUP_ICON} /></span>

@@ -3,6 +3,7 @@ import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
@@ -68,6 +69,9 @@ const ManageClasses = () => {
   };
   const plan = bulk.on && !editingClass ? bulkPlan() : [];
   const toCreate = plan.filter(p => !p.exists);
+  // ชั้นที่แถวอื่นเลือกไปแล้ว เลือกซ้ำไม่ได้ · ปุ่มเพิ่มชั้นตั้งชั้นถัดไปที่ยังว่างให้
+  const usedGrades = (except) => new Set(bulk.rows.filter((_, idx) => idx !== except).map(r => toId(r.gradeId)).filter(Boolean));
+  const nextFreeGrade = () => { const used = usedGrades(-1); return grades.find(g => !used.has(g.id))?.id ?? null; };
   const setBulkRow = (i, patch) => setBulk(b => ({ ...b, rows: b.rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) }));
   const onNameChange = (value) => {
     autoName.current = false;
@@ -310,19 +314,6 @@ const ManageClasses = () => {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามชั้นปี</label>
-          <SmartComboBox
-            options={grades}
-            value={filterGrade}
-            onChange={setFilterGrade}
-            labelKey="gradeName"
-            valueKey="id"
-            placeholder="ทุกชั้นปี"
-            clearable
-            searchable
-          />
-        </div>
-        <div className="sm:w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามปีการศึกษา</label>
           <SmartComboBox
             options={academicYears}
@@ -335,16 +326,27 @@ const ManageClasses = () => {
             searchable
           />
         </div>
+        <div className="sm:w-64">
+          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามชั้นปี</label>
+          <SmartComboBox
+            options={grades}
+            value={filterGrade}
+            onChange={setFilterGrade}
+            labelKey="gradeName"
+            valueKey="id"
+            placeholder="ทุกชั้นปี"
+            clearable
+            searchable
+          />
+        </div>
       </div>
     </>
   );
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มห้องเรียน" />
+    <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">ห้องเรียน</h1>
+      <PageHeader title="ห้องเรียน">
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
@@ -354,7 +356,8 @@ const ManageClasses = () => {
           </svg>
           เพิ่มห้องเรียน
         </button>
-      </div>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มห้องเรียน" />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -415,6 +418,40 @@ const ManageClasses = () => {
       >
         <div className="p-4">
           <form id="class-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ปีการศึกษา
+                </label>
+                <SmartComboBox
+                  options={academicYears}
+                  value={formData.academicYearId}
+                  onChange={(val) => setFormData({ ...formData, academicYearId: val })}
+                  labelKey="year"
+                  valueKey="id"
+                  placeholder="เลือกปีการศึกษา"
+                  searchable
+                  clearable
+                />
+              </div>
+
+              {!(bulk.on && !editingClass) && (
+              <div data-field="gradeId">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชั้นปี <span className="text-red-500">*</span>
+                </label>
+                <SmartComboBox
+                  options={grades}
+                  value={formData.gradeId}
+                  onChange={onGradeChange}
+                  labelKey="gradeName"
+                  valueKey="id"
+                  placeholder="เลือกชั้น"
+                  searchable
+                    error={errorFor('gradeId', toId(formData.gradeId) === null)}
+                  />
+              </div>
+              )}
+
               <div data-field="className">
                 {!(bulk.on && !editingClass) && (
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -449,14 +486,14 @@ const ManageClasses = () => {
                     {bulk.rows.map((row, i) => (
                       <div key={i} className="flex items-end gap-2">
                         <div className="min-w-0 flex-1">
-                          <span className="mb-1 block text-gray-700">ชั้นปี</span>
+                          <span className="mb-1 block text-gray-700">ชั้น</span>
                           <SmartComboBox
-                            options={grades}
+                            options={grades.filter(g => !usedGrades(i).has(g.id))}
                             value={row.gradeId}
                             onChange={(val) => setBulkRow(i, { gradeId: val })}
                             labelKey="gradeName"
                             valueKey="id"
-                            placeholder="เลือกชั้นปี"
+                            placeholder="เลือกชั้น"
                             searchable
                           />
                         </div>
@@ -473,8 +510,10 @@ const ManageClasses = () => {
                         )}
                       </div>
                     ))}
-                    <button type="button" onClick={() => setBulk(b => ({ ...b, rows: [...b.rows, { gradeId: null, count: 3 }] }))}
-                      className="min-h-[44px] rounded-lg border border-dashed border-brand-400 px-3 text-brand-700 hover:bg-white">+ เพิ่มชั้น</button>
+                    {usedGrades(-1).size < grades.length && (
+                      <button type="button" onClick={() => setBulk(b => ({ ...b, rows: [...b.rows, { gradeId: nextFreeGrade(), count: 3 }] }))}
+                        className="min-h-[44px] rounded-lg border border-dashed border-brand-400 px-3 text-brand-700 hover:bg-white">+ เพิ่มชั้น</button>
+                    )}
                     <div>
                       <p className="mb-1 text-gray-700">จะสร้าง (สูงสุด 20 ห้องต่อชั้น)</p>
                       {plan.length ? (
@@ -493,23 +532,6 @@ const ManageClasses = () => {
               </div>
 
 
-              {!(bulk.on && !editingClass) && (
-              <div data-field="gradeId">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชั้นปี <span className="text-red-500">*</span>
-                </label>
-                <SmartComboBox
-                  options={grades}
-                  value={formData.gradeId}
-                  onChange={onGradeChange}
-                  labelKey="gradeName"
-                  valueKey="id"
-                  placeholder="เลือกชั้นปี"
-                  searchable
-                    error={errorFor('gradeId', toId(formData.gradeId) === null)}
-                  />
-              </div>
-              )}
 
               {!(bulk.on && !editingClass) && (
               <div>
@@ -526,22 +548,6 @@ const ManageClasses = () => {
                 />
               </div>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ปีการศึกษา
-                </label>
-                <SmartComboBox
-                  options={academicYears}
-                  value={formData.academicYearId}
-                  onChange={(val) => setFormData({ ...formData, academicYearId: val })}
-                  labelKey="year"
-                  valueKey="id"
-                  placeholder="เลือกปีการศึกษา"
-                  searchable
-                  clearable
-                />
-              </div>
 
               <details className="border rounded-lg px-3 py-2">
                 <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
@@ -560,14 +566,14 @@ const ManageClasses = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                 </div>
               </details>

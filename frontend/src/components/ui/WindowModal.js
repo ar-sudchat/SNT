@@ -213,7 +213,7 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
   return createPortal(
     <>
       {!minimized && (
-        <div className="fixed inset-0 z-50 bg-black/50" aria-hidden="true" />
+        <div className="fixed inset-0 z-50 bg-black/50 print:hidden" aria-hidden="true" />
       )}
       <div
         ref={panelRef}
@@ -222,7 +222,7 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
         aria-labelledby={titleId}
         tabIndex={-1}
         hidden={minimized}
-        className={`${panelClass} z-50 ${minimized ? 'hidden' : 'flex'} flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-black/10 focus:outline-none ${
+        className={`${panelClass} z-50 ${minimized ? 'hidden' : 'flex'} print:hidden flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-black/10 focus:outline-none ${
           dragging ? 'select-none' : ''
         }`}
         style={panelStyle}

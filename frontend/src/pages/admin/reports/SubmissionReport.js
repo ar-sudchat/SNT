@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import PageHeader from '../../../components/ui/PageHeader';
+import { SmartComboBox } from '../../../components/ui';
 
 const SubmissionReport = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -73,12 +75,9 @@ const SubmissionReport = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">สรุปการส่งงาน</h1>
-        </div>
+      <PageHeader title="สรุปการส่งงาน">
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
@@ -88,7 +87,7 @@ const SubmissionReport = () => {
           </svg>
           พิมพ์รายงาน
         </button>
-      </div>
+      </PageHeader>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
@@ -119,43 +118,34 @@ const SubmissionReport = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
-            <select
+            <SmartComboBox
+              options={[{ value: '', label: 'ทั้งหมด' }, ...subjects.map(s => ({ value: String(s.id), label: s.subjectName }))]}
               value={filters.subjectId}
-              onChange={(e) => setFilters({...filters, subjectId: e.target.value})}
-              className="w-full px-3 py-2 min-h-[44px] border rounded-lg focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">ทั้งหมด</option>
-              {subjects.map(s => (
-                <option key={s.id} value={s.id}>{s.subjectName}</option>
-              ))}
-            </select>
+              onChange={(v) => setFilters({...filters, subjectId: v ?? ''})}
+              clearable={false}
+              ariaLabel="วิชา"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
-            <select
+            <SmartComboBox
+              options={[{ value: '', label: 'ทั้งหมด' }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
               value={filters.classId}
-              onChange={(e) => setFilters({...filters, classId: e.target.value})}
-              className="w-full px-3 py-2 min-h-[44px] border rounded-lg focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">ทั้งหมด</option>
-              {classes.map(c => (
-                <option key={c.id} value={c.id}>{c.className}</option>
-              ))}
-            </select>
+              onChange={(v) => setFilters({...filters, classId: v ?? ''})}
+              clearable={false}
+              ariaLabel="ห้องเรียน"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-            <select
+            <SmartComboBox
+              options={[{ value: '', label: 'ทั้งหมด' }, { value: 'APPROVED', label: 'ผ่าน' }, { value: 'PENDING', label: 'รอตรวจ' }, { value: 'REJECTED', label: 'ไม่ผ่าน' }, { value: 'NOT_SUBMITTED', label: 'ยังไม่ส่ง' }]}
               value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="w-full px-3 py-2 min-h-[44px] border rounded-lg focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">ทั้งหมด</option>
-              <option value="APPROVED">ผ่าน</option>
-              <option value="PENDING">รอตรวจ</option>
-              <option value="REJECTED">ไม่ผ่าน</option>
-              <option value="NOT_SUBMITTED">ยังไม่ส่ง</option>
-            </select>
+              onChange={(v) => setFilters({...filters, status: v ?? ''})}
+              clearable={false}
+              searchable={false}
+              ariaLabel="สถานะ"
+            />
           </div>
         </div>
       </div>

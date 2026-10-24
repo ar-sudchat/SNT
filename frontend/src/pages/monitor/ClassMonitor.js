@@ -249,6 +249,38 @@ const ClassMonitor = ({ embedded = false }) => {
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
       <MonitorFilterBar>
         <MonitorFilterField
+          label="ปีการศึกษา"
+          options={academicYears}
+          value={filterAcademicYear}
+          onChange={(val) => {
+            setFilterAcademicYear(val);
+            setFilterGrade(null);
+            setSelectedClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(val, null, null, null);
+          }}
+          labelKey="year"
+          valueKey="id"
+          placeholder="เลือกปีการศึกษา"
+          clearable={false}
+        />
+        <MonitorFilterField
+          label="ชั้น"
+          options={grades}
+          value={filterGrade}
+          onChange={(val) => {
+            setFilterGrade(val);
+            setSelectedClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(filterAcademicYear, val, null, null);
+          }}
+          labelKey="gradeName"
+          valueKey="id"
+          placeholder="ทุกชั้น"
+        />
+        <MonitorFilterField
           label="ห้องเรียน"
           options={classes}
           value={selectedClass}
@@ -272,38 +304,6 @@ const ClassMonitor = ({ embedded = false }) => {
           labelKey="subjectName"
           valueKey="id"
           placeholder="ทุกวิชา"
-        />
-        <MonitorFilterField
-          label="ชั้น"
-          options={grades}
-          value={filterGrade}
-          onChange={(val) => {
-            setFilterGrade(val);
-            setSelectedClass(null);
-            setSelectedSubject(null);
-            setData(null);
-            updateURL(filterAcademicYear, val, null, null);
-          }}
-          labelKey="gradeName"
-          valueKey="id"
-          placeholder="ทุกชั้น"
-        />
-        <MonitorFilterField
-          label="ปีการศึกษา"
-          options={academicYears}
-          value={filterAcademicYear}
-          onChange={(val) => {
-            setFilterAcademicYear(val);
-            setFilterGrade(null);
-            setSelectedClass(null);
-            setSelectedSubject(null);
-            setData(null);
-            updateURL(val, null, null, null);
-          }}
-          labelKey="year"
-          valueKey="id"
-          placeholder="เลือกปีการศึกษา"
-          clearable={false}
         />
       </MonitorFilterBar>
 

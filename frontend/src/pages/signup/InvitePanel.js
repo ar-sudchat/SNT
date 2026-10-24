@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { inviteAPI, errMsg } from './client';
 import { useDialog } from '../../components/ui/DialogProvider';
+import { SmartComboBox } from '../../components/ui';
 
 const ROLE = { TEACHER: 'ครู', ADMIN: 'ผู้ดูแล' };
 const STATUS = { ok: ['รอตอบรับ', 'bg-amber-50 text-amber-700'], accepted: ['ตอบรับแล้ว', 'bg-green-50 text-green-700'], expired: ['หมดอายุ', 'bg-gray-100 text-gray-500'] };
@@ -43,10 +44,15 @@ const InvitePanel = () => {
       <h2 id="invite-title" className="text-lg font-bold text-gray-800">เชิญด้วยลิงก์</h2>
       <p className="mb-3 text-sm text-gray-500">สร้างลิงก์เชิญแล้วคัดลอกไปส่งทาง LINE · ลิงก์ใช้ได้ครั้งเดียว อายุ 7 วัน</p>
       <form onSubmit={create} className="flex flex-col gap-2 sm:flex-row">
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="min-h-[44px] rounded-lg border border-gray-300 bg-white px-3" aria-label="บทบาท">
-          <option value="TEACHER">ครู</option>
-          <option value="ADMIN">ผู้ดูแลระบบ</option>
-        </select>
+        <SmartComboBox
+          options={[{ value: 'TEACHER', label: 'ครู' }, { value: 'ADMIN', label: 'ผู้ดูแลระบบ' }]}
+          value={role}
+          onChange={(v) => v && setRole(v)}
+          searchable={false}
+          clearable={false}
+          ariaLabel="บทบาท"
+          className="sm:w-44"
+        />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="อีเมล (ไม่บังคับ)" className="min-h-[44px] flex-1 rounded-lg border border-gray-300 px-3" />
         <button disabled={busy} className="min-h-[44px] rounded-lg bg-brand-600 px-5 font-semibold text-white hover:bg-brand-700 disabled:opacity-50">{busy ? 'กำลังสร้าง...' : 'สร้างลิงก์เชิญ'}</button>
       </form>

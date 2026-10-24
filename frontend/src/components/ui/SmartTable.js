@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import WindowModal from './WindowModal';
+import SmartComboBox from './SmartComboBox';
 import { EmptyBox } from '../illustrations';
 
 /**
@@ -37,6 +39,13 @@ import { EmptyBox } from '../illustrations';
  * - getRowId: (row) => id - ค่าเริ่มต้น row.id
  * - bulkActions: [{ label, danger?, onClick: (selectedRows) => Promise|void }]
  * - onSelectionChange: (rows) => void - ถูกเรียกเมื่อผู้ใช้เปลี่ยนการเลือก
+ *
+ * ทุกตารางมีเหมือนกัน (บนคอม):
+ * - คอลัมน์ # ลำดับแถวเสมอ (ปิดได้ด้วย showRowNumber={false})
+ * - คลิกขวาที่แถว/หัวคอลัมน์: เปิด, rowActions ของหน้า, คัดลอกช่อง/แถว, ค้นหาค่านี้, เลือกแถว, เรียง, ดาวน์โหลด, พิมพ์
+ * - เมนู ⋯ : ดาวน์โหลด Excel/CSV (ทั้งหมด/ที่เลือก), คัดลอกตาราง, พิมพ์, เลือกคอลัมน์ที่แสดง (จำไว้ต่อหน้า)
+ * - rowActions: [{ label, onClick: (row) => void, danger?, show?: (row) => bool }]
+ * - column.exportValue: (row) => ค่าที่ใช้ตอนดาวน์โหลด/คัดลอก (ค่าเริ่มต้น = ค่าดิบของ key)
  */
 
 const SmartTable = ({
@@ -48,7 +57,7 @@ const SmartTable = ({
   selectable = false,
   pagination = true,
   pageSize: defaultPageSize = 10,
-  pageSizeOptions = [10, 25, 50, 100],
+  pageSizeOptions = [10, 25, 50, 100, 150, 200, 250],
   title = '',
   exportFileName = 'export',
   onRowClick,
@@ -65,6 +74,9 @@ const SmartTable = ({
   activeFilterCount = 0,
   onClearFilters,
   emptyAction,
+  toolbarStart,
+  rowActions,
+  showRowNumber = true,
 }) => {
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,6 +88,25 @@ const SmartTable = ({
   const [mobileLimit, setMobileLimit] = useState(50);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterSheet, setFilterSheet] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, row, col, cellText }
+  const [toast, setToast] = useState('');
+  const [colPanel, setColPanel] = useState(false);
+
+  // คอลัมน์ที่ซ่อน จำไว้ต่อหน้า + ต่อตาราง
+  const colsKey = `smarttable.hidden.${typeof window !== 'undefined' ? window.location.pathname : ''}.${exportFileName}`;
+  const [hiddenCols, setHiddenCols] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(colsKey)) || []); } catch (e) { return new Set(); }
+  });
+  const toggleCol = (key) => setHiddenCols(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    try { localStorage.setItem(colsKey, JSON.stringify([...next])); } catch (e) { /* storage ปิดอยู่ */ }
+    return next;
+  });
+  const visibleColumns = useMemo(() => {
+    const shown = columns.filter(c => !hiddenCols.has(c.key));
+    return shown.length ? shown : columns;
+  }, [columns, hiddenCols]);
 
   // Track previous data length to detect actual data changes vs refreshes
   const prevDataLengthRef = useRef(data.length);
@@ -251,29 +282,76 @@ const SmartTable = ({
     }
   }, [bulkBusy, selectedList, commitSelection]);
 
-  const handleExport = useCallback(() => {
-    const exportData = sortedData.map(row => {
-      const obj = {};
-      columns.forEach(col => {
-        if (col.exportable !== false) {
-          obj[col.label] = getNestedValue(row, col.key);
-        }
-      });
-      return obj;
-    });
+  // ค่าของช่องตอนดาวน์โหลด/คัดลอก
+  const exportCell = (col, row) => {
+    const v = col.exportValue ? col.exportValue(row) : getNestedValue(row, col.key);
+    return v === null || v === undefined ? '' : (typeof v === 'object' ? JSON.stringify(v) : v);
+  };
+  const exportColumns = visibleColumns.filter(col => col.exportable !== false && !isActionColumn(col));
+  const toRecords = (rows) => rows.map((row, i) => {
+    const obj = showRowNumber ? { '#': i + 1 } : {};
+    exportColumns.forEach(col => { obj[col.label] = exportCell(col, row); });
+    return obj;
+  });
+  const fileStamp = () => `${exportFileName}_${new Date().toISOString().split('T')[0]}`;
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+  const handleExport = useCallback((rows = sortedData) => {
+    const ws = XLSX.utils.json_to_sheet(toRecords(rows));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    ws['!cols'] = [...(showRowNumber ? [{ wch: 6 }] : []), ...exportColumns.map(col => ({ wch: Math.max(String(col.label).length, 15) }))];
+    XLSX.writeFile(wb, `${fileStamp()}.xlsx`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedData, exportColumns, exportFileName, showRowNumber]);
 
-    // Auto-size columns
-    const colWidths = columns.map(col => ({
-      wch: Math.max(col.label.length, 15)
-    }));
-    ws['!cols'] = colWidths;
+  const handleExportCsv = (rows = sortedData) => {
+    const ws = XLSX.utils.json_to_sheet(toRecords(rows));
+    // BOM ให้ Excel อ่านภาษาไทยถูก
+    const blob = new Blob(['\ufeff' + XLSX.utils.sheet_to_csv(ws)], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileStamp()}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
 
-    XLSX.writeFile(wb, `${exportFileName}_${new Date().toISOString().split('T')[0]}.xlsx`);
-  }, [sortedData, columns, exportFileName]);
+  const flash = (msg) => { setToast(msg); setTimeout(() => setToast(''), 1800); };
+  const copyText = async (text, msg = 'คัดลอกแล้ว') => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (err) { /* เบราว์เซอร์ไม่ให้คัดลอก */ }
+      ta.remove();
+    }
+    flash(msg);
+  };
+  // คัดลอกเป็นแท็บคั่น วางใน Excel/Google Sheets ได้ตรงช่อง
+  const rowsToTsv = (rows, withHeader) => {
+    const header = [...(showRowNumber ? ['#'] : []), ...exportColumns.map(c => c.label)].join('\t');
+    const body = rows.map((row, i) => [...(showRowNumber ? [i + 1] : []), ...exportColumns.map(c => String(exportCell(c, row)).replace(/\s+/g, ' '))].join('\t'));
+    return (withHeader ? [header, ...body] : body).join('\n');
+  };
+
+  // เมนูคลิกขวา: ปิดเมื่อกด Esc หรือเลื่อนหน้า
+  useEffect(() => {
+    if (!ctxMenu) return undefined;
+    const close = (e) => { if (e.type !== 'keydown' || e.key === 'Escape') setCtxMenu(null); };
+    window.addEventListener('keydown', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('keydown', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [ctxMenu]);
+  const openCtxMenu = (e, row, col) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    setCtxMenu({ x: e.clientX, y: e.clientY, row, col, cellText: (e.currentTarget.innerText || '').trim() });
+  };
 
   const isAllSelected = paginatedData.length > 0 &&
     paginatedData.every(row => selectedRows.has(idOf(row)));
@@ -290,7 +368,7 @@ const SmartTable = ({
     ? col.render(getNestedValue(row, col.key), row, rowIndex)
     : getNestedValue(row, col.key) ?? '-';
   // การ์ดมือถือ: บรรทัด 1 = mobilePrimary, บรรทัด 2 = ค่าอื่นไม่เกิน 3 ค่า (ไม่แสดงคอลัมน์ปุ่ม)
-  const isActionCol = (col) => col.isAction || col.key === 'actions' || col.key === 'action';
+  const isActionCol = isActionColumn;
   const badgeCol = columns.find(col => col.mobileBadge);
   const mobileColumns = columns.filter(col => !col.hideOnMobile && !isActionCol(col) && col !== badgeCol);
   const primaryCol = mobileColumns.find(col => col.mobilePrimary) || mobileColumns[0];
@@ -328,6 +406,8 @@ const SmartTable = ({
       {/* Header */}
       <div className="p-4 border-b bg-gray-50">
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+          {/* ของที่หน้าเรียกใส่เอง (เช่นชิปกรอง) อยู่แถวเดียวกับช่องค้นหา ไม่เปลืองอีกแถว */}
+          {toolbarStart && <div className="min-w-0 sm:flex-1">{toolbarStart}</div>}
           {/* Title (ถ้ามี) และจำนวน: แสดงจำนวนเฉพาะตอนค้นหา/กรอง หรือเมื่อมือถือยังโหลดไม่ครบ */}
           {(title || loading || searchTerm || activeFilterCount > 0 || mobileData.length < sortedData.length) && (
             <div>
@@ -408,15 +488,28 @@ const SmartTable = ({
                 {menuOpen && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                    <div role="menu" className="absolute right-0 z-30 mt-1 w-44 rounded-lg border bg-white py-1 shadow-lg">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setMenuOpen(false); handleExport(); }}
-                        className="flex min-h-[44px] w-full items-center gap-2 px-3 text-left text-sm text-gray-700 hover:bg-gray-50"
-                      >
-                        ส่งออก Excel
-                      </button>
+                    <div role="menu" className="absolute right-0 z-30 mt-1 w-60 rounded-lg border bg-white py-1 shadow-lg">
+                      {[
+                        { label: `ดาวน์โหลด Excel (${sortedData.length} แถว)`, run: () => handleExport() },
+                        { label: 'ดาวน์โหลด CSV', run: () => handleExportCsv() },
+                        selectedCount > 0 && { label: `ดาวน์โหลด Excel เฉพาะที่เลือก (${selectedCount})`, run: () => handleExport(selectedList) },
+                        { sep: true },
+                        { label: 'คัดลอกทั้งตาราง (วางใน Excel ได้)', run: () => copyText(rowsToTsv(sortedData, true), `คัดลอก ${sortedData.length} แถวแล้ว`) },
+                        { label: 'พิมพ์ตาราง', run: () => window.print(), desktop: true },
+                        { label: 'เลือกคอลัมน์ที่แสดง', run: () => setColPanel(true), desktop: true },
+                      ].filter(Boolean).map((item, i) => (item.sep
+                        ? <div key={i} className="my-1 border-t" role="separator" />
+                        : (
+                          <button
+                            key={item.label}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { setMenuOpen(false); item.run(); }}
+                            className={`${item.desktop ? 'hidden md:flex' : 'flex'} min-h-[44px] w-full items-center gap-2 px-3 text-left text-sm text-gray-700 hover:bg-gray-50`}
+                          >
+                            {item.label}
+                          </button>
+                        )))}
                     </div>
                   </>
                 )}
@@ -459,18 +552,23 @@ const SmartTable = ({
                 </th>
               )}
 
+              {showRowNumber && (
+                <th scope="col" className={`w-12 px-3 py-3 text-right text-sm font-semibold text-th-fg print:text-black ${stickyHeader ? 'sticky top-0 z-10 bg-th' : ''}`}>#</th>
+              )}
+
               {/* Data Columns */}
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <th
                   key={col.key}
+                  onContextMenu={(e) => openCtxMenu(e, null, col)}
                   className={`px-4 py-3 text-left text-sm font-semibold text-th-fg print:text-black tracking-wide ${stickyHeader ? 'sticky top-0 z-10 bg-th shadow-[inset_0_-2px_0_0_rgb(var(--th-fg)/0.15)] print:static print:shadow-none' : ''} ${
                     col.sortable ? 'cursor-pointer hover:brightness-95 select-none' : ''
                   } ${col.className || ''}`}
                   style={{ width: col.width, minWidth: col.minWidth }}
                   onClick={() => col.sortable && handleSort(col.key)}
                 >
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span>{col.label}</span>
+                  <div className="flex flex-nowrap items-center gap-1">
+                    <span className="whitespace-nowrap">{col.label}</span>
                     {col.sortable && (
                       <span className="flex flex-col">
                         <svg
@@ -499,7 +597,7 @@ const SmartTable = ({
             {loading && paginatedData.length === 0 ? (
               // Loading State - only show when no existing data
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0) + (onRowClick ? 1 : 0)} className="px-4 py-12 text-center">
+                <td colSpan={visibleColumns.length + (selectable ? 1 : 0) + (onRowClick ? 1 : 0) + (showRowNumber ? 1 : 0)} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
                     <span className="text-gray-500">กำลังโหลดข้อมูล...</span>
@@ -509,7 +607,7 @@ const SmartTable = ({
             ) : !loading && paginatedData.length === 0 ? (
               // Empty State
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0) + (onRowClick ? 1 : 0)} className="px-4 py-12 text-center">
+                <td colSpan={visibleColumns.length + (selectable ? 1 : 0) + (onRowClick ? 1 : 0) + (showRowNumber ? 1 : 0)} className="px-4 py-12 text-center">
                   {renderEmpty()}
                 </td>
               </tr>
@@ -541,9 +639,15 @@ const SmartTable = ({
                         />
                       </td>
                     )}
-                    {columns.map((col) => (
+                    {showRowNumber && (
+                      <td className="w-12 px-3 py-3 text-right text-sm tabular-nums text-gray-400" onContextMenu={(e) => openCtxMenu(e, row, null)}>
+                        {(pagination ? (currentPage - 1) * pageSize : 0) + rowIndex + 1}
+                      </td>
+                    )}
+                    {visibleColumns.map((col) => (
                       <td
                         key={col.key}
+                        onContextMenu={(e) => openCtxMenu(e, row, col)}
                         className={`px-4 py-3 text-sm ${col.cellClassName || ''}`}
                       >
                         {renderCell(col, row, rowIndex)}
@@ -646,10 +750,85 @@ const SmartTable = ({
         </WindowModal>
       )}
 
+      {/* เมนูคลิกขวา */}
+      {ctxMenu && createPortal(
+        <>
+          <div className="fixed inset-0 z-[60]" onClick={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }} aria-hidden="true" />
+          <div
+            role="menu"
+            aria-label="เมนูของแถว"
+            className="fixed z-[61] w-64 rounded-lg border bg-white py-1 text-sm shadow-xl"
+            style={{ left: Math.min(ctxMenu.x, window.innerWidth - 264), top: Math.min(ctxMenu.y, window.innerHeight - 420) }}
+          >
+            {(() => {
+              const { row, col, cellText } = ctxMenu;
+              const items = [
+                row && onRowClick && { label: 'เปิด', run: () => onRowClick(row), bold: true },
+                ...(row && rowActions ? rowActions.filter(a => !a.show || a.show(row)).map(a => ({ label: a.label, run: () => a.onClick(row), danger: a.danger })) : []),
+                { sep: true },
+                cellText && { label: `คัดลอก "${cellText.length > 24 ? `${cellText.slice(0, 24)}…` : cellText}"`, run: () => copyText(cellText) },
+                row && { label: 'คัดลอกทั้งแถว', run: () => copyText(rowsToTsv([row], false)) },
+                row && cellText && searchable && { label: `ค้นหา "${cellText.length > 18 ? `${cellText.slice(0, 18)}…` : cellText}"`, run: () => { setSearchTerm(cellText); setCurrentPage(1); } },
+                searchTerm && { label: 'ล้างการค้นหา', run: () => setSearchTerm('') },
+                { sep: true },
+                row && selectable && { label: selectedRows.has(idOf(row)) ? 'ไม่เลือกแถวนี้' : 'เลือกแถวนี้', run: () => handleSelectRow(row) },
+                selectable && { label: `เลือกทั้งหมด (${sortedData.length})`, run: handleSelectAllFiltered },
+                col && col.sortable && { label: `เรียง "${col.label}" น้อย → มาก`, run: () => setSortConfig({ key: col.key, direction: 'asc' }) },
+                col && col.sortable && { label: `เรียง "${col.label}" มาก → น้อย`, run: () => setSortConfig({ key: col.key, direction: 'desc' }) },
+                sortConfig.key && { label: 'ยกเลิกการเรียง', run: () => setSortConfig({ key: null, direction: 'asc' }) },
+                col && !row && { label: `ซ่อนคอลัมน์ "${col.label}"`, run: () => toggleCol(col.key) },
+                { sep: true },
+                exportable && { label: `ดาวน์โหลด Excel (${sortedData.length} แถว)`, run: () => handleExport() },
+                exportable && selectedCount > 0 && { label: `ดาวน์โหลดเฉพาะที่เลือก (${selectedCount})`, run: () => handleExport(selectedList) },
+                exportable && { label: 'ดาวน์โหลด CSV', run: () => handleExportCsv() },
+                { label: 'พิมพ์ตาราง', run: () => window.print() },
+              ].filter(Boolean);
+              // ตัดเส้นคั่นที่หัว/ท้าย/ซ้อนกัน
+              const clean = items.filter((it, i) => !it.sep || (i > 0 && !items[i - 1].sep && i < items.length - 1));
+              return clean.map((it, i) => (it.sep
+                ? <div key={`sep-${i}`} className="my-1 border-t" role="separator" />
+                : (
+                  <button
+                    key={it.label}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setCtxMenu(null); it.run(); }}
+                    className={`flex min-h-[36px] w-full items-center px-3 text-left hover:bg-gray-50 ${it.danger ? 'text-red-600' : 'text-gray-700'} ${it.bold ? 'font-semibold' : ''}`}
+                  >
+                    <span className="truncate">{it.label}</span>
+                  </button>
+                )));
+            })()}
+          </div>
+        </>,
+        document.body
+      )}
+
+      {toast && createPortal(
+        <div role="status" className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white shadow-lg print:hidden">{toast}</div>,
+        document.body
+      )}
+
+      {/* เลือกคอลัมน์ที่แสดง */}
+      {colPanel && (
+        <WindowModal open id="smarttable-columns" title="เลือกคอลัมน์ที่แสดง" onClose={() => setColPanel(false)} initialWidth="max-w-sm"
+          footer={<button type="button" onClick={() => setColPanel(false)} className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white">เสร็จ</button>}>
+          <div className="p-4 space-y-1">
+            {columns.map(col => (
+              <label key={col.key} className="flex min-h-[44px] items-center gap-3 rounded-lg px-2 hover:bg-gray-50">
+                <input type="checkbox" checked={!hiddenCols.has(col.key)} onChange={() => toggleCol(col.key)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
+                <span className="text-sm text-gray-800">{typeof col.label === 'string' ? col.label : col.key}</span>
+              </label>
+            ))}
+            <p className="pt-2 text-xs text-gray-500">ระบบจำไว้ในเครื่องนี้ ซ่อนได้แต่ต้องเหลืออย่างน้อย 1 คอลัมน์</p>
+          </div>
+        </WindowModal>
+      )}
+
       {/* แถบการทำงานกับแถวที่เลือก (ไม่พิมพ์ ไม่ส่งออก) */}
       {selectable && hasBulkActions && selectedCount > 0 && (
         <>
-          <div className="h-16 print:hidden" aria-hidden="true" />
+          <div className="h-16 lg:hidden print:hidden" aria-hidden="true" />
           <div
             role="toolbar"
             aria-label="จัดการรายการที่เลือก"
@@ -702,15 +881,15 @@ const SmartTable = ({
             {/* Page Size Selector */}
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
               <span>แสดง</span>
-              <select
+              <SmartComboBox
+                options={pageSizeOptions.map(size => ({ value: size, label: String(size) }))}
                 value={pageSize}
-                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="min-h-[44px] sm:min-h-0 px-2 py-1 border rounded focus:ring-2 focus:ring-brand-500"
-              >
-                {pageSizeOptions.map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
+                onChange={(val) => val && handlePageSizeChange(Number(val))}
+                labelKey="label"
+                valueKey="value"
+                clearable={false}
+                className="w-24"
+              />
               <span>รายการ</span>
             </div>
 
@@ -793,6 +972,10 @@ const SmartTable = ({
 };
 
 // Helper function to generate page numbers
+function isActionColumn(col) {
+  return col.isAction || col.key === 'actions' || col.key === 'action';
+}
+
 function generatePageNumbers(current, total) {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);

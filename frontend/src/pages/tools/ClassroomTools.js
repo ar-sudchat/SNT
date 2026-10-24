@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { classAPI, gradeAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import RandomPicker from './RandomPicker';
 import GroupMaker from './GroupMaker';
 import ClassTimer from './ClassTimer';
@@ -103,11 +104,10 @@ const ClassroomTools = () => {
   const needsClass = tab !== 'timer';
 
   return (
-    <div className="max-w-6xl mx-auto p-4 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <h1 className="text-2xl font-bold text-ink-900">เครื่องมือห้องเรียน</h1>
+    <div className="max-w-6xl mx-auto space-y-4">
+      <PageHeader title="เครื่องมือห้องเรียน" className="print:hidden">
         {canFullscreen && <button type="button" onClick={toggleFullscreen} className={btnSecondary}>เต็มจอ</button>}
-      </div>
+      </PageHeader>
 
       <div ref={panelRef} className="space-y-4 bg-ink-50 [&:fullscreen]:p-6 [&:fullscreen]:overflow-auto">
         <div className="flex flex-wrap gap-3 items-end print:hidden">

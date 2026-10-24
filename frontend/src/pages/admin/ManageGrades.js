@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { gradeAPI } from '../../services/api';
-import { SmartTable, ConfirmDialog, WindowModal } from '../../components/ui';
+import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 
 // ทางลัดชั้นปีที่ใช้บ่อย
@@ -230,30 +231,27 @@ const ManageGrades = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มชั้นปี" />
+    <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">ชั้นปี</h1>
-        <div className="flex flex-col-reverse sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={openBulk}
-            className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
-          >
-            เพิ่มหลายชั้น
-          </button>
-          <button
-            onClick={() => openModal()}
-            className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            เพิ่มชั้นปี
-          </button>
-        </div>
-      </div>
+      <PageHeader title="ชั้นปี">
+        <button
+          type="button"
+          onClick={openBulk}
+          className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+        >
+          เพิ่มหลายชั้น
+        </button>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          เพิ่มชั้นปี
+        </button>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มชั้นปี" />
 
       {/* ผลลัพธ์ */}
       {notice && (
@@ -358,14 +356,14 @@ const ManageGrades = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                 </div>
               </details>

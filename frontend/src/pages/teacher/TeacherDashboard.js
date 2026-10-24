@@ -37,7 +37,7 @@ const Bar = ({ value, color = 'bg-brand-600' }) => (
 );
 
 const Skeleton = () => (
-  <div className="space-y-6 animate-pulse" aria-label="กำลังโหลด">
+  <div className="space-y-4 animate-pulse" aria-label="กำลังโหลด">
     <div className="h-14 w-2/3 rounded bg-gray-200" />
     <div className="grid grid-cols-3 gap-3">{[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl bg-gray-200" />)}</div>
     <div className="grid gap-6 lg:grid-cols-5">
@@ -124,7 +124,7 @@ const TeacherDashboard = () => {
   };
 
   const header = (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0 flex items-center gap-3">
         <TeacherWave className="hidden min-[400px]:block h-16 sm:h-20 w-auto shrink-0 text-brand-600" />
         <div className="min-w-0">
@@ -146,7 +146,7 @@ const TeacherDashboard = () => {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         {header}
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
           <p className="text-red-700">{error}</p>
@@ -170,7 +170,7 @@ const TeacherDashboard = () => {
       { n: 3, title: 'สร้างงานแล้วสแกนสมุด', desc: 'รู้ทันทีว่าใครส่งแล้ว ใครยังค้าง', to: '/admin/tasks' },
     ];
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         {header}
         <section className="rounded-xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-gray-100" aria-labelledby="td-empty">
           <div className="max-w-xl">
@@ -223,7 +223,7 @@ const TeacherDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {header}
 
       {/* สรุปวันนี้ */}

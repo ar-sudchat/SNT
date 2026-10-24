@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
 import { useDialog } from '../../components/ui/DialogProvider';
+import PageHeader, { CRUMB_LINK } from '../../components/ui/PageHeader';
 import PaperPreview from '../../components/lessonlog/PaperPreview';
 import useLessonContext from './useLessonContext';
+import LessonContextBar from './LessonContextBar';
 import { RESPONSE_TYPES, SCOPE_LABEL, scopeOf, shortName } from './lessonLogCore';
 
 const PRIMARY = 'min-h-[44px] rounded-xl px-5 py-2.5 font-medium bg-primary !text-primary-fg disabled:opacity-50';
@@ -33,7 +35,8 @@ function formatLabel(r) {
 
 export default function ExportPage() {
   const dialog = useDialog();
-  const { classId, subjectId, cls, subject, loading: ctxLoading, error: ctxError } = useLessonContext();
+  const ctx = useLessonContext();
+  const { classId, subjectId, cls, subject, loading: ctxLoading, error: ctxError } = ctx;
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -136,29 +139,17 @@ export default function ExportPage() {
 
   return (
     <div className="space-y-4 pb-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <Link to="/lesson-log" className={LINK}>‹ บันทึกหลังแผน</Link>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ส่งออกเป็น Word</h1>
-        </div>
+      <PageHeader title="ส่งออกเป็น Word" crumb={<Link to="/lesson-log" className={CRUMB_LINK}>‹ บันทึกหลังแผน</Link>}>
         {/* Primary action sits in the header on computer; phones use the sticky bar below. */}
         <button onClick={doExport} disabled={!checkedIds.length || exporting} className={`${PRIMARY} hidden lg:inline-flex items-center`}>
           {exportLabel}
         </button>
-      </div>
+      </PageHeader>
 
       {ctxError && <div className="rounded-xl bg-fail/10 p-3 text-sm text-fail" role="alert">{ctxError}</div>}
       {error && <div className="rounded-xl bg-fail/10 p-3 text-sm text-fail" role="alert">{error}</div>}
 
-      {cls && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
-          <div className="min-w-0">
-            <div className="text-xs text-gray-500">กำลังดู</div>
-            <div className="font-medium text-gray-800 truncate">{contextLabel}</div>
-          </div>
-          <Link to="/lesson-log" className={`${LINK} shrink-0`}>เปลี่ยน</Link>
-        </div>
-      )}
+      {cls && <LessonContextBar ctx={ctx} />}
 
       {!ctxLoading && !cls && !ctxError && (
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 space-y-1">

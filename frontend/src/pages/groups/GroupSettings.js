@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api, { groupAPI, tenantAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmDialog } from '../../components/ui';
+import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 import InvitePanel from '../signup/InvitePanel';
 
@@ -88,10 +89,7 @@ const GroupSettings = () => {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">ตั้งค่ากลุ่ม</h1>
-        <p className="text-sm text-gray-500">รหัสเชิญ สมาชิก และชื่อกลุ่ม</p>
-      </div>
+      <PageHeader title="ตั้งค่ากลุ่ม" subtitle="รหัสเชิญ สมาชิก และชื่อกลุ่ม" />
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {msg && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{msg}</p>}
 

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { importAPI } from '../../services/api';
 import { useDialog } from '../../components/ui/DialogProvider';
+import { SmartComboBox } from '../../components/ui';
 
 const labels = { studentCode: 'เลขประจำตัว', studentNumber: 'เลขที่', prefix: 'คำนำหน้า', firstName: 'ชื่อ', lastName: 'นามสกุล', fullName: 'ชื่อ-สกุล', className: 'ห้อง', grade: 'ชั้น', room: 'ห้องที่' };
 const sources = { rules: 'ระบบจับคอลัมน์ให้', ai: 'AI ช่วยจับคอลัมน์', user: 'ตามที่ครูเลือก' };
@@ -67,11 +68,18 @@ export default function SmartImport() {
           </span>
         </summary>
       <fieldset disabled={loading || saving} className="space-y-3 mt-3">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{Object.entries(labels).map(([field, label]) => <label key={field} className="text-sm min-w-0">{label}
-          <select value={preview.mapping[field] ?? ''} onChange={e => refresh({ mapping: { ...preview.mapping, [field]: e.target.value === '' ? null : Number(e.target.value) } })} className="block w-full min-h-[44px] border rounded-lg px-2 mt-1">
-            <option value="">ไม่มี</option>{preview.headers.map((h, i) => <option key={i} value={i}>{i + 1}. {h || 'ไม่มีหัวคอลัมน์'}</option>)}
-          </select>
-        </label>)}</div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{Object.entries(labels).map(([field, label]) => <div key={field} className="text-sm min-w-0">{label}
+          {/* fieldset disabled ไม่มีผลกับ SmartComboBox ต้องส่ง disabled เอง */}
+          <SmartComboBox
+            options={[{ value: '', label: 'ไม่มี' }, ...preview.headers.map((h, i) => ({ value: i, label: `${i + 1}. ${h || 'ไม่มีหัวคอลัมน์'}` }))]}
+            value={preview.mapping[field] ?? ''}
+            onChange={v => refresh({ mapping: { ...preview.mapping, [field]: v === '' || v == null ? null : Number(v) } })}
+            disabled={loading || saving}
+            clearable={false}
+            ariaLabel={label}
+            className="mt-1"
+          />
+        </div>)}</div>
         <label className="block text-sm">ห้อง (ถ้าในไฟล์ไม่มี)
           <input value={defaultClass} maxLength={100} onChange={e => setDefaultClass(e.target.value)} onBlur={() => { if (defaultClass !== preview.defaultClass) refresh(); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} placeholder="เช่น ป.4/1" className="block w-full min-h-[44px] border rounded-lg px-3 mt-1" />
         </label>

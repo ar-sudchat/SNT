@@ -3,6 +3,7 @@ import { subjectAPI, teacherAPI, academicYearAPI, gradeAPI } from '../../service
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useDialog } from '../../components/ui/DialogProvider';
@@ -388,30 +389,27 @@ const ManageSubjects = () => {
   );
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มวิชา" />
+    <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">วิชา</h1>
-        <div className="flex flex-col-reverse sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={openBulk}
-            className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
-          >
-            เพิ่มหลายวิชา
-          </button>
-          <button
-            onClick={() => openModal()}
-            className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            เพิ่มวิชา
-          </button>
-        </div>
-      </div>
+      <PageHeader title="วิชา">
+        <button
+          type="button"
+          onClick={openBulk}
+          className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+        >
+          เพิ่มหลายวิชา
+        </button>
+        <button
+          onClick={() => openModal()}
+          className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          เพิ่มวิชา
+        </button>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มวิชา" />
 
       {/* ผลลัพธ์ */}
       {notice && (
@@ -484,6 +482,34 @@ const ManageSubjects = () => {
       >
         <div className="p-4">
           <form id="subject-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+                <SmartComboBox
+                  options={academicYears}
+                  value={formData.academicYearId}
+                  onChange={(val) => setFormData({ ...formData, academicYearId: val })}
+                  labelKey="year"
+                  valueKey="id"
+                  placeholder="เลือกปีการศึกษา"
+                  searchable
+                  clearable
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+                <SmartComboBox
+                  options={grades}
+                  value={formData.gradeId}
+                  onChange={(val) => setFormData({ ...formData, gradeId: val })}
+                  labelKey="gradeName"
+                  valueKey="id"
+                  placeholder="เลือกชั้นเรียน"
+                  searchable
+                  clearable
+                />
+              </div>
+
               <div data-field="subjectCode">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   รหัสวิชา <span className="text-red-500">*</span>
@@ -526,34 +552,6 @@ const ManageSubjects = () => {
                   />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
-                <SmartComboBox
-                  options={grades}
-                  value={formData.gradeId}
-                  onChange={(val) => setFormData({ ...formData, gradeId: val })}
-                  labelKey="gradeName"
-                  valueKey="id"
-                  placeholder="เลือกชั้นเรียน"
-                  searchable
-                  clearable
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
-                <SmartComboBox
-                  options={academicYears}
-                  value={formData.academicYearId}
-                  onChange={(val) => setFormData({ ...formData, academicYearId: val })}
-                  labelKey="year"
-                  valueKey="id"
-                  placeholder="เลือกปีการศึกษา"
-                  searchable
-                  clearable
-                />
-              </div>
-
               <details className="border rounded-lg px-3 py-2">
                 <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
                 <div className="space-y-4 mt-3">
@@ -569,14 +567,14 @@ const ManageSubjects = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                 </div>
               </details>
@@ -611,6 +609,19 @@ const ManageSubjects = () => {
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+              <SmartComboBox
+                options={academicYears}
+                value={bulkDefaults.academicYearId}
+                onChange={(val) => setBulkDefaults((d) => ({ ...d, academicYearId: val }))}
+                labelKey="year"
+                valueKey="id"
+                placeholder="เลือกปีการศึกษา"
+                searchable
+                clearable
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
               <SmartComboBox
                 options={grades}
@@ -635,19 +646,6 @@ const ManageSubjects = () => {
                 valueKey="id"
                 placeholder="เลือกครูผู้สอน"
                 searchable
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
-              <SmartComboBox
-                options={academicYears}
-                value={bulkDefaults.academicYearId}
-                onChange={(val) => setBulkDefaults((d) => ({ ...d, academicYearId: val }))}
-                labelKey="year"
-                valueKey="id"
-                placeholder="เลือกปีการศึกษา"
-                searchable
-                clearable
               />
             </div>
           </div>
