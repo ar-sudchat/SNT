@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import { useDialog } from '../../components/ui/DialogProvider';
 import WindowModal from '../../components/ui/WindowModal';
 import { RESPONSE_TYPES, FIELD_TYPES, SCOPE_LABEL, scopeOf, responseOf } from './lessonLogCore';
@@ -748,9 +747,7 @@ function DocSettingsCard({ canManage }) {
 // ---- หน้าหลัก ----
 
 export default function TemplatesPage() {
-  const { user } = useAuth();
   const dialog = useDialog();
-  const canManage = user?.role === 'ADMIN' || !!user?.canManage;
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -878,7 +875,8 @@ export default function TemplatesPage() {
         })}
       </ul>
 
-      <DocSettingsCard canManage={canManage} />
+      {/* Every teacher of the group may edit the school name and signers. */}
+      <DocSettingsCard canManage />
 
       <WindowModal
         open={!!editor}

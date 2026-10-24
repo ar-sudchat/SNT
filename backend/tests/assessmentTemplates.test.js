@@ -53,7 +53,7 @@ test('assessment templates API', async (t) => {
     assert.deepStrictEqual(r1.body.map(x => x.key), ['note', 'behav', 'act', 'work', 'trait', 'comp']);
     assert.strictEqual(r2.body.length, 6);
     assert.strictEqual(await asBypass(base.assessmentTemplate.count({ where: { tenantId: A.id, isBuiltIn: true } })), 6);
-    assert.ok(r1.body.every(x => x.isBuiltIn && x.canEdit === false));
+    assert.ok(r1.body.every(x => x.isBuiltIn && x.canEdit === true));
     assert.ok((await call(A.id, T.list, manager)).body.every(x => x.canEdit === true));
     assert.deepStrictEqual(Object.keys(r1.body[1]).sort(),
       ['canEdit', 'classFields', 'createdById', 'criteria', 'id', 'isBuiltIn', 'key', 'kind', 'levels', 'maxScore', 'name', 'responseType', 'useAverage']);
@@ -118,8 +118,8 @@ test('assessment templates API', async (t) => {
     assert.strictEqual(back.body.maxScore, 4);
   });
 
-  await t.test('teacher cannot edit a built-in; manager can but kind/key stay', async () => {
-    assert.strictEqual((await call(A.id, T.update, teacher1, { params: { id: String(behavId) }, body: { name: 'x' } })).status, 403);
+  await t.test('any teacher may edit a built-in; kind/key stay', async () => {
+    assert.strictEqual((await call(A.id, T.update, teacher1, { params: { id: String(behavId) }, body: { name: 'แบบพฤติกรรม' } })).status, 200);
     const up = await call(A.id, T.update, manager, { params: { id: String(behavId) }, body: { name: 'พฤติกรรมของเรา', kind: 'NOTE', key: 'hack' } });
     assert.strictEqual(up.status, 200);
     assert.strictEqual(up.body.name, 'พฤติกรรมของเรา');

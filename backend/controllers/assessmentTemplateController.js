@@ -4,7 +4,8 @@ const { BUILTINS, cleanTemplateInput, ensureBuiltins } = require('../services/as
 const { canManage } = require('../services/assessmentRecords');
 
 const canEditTemplate = (t, user) =>
-  canManage(user) || (!t.isBuiltIn && t.createdById != null && !!user && t.createdById === user.teacherId);
+  // Built-ins are the group's shared forms: every teacher may adjust them. Custom forms: creator or manager.
+  canManage(user) || t.isBuiltIn || (t.createdById != null && !!user && t.createdById === user.teacherId);
 
 const toTemplate = (t, user) => ({
   id: t.id, key: t.key, name: t.name, kind: t.kind, responseType: t.responseType, classFields: t.classFields, maxScore: t.maxScore, useAverage: t.useAverage,

@@ -2,7 +2,7 @@
 // Contract: docs/LESSON-LOG.md
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize, isAdmin } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const T = require('../controllers/assessmentTemplateController');
 const R = require('../controllers/assessmentRecordController');
 const X = require('../controllers/assessmentExportController');
@@ -16,7 +16,7 @@ router.put('/templates/:id', T.update);
 router.delete('/templates/:id', T.remove);
 
 router.get('/settings', X.getSettings);
-router.put('/settings', isAdmin, X.updateSettings);
+router.put('/settings', X.updateSettings); // any teacher of the group (staff already required above)
 
 router.get('/records', R.list);
 router.post('/records', R.create);

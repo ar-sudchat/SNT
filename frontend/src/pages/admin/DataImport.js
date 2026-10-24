@@ -44,7 +44,7 @@ const parseFileSample = async (file, maxRows = 5) => {
 
 const DataImport = () => {
   const { user } = useAuth();
-  // Teachers get the smart roster import; template imports (years, teachers, subjects, tasks) stay with managers.
+  // Every teacher imports their own teaching data; only the teacher-accounts template stays with managers.
   const canManage = user?.role === 'ADMIN' || !!user?.canManage;
   const [selectedType, setSelectedType] = useState('');
   const [file, setFile] = useState(null);
@@ -191,14 +191,14 @@ const DataImport = () => {
         <SmartImport />
       </section>
 
-      {canManage && (<div className="space-y-6">
+      <div className="space-y-6">
       <h2 className="text-lg font-semibold pt-2">นำเข้าแบบแม่แบบ (ขั้นสูง)</h2>
       {/* ขั้น 1: เลือกประเภท */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-1">1. เลือกประเภทข้อมูล</h2>
         <p className="text-xs text-gray-500 mb-4">ลำดับที่แนะนำ: ปีการศึกษา → ชั้นปี → ครู → ห้องเรียน → นักเรียน → วิชา → งาน</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-          {importTypes.map((type) => (
+          {importTypes.filter(type => canManage || type.value !== 'teacher').map((type) => (
             <button
               type="button"
               key={type.value}
@@ -324,7 +324,7 @@ const DataImport = () => {
       )}
 
       {/* Alert Dialog */}
-      </div>)}
+      </div>
       <ConfirmDialog
         isOpen={alert.show}
         onClose={() => setAlert({ ...alert, show: false })}

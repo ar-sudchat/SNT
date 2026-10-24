@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const { authenticate, isAdmin, isTeacher } = require('../middleware/auth');
+const { authenticate, isTeacher, authorize } = require('../middleware/auth');
+// Every teacher of the group manages its teaching data (owner request 2026-10-24).
+const staff = authorize('ADMIN', 'TEACHER');
 
 // Admin dashboard overview
-router.get('/admin/overview', authenticate, isAdmin, reportController.adminOverview);
+router.get('/admin/overview', authenticate, staff, reportController.adminOverview);
 
 // Admin task submission statistics
-router.get('/admin/statistics', authenticate, isAdmin, reportController.adminStatistics);
+router.get('/admin/statistics', authenticate, staff, reportController.adminStatistics);
 
 // Teacher dashboard overview (like admin but for teacher's subjects)
 router.get('/teacher/overview', authenticate, isTeacher, reportController.teacherOverview);

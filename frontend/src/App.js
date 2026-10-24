@@ -174,7 +174,7 @@ function App() {
             <Route
               path="admin/academic-years"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ManageAcademicYears />
                 </ProtectedRoute>
               }
@@ -214,7 +214,7 @@ function App() {
             <Route
               path="admin/subjects"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ManageSubjects />
                 </ProtectedRoute>
               }
@@ -246,7 +246,7 @@ function App() {
             <Route
               path="admin/qrcode"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <QRCodeGenerator />
                 </ProtectedRoute>
               }
@@ -262,7 +262,7 @@ function App() {
             <Route
               path="admin/transfer"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ClassTransfer />
                 </ProtectedRoute>
               }
