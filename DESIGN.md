@@ -56,9 +56,10 @@ props: `isOpen, onClose, onConfirm, title, message, confirmText, cancelText, typ
 ### ErrorBoundary (`src/components/ErrorBoundary.js`)
 class component กันจอขาวเมื่อหน้าพัง แสดงข้อความ + ปุ่ม "โหลดใหม่" ห่อเนื้อหาหน้าใน route (ดู App.js/Layout) ไม่ต้องห่อซ้ำในแต่ละหน้า
 
-### Context bar + ตัวกรองแบบ bottom sheet (หน้า `src/pages/monitor/*`)
-- แถบ "กำลังดู" (`text-xs` ป้ายเล็ก + ชื่อ `contextLabel` เช่น `ม.2/1 · ทุกวิชา`) พร้อมปุ่ม "เปลี่ยน" (≥ 44px) — แสดงผลลัพธ์ก่อน
-- กด "เปลี่ยน" → ตัวกรองเปิดเป็น `.modal-backdrop` + `.modal-panel` (bottom sheet บนมือถือ, inline panel บน lg+ ด้วย `lg:static lg:bg-transparent …`)
+### แถบตัวกรองแบบ inline (หน้า `src/pages/monitor/*`) — เจ้าของสั่ง 2026-10-24 แทนแบบ bottom sheet เดิม
+- ตัวกรอง `วิชา / ห้องเรียน / ชั้น / ปีการศึกษา` (โหมดรายห้อง: `ห้องเรียน / วิชา / ชั้น / ปีการศึกษา`) แสดงตรงบนหน้าตลอด **ไม่มี popup, ไม่มีปุ่ม "เปลี่ยน", ไม่มีปุ่ม "ดูผล"** — เปลี่ยนค่าแล้วโหลดผลทันที
+- ใช้ `MonitorFilterBar` + `MonitorFilterField` (`src/pages/monitor/MonitorFilterBar.js`) ห่อ `SmartComboBox`: การ์ดขาว `grid grid-cols-2 md:grid-cols-4` (มือถือ 2 คอลัมน์, md+ แถวเดียว 4 ช่อง) ป้ายเล็ก `text-xs sm:text-sm` เหนือช่อง ช่องเลือกสูง ≥ 44px ไม่ล้นจอที่ 360px (`min-w-0` + truncate)
+- ไม่มีแถบ "กำลังดู" แล้ว เพราะค่าที่เลือกอยู่เห็นในช่องเลือกอยู่แล้ว
 - ใต้แถบมี filter chips `[ยังไม่ส่ง N] [ทั้งหมด N]` (ค่าเริ่มต้น = ยังไม่ส่ง) และ pill สีเหลืองอำพัน `รอตรวจ N งาน` เมื่อมีงานรอตรวจ
 - chips (ปุ่มกลม `rounded-full` ≥ 44px) ใช้สำหรับตัวกรอง/ทางลัดที่แตะแล้วทำทันที เช่น ตัวกรองด้านบน และคำถามตัวอย่างใน `pages/ai/AIAssistant.js`; badge สถานะเล็กในการ์ด (`ค้าง N` แดง / `ครบ` เขียว) เป็นข้อความอย่างเดียว ไม่ต้องแตะได้
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, subjectAPI, academicYearAPI, gradeAPI, classAPI, submissionAPI } from '../../services/api';
-import { SmartComboBox, WindowModal } from '../../components/ui';
+import { MonitorFilterBar, MonitorFilterField } from './MonitorFilterBar';
 import { useDialog } from '../../components/ui/DialogProvider';
 import { ReminderButton, shortThaiDate } from './reminderText';
 
@@ -41,7 +41,6 @@ const SubjectMonitor = ({ embedded = false }) => {
   const [savingCell, setSavingCell] = useState(null); // {studentId, taskId}
   const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // Search term for filtering students
-  const [filterOpen, setFilterOpen] = useState(false);
   const [quickFilter, setQuickFilter] = useState('all'); // all | missing | pending
 
   // Update URL when filters change
@@ -458,12 +457,6 @@ const SubjectMonitor = ({ embedded = false }) => {
     return { title, deadline: activeTask ? shortThaiDate(activeTask.deadline) : '', items };
   }, [data, activeTask, activeTasks, studentsWithCounts]);
 
-  const currentSubject = subjects.find(x => x.id === selectedSubject);
-  const currentClass = classes.find(c => c.id === filterClass);
-  const contextLabel = [
-    data?.subject?.subjectName || currentSubject?.subjectName || 'ยังไม่ได้เลือกวิชา',
-    currentClass?.className || 'ทุกห้อง'
-  ].join(' · ');
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -493,111 +486,65 @@ const SubjectMonitor = ({ embedded = false }) => {
         </div>
       )}
 
-      {/* Context bar */}
-      <div className="bg-white rounded-lg shadow px-3 sm:px-4 py-2 flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-gray-500">กำลังดู</p>
-          <p className="font-semibold text-gray-800 truncate">{contextLabel}</p>
-        </div>
-        <button
-          onClick={() => setFilterOpen(o => !o)}
-          className="shrink-0 min-h-[44px] px-4 rounded-lg bg-brand-50 text-brand-700 font-medium hover:bg-brand-100 transition-colors"
-        >
-          {filterOpen ? 'ปิด' : 'เปลี่ยน'}
-        </button>
-      </div>
-
-      {/* Filters: bottom sheet on phone, inline panel on lg+ */}
-      <WindowModal
-        open={filterOpen}
-        title="เลือกวิชาและห้อง"
-        onClose={() => setFilterOpen(false)}
-        id="subject-monitor-filter"
-        initialWidth="max-w-4xl"
-        footer={
-            <button
-              onClick={() => setFilterOpen(false)}
-              className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700"
-            >
-              ดูผล
-            </button>
-        }
-      >
-        <div className="p-4 space-y-3">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
-                <SmartComboBox
-                  options={subjects}
-                  value={selectedSubject}
-                  onChange={(val) => {
-                    setSelectedSubject(val);
-                    updateURL(filterAcademicYear, filterGrade, filterClass, val);
-                  }}
-                  labelKey="subjectName"
-                  valueKey="id"
-                  placeholder="เลือกวิชา"
-                  searchable
-                  clearable
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
-                <SmartComboBox
-                  options={classes}
-                  value={filterClass}
-                  onChange={(val) => {
-                    setFilterClass(val);
-                    updateURL(filterAcademicYear, filterGrade, val, selectedSubject);
-                  }}
-                  labelKey="className"
-                  valueKey="id"
-                  placeholder="ทุกห้อง"
-                  searchable
-                  clearable
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
-                <SmartComboBox
-                  options={grades}
-                  value={filterGrade}
-                  onChange={(val) => {
-                    setFilterGrade(val);
-                    setFilterClass(null);
-                    setSelectedSubject(null);
-                    setData(null);
-                    updateURL(filterAcademicYear, val, null, null);
-                  }}
-                  labelKey="gradeName"
-                  valueKey="id"
-                  placeholder="ทุกชั้น"
-                  searchable
-                  clearable
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
-                <SmartComboBox
-                  options={academicYears}
-                  value={filterAcademicYear}
-                  onChange={(val) => {
-                    setFilterAcademicYear(val);
-                    setFilterGrade(null);
-                    setFilterClass(null);
-                    setSelectedSubject(null);
-                    setData(null);
-                    updateURL(val, null, null, null);
-                  }}
-                  labelKey="year"
-                  valueKey="id"
-                  placeholder="เลือกปีการศึกษา"
-                  searchable
-                />
-              </div>
-            </div>
-        </div>
-      </WindowModal>
+      {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
+      <MonitorFilterBar>
+        <MonitorFilterField
+          label="วิชา"
+          options={subjects}
+          value={selectedSubject}
+          onChange={(val) => {
+            setSelectedSubject(val);
+            updateURL(filterAcademicYear, filterGrade, filterClass, val);
+          }}
+          labelKey="subjectName"
+          valueKey="id"
+          placeholder="เลือกวิชา"
+        />
+        <MonitorFilterField
+          label="ห้องเรียน"
+          options={classes}
+          value={filterClass}
+          onChange={(val) => {
+            setFilterClass(val);
+            updateURL(filterAcademicYear, filterGrade, val, selectedSubject);
+          }}
+          labelKey="className"
+          valueKey="id"
+          placeholder="ทุกห้อง"
+        />
+        <MonitorFilterField
+          label="ชั้น"
+          options={grades}
+          value={filterGrade}
+          onChange={(val) => {
+            setFilterGrade(val);
+            setFilterClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(filterAcademicYear, val, null, null);
+          }}
+          labelKey="gradeName"
+          valueKey="id"
+          placeholder="ทุกชั้น"
+        />
+        <MonitorFilterField
+          label="ปีการศึกษา"
+          options={academicYears}
+          value={filterAcademicYear}
+          onChange={(val) => {
+            setFilterAcademicYear(val);
+            setFilterGrade(null);
+            setFilterClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(val, null, null, null);
+          }}
+          labelKey="year"
+          valueKey="id"
+          placeholder="เลือกปีการศึกษา"
+          clearable={false}
+        />
+      </MonitorFilterBar>
 
       {/* Loading */}
       {loading && selectedSubject && (
@@ -875,10 +822,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       {/* No subject selected */}
       {!loading && !selectedSubject && (
         <div className="bg-white rounded-lg shadow p-10 text-center">
-          <p className="text-gray-500 text-lg mb-3">ยังไม่ได้เลือกวิชา</p>
-          <button onClick={() => setFilterOpen(true)} className="min-h-[44px] px-5 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700">
-            เลือกวิชา
-          </button>
+          <p className="text-gray-500 text-lg">เลือกวิชาด้านบนเพื่อดูผล</p>
         </div>
       )}
     </div>
