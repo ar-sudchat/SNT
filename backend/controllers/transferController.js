@@ -13,7 +13,7 @@ const transferController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       // Verify new class exists
@@ -23,12 +23,12 @@ const transferController = {
       });
 
       if (!newClass) {
-        return res.status(404).json({ error: 'Class not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลห้องเรียน' });
       }
 
       // Check capacity
       if (newClass._count.students >= newClass.capacity) {
-        return res.status(400).json({ error: 'Class is at full capacity' });
+        return res.status(400).json({ error: 'ห้องเรียนเต็มแล้ว' });
       }
 
       // Transfer student
@@ -39,14 +39,14 @@ const transferController = {
       });
 
       res.json({
-        message: 'Student transferred successfully',
+        message: 'ย้ายนักเรียนเรียบร้อยแล้ว',
         student: updatedStudent,
         fromClass: student.class.className,
         toClass: newClass.className
       });
     } catch (error) {
       console.error('Transfer student error:', error);
-      res.status(500).json({ error: 'Failed to transfer student' });
+      res.status(500).json({ error: 'ย้ายข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -65,7 +65,7 @@ const transferController = {
           });
 
       if (students.length === 0) {
-        return res.status(400).json({ error: 'No students to transfer' });
+        return res.status(400).json({ error: 'ไม่มีนักเรียนที่จะย้าย' });
       }
 
       // Verify target class
@@ -75,14 +75,14 @@ const transferController = {
       });
 
       if (!toClass) {
-        return res.status(404).json({ error: 'Target class not found' });
+        return res.status(404).json({ error: 'ไม่พบห้องเรียนปลายทาง' });
       }
 
       // Check capacity
       const availableSlots = toClass.capacity - toClass._count.students;
       if (students.length > availableSlots) {
         return res.status(400).json({
-          error: `Not enough capacity. Available: ${availableSlots}, Requested: ${students.length}`
+          error: `ที่นั่งไม่พอ (ว่าง ${availableSlots}, ต้องการ ${students.length})`
         });
       }
 
@@ -98,7 +98,7 @@ const transferController = {
       });
     } catch (error) {
       console.error('Bulk transfer error:', error);
-      res.status(500).json({ error: 'Failed to transfer students' });
+      res.status(500).json({ error: 'ย้ายข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -109,7 +109,7 @@ const transferController = {
       // promotions = [{ fromClassId, toClassId }]
 
       if (!promotions || promotions.length === 0) {
-        return res.status(400).json({ error: 'No promotion mappings provided' });
+        return res.status(400).json({ error: 'ไม่ได้ระบุการเลื่อนชั้น' });
       }
 
       const results = [];
@@ -140,13 +140,13 @@ const transferController = {
       }
 
       res.json({
-        message: `Promoted ${totalTransferred} students successfully`,
+        message: `à¹à¸¥à¸·à¹à¸­à¸à¸à¸±à¹à¸à¸à¸±à¸à¹à¸£à¸µà¸¢à¸ ${totalTransferred} à¸à¸à¹à¸£à¸µà¸¢à¸à¸£à¹à¸­à¸¢à¹à¸¥à¹à¸§`,
         totalTransferred,
         details: results
       });
     } catch (error) {
       console.error('Promote students error:', error);
-      res.status(500).json({ error: 'Failed to promote students' });
+      res.status(500).json({ error: 'เลื่อนชั้นข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -232,7 +232,7 @@ const transferController = {
       });
     } catch (error) {
       console.error('Get promotion preview error:', error);
-      res.status(500).json({ error: 'Failed to get promotion preview' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   }
 };

@@ -1,5 +1,29 @@
 const prisma = require('../config/database');
 
+// Neutralise spreadsheet formula injection: prefix cells starting with = + - @ (or tab/CR) with '
+function csvSafe(v) {
+  const str = (v === null || v === undefined ? '' : v).toString();
+  return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+}
+
+
+// Same student population as monitorController.getSubjectMonitor:
+// all ACTIVE students in ACTIVE classes of the subject's grade + academic year.
+async function getSubjectStudentIds(subject) {
+  const students = await prisma.student.findMany({
+    where: {
+      status: 'ACTIVE',
+      class: {
+        gradeId: subject.gradeId,
+        academicYearId: subject.academicYearId,
+        status: 'ACTIVE'
+      }
+    },
+    select: { id: true }
+  });
+  return students.map(st => st.id);
+}
+
 const reportController = {
   // Admin overview
   async adminOverview(req, res) {
@@ -35,7 +59,23 @@ const reportController = {
       });
 
       // Calculate expected submissions (students * tasks)
-      const expectedSubmissions = studentCount * taskCount;
+      // Σ (students in subject's grade+year population × ACTIVE tasks of that subject)
+      const subjectsWithTasks = await prisma.subject.findMany({
+        where: { status: 'ACTIVE' },
+        select: {
+          id: true, gradeId: true, academicYearId: true,
+          _count: { select: { tasks: { where: { status: 'ACTIVE' } } } }
+        }
+      });
+      const popCache = new Map();
+      let expectedSubmissions = 0;
+      for (const subj of subjectsWithTasks) {
+        const n = subj._count.tasks;
+        if (!n) continue;
+        const key = `${subj.gradeId}|${subj.academicYearId}`;
+        if (!popCache.has(key)) popCache.set(key, (await getSubjectStudentIds(subj)).length);
+        expectedSubmissions += popCache.get(key) * n;
+      }
 
       res.json({
         counts: {
@@ -52,7 +92,7 @@ const reportController = {
       });
     } catch (error) {
       console.error('Admin overview error:', error);
-      res.status(500).json({ error: 'Failed to fetch overview' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -74,21 +114,36 @@ const reportController = {
         ]
       });
 
-      const totalStudents = await prisma.student.count({
-        where: { status: 'ACTIVE' }
-      });
+      const popBySubject = new Map();
+      for (const task of tasks) {
+        if (!popBySubject.has(task.subjectId)) {
+          popBySubject.set(task.subjectId, new Set(await getSubjectStudentIds(task.subject)));
+        }
+      }
+      const teacherIds = [...new Set(tasks.map(t => t.subject.teacherId))];
+      const teachers = teacherIds.length
+        ? await prisma.teacher.findMany({ where: { id: { in: teacherIds } }, select: { id: true, name: true } })
+        : [];
+      const teacherName = new Map(teachers.map(t => [t.id, t.name]));
 
       const taskStats = tasks.map(task => {
-        const approved = task.submissions.filter(s => s.status === 'APPROVED').length;
-        const rejected = task.submissions.filter(s => s.status === 'REJECTED').length;
-        const pending = task.submissions.filter(s => s.status === 'PENDING').length;
-        const notSubmitted = totalStudents - approved - rejected - pending;
+        const pop = popBySubject.get(task.subjectId);
+        const subs = task.submissions.filter(s => pop.has(s.studentId));
+        const approved = subs.filter(s => s.status === 'APPROVED').length;
+        const rejected = subs.filter(s => s.status === 'REJECTED').length;
+        const pending = subs.filter(s => s.status === 'PENDING').length;
+        const totalStudents = pop.size;
+        const notSubmitted = Math.max(0, totalStudents - approved - rejected - pending);
 
         return {
           taskId: task.id,
           taskName: task.taskName,
           taskNumber: task.taskNumber,
+          subjectId: task.subjectId,
+          subjectCode: task.subject.subjectCode,
           subjectName: task.subject.subjectName,
+          academicYearId: task.subject.academicYearId,
+          teacherName: teacherName.get(task.subject.teacherId) || null,
           approved,
           rejected,
           pending,
@@ -103,7 +158,7 @@ const reportController = {
       res.json(taskStats);
     } catch (error) {
       console.error('Admin statistics error:', error);
-      res.status(500).json({ error: 'Failed to fetch statistics' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -113,7 +168,7 @@ const reportController = {
       const teacherId = req.user.teacherId || req.user.teacher?.id;
 
       if (!teacherId) {
-        return res.status(400).json({ error: 'Teacher ID not found' });
+        return res.status(400).json({ error: 'ไม่พบข้อมูลครู' });
       }
 
       // Get teacher's subjects
@@ -128,17 +183,22 @@ const reportController = {
       const subjectIds = subjects.map(s => s.id);
       const taskIds = subjects.flatMap(s => s.tasks.map(t => t.id));
 
-      // Count unique students from QRCodes
-      const qrcodes = await prisma.qRCode.findMany({
-        where: { subjectId: { in: subjectIds } },
-        select: { studentId: true }
-      });
-      const uniqueStudentIds = [...new Set(qrcodes.map(q => q.studentId))];
-      const studentCount = uniqueStudentIds.length;
+      // Students = all active students of each subject's grade/year (same as monitor)
+      const studentIdsBySubject = {};
+      const allStudentIds = new Set();
+      for (const subj of subjects) {
+        const ids = await getSubjectStudentIds(subj);
+        studentIdsBySubject[subj.id] = new Set(ids);
+        ids.forEach(i => allStudentIds.add(i));
+      }
+      const studentCount = allStudentIds.size;
 
-      // Get submission stats for teacher's tasks
-      const submissions = await prisma.submission.findMany({
+      // Submissions only from students in each subject's population
+      const submissions = (await prisma.submission.findMany({
         where: { taskId: { in: taskIds } }
+      })).filter(sub => {
+        const sj = subjects.find(x => x.tasks.some(tk => tk.id === sub.taskId));
+        return sj && studentIdsBySubject[sj.id].has(sub.studentId);
       });
 
       const submissionStats = {
@@ -150,7 +210,7 @@ const reportController = {
       };
 
       // Calculate expected submissions
-      const expectedSubmissions = studentCount * taskIds.length;
+      const expectedSubmissions = subjects.reduce((sum, sj) => sum + studentIdsBySubject[sj.id].size * sj.tasks.length, 0);
       submissionStats.notSubmitted = expectedSubmissions - submissionStats.approved - submissionStats.rejected - submissionStats.pending;
       if (submissionStats.notSubmitted < 0) submissionStats.notSubmitted = 0;
 
@@ -168,7 +228,7 @@ const reportController = {
       });
     } catch (error) {
       console.error('Teacher overview error:', error);
-      res.status(500).json({ error: 'Failed to fetch overview' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -178,7 +238,7 @@ const reportController = {
       const teacherId = req.user.teacherId || req.user.teacher?.id;
 
       if (!teacherId) {
-        return res.status(400).json({ error: 'Teacher ID not found' });
+        return res.status(400).json({ error: 'ไม่พบข้อมูลครู' });
       }
 
       // Get tasks for teacher's subjects
@@ -198,22 +258,22 @@ const reportController = {
       });
 
       // Get student count per subject
-      const subjectStudentCounts = {};
+      const subjectStudentIds = {};
       for (const task of tasks) {
-        if (!subjectStudentCounts[task.subjectId]) {
-          const qrcodeCount = await prisma.qRCode.count({
-            where: { subjectId: task.subjectId }
-          });
-          subjectStudentCounts[task.subjectId] = qrcodeCount;
+        if (!subjectStudentIds[task.subjectId]) {
+          subjectStudentIds[task.subjectId] = new Set(await getSubjectStudentIds(task.subject));
         }
       }
 
       const taskStats = tasks.map(task => {
-        const totalStudents = subjectStudentCounts[task.subjectId] || 0;
-        const approved = task.submissions.filter(s => s.status === 'APPROVED').length;
-        const rejected = task.submissions.filter(s => s.status === 'REJECTED').length;
-        const pending = task.submissions.filter(s => s.status === 'PENDING').length;
-        const notSubmitted = Math.max(0, totalStudents - approved - rejected - pending);
+        const idSet = subjectStudentIds[task.subjectId];
+        const totalStudents = idSet.size;
+        const subs = task.submissions.filter(s => idSet.has(s.studentId));
+        const approved = subs.filter(s => s.status === 'APPROVED').length;
+        const rejected = subs.filter(s => s.status === 'REJECTED').length;
+        const pending = subs.filter(s => s.status === 'PENDING').length;
+        const submitted = subs.filter(s => s.status !== 'NOT_SUBMITTED').length;
+        const notSubmitted = Math.max(0, totalStudents - submitted);
 
         return {
           taskId: task.id,
@@ -235,7 +295,7 @@ const reportController = {
       res.json(taskStats);
     } catch (error) {
       console.error('Teacher statistics error:', error);
-      res.status(500).json({ error: 'Failed to fetch statistics' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -245,7 +305,7 @@ const reportController = {
       const teacherId = req.user.teacherId || req.user.teacher?.id;
 
       if (!teacherId) {
-        return res.status(400).json({ error: 'Teacher ID not found' });
+        return res.status(400).json({ error: 'ไม่พบข้อมูลครู' });
       }
 
       const subjects = await prisma.subject.findMany({
@@ -271,7 +331,7 @@ const reportController = {
       res.json(subjects);
     } catch (error) {
       console.error('Teacher subjects error:', error);
-      res.status(500).json({ error: 'Failed to fetch subjects' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -291,16 +351,11 @@ const reportController = {
       });
 
       if (!subject) {
-        return res.status(404).json({ error: 'Subject not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลวิชา' });
       }
 
-      // Get all students who have QR codes for this subject
-      const qrcodes = await prisma.qRCode.findMany({
-        where: { subjectId: parseInt(subjectId) },
-        include: { student: true }
-      });
-
-      const studentIds = qrcodes.map(q => q.studentId);
+      // All active students of the subject's grade/year (same as monitor)
+      const studentIds = await getSubjectStudentIds(subject);
       const totalStudents = studentIds.length;
 
       // Get submissions for each task
@@ -316,7 +371,8 @@ const reportController = {
           const approved = submissions.filter(s => s.status === 'APPROVED').length;
           const rejected = submissions.filter(s => s.status === 'REJECTED').length;
           const pending = submissions.filter(s => s.status === 'PENDING').length;
-          const notSubmitted = totalStudents - approved - rejected - pending;
+          const submitted = submissions.filter(s => s.status !== 'NOT_SUBMITTED').length;
+          const notSubmitted = Math.max(0, totalStudents - submitted);
 
           return {
             taskId: task.id,
@@ -342,7 +398,7 @@ const reportController = {
       });
     } catch (error) {
       console.error('Subject summary error:', error);
-      res.status(500).json({ error: 'Failed to fetch summary' });
+      res.status(500).json({ error: 'โหลดสรุปข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -361,7 +417,7 @@ const reportController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       // Get all QR codes for this student
@@ -419,7 +475,7 @@ const reportController = {
       });
     } catch (error) {
       console.error('Student summary error:', error);
-      res.status(500).json({ error: 'Failed to fetch summary' });
+      res.status(500).json({ error: 'โหลดสรุปข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -429,7 +485,7 @@ const reportController = {
       const studentId = req.user.studentId || req.user.student?.id;
 
       if (!studentId) {
-        return res.status(400).json({ error: 'Student ID not found' });
+        return res.status(400).json({ error: 'ไม่พบรหัสนักเรียน' });
       }
 
       // Get all QR codes for this student
@@ -480,7 +536,7 @@ const reportController = {
       res.json(subjectSummaries);
     } catch (error) {
       console.error('Student submissions error:', error);
-      res.status(500).json({ error: 'Failed to fetch submissions' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -534,13 +590,13 @@ const reportController = {
 
       // Convert to CSV
       if (data.length === 0) {
-        return res.status(404).json({ error: 'No data to export' });
+        return res.status(404).json({ error: 'ไม่มีข้อมูลสำหรับส่งออก' });
       }
 
       const headers = Object.keys(data[0]);
       const csvContent = [
         headers.join(','),
-        ...data.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','))
+        ...data.map(row => headers.map(h => `"${csvSafe(row[h]).replace(/"/g, '""')}"`).join(','))
       ].join('\n');
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -548,9 +604,10 @@ const reportController = {
       res.send('\uFEFF' + csvContent); // Add BOM for Excel UTF-8
     } catch (error) {
       console.error('Export report error:', error);
-      res.status(500).json({ error: 'Failed to export report' });
+      res.status(500).json({ error: 'ส่งออกข้อมูลไม่สำเร็จ' });
     }
   }
 };
 
 module.exports = reportController;
+module.exports.csvSafe = csvSafe;

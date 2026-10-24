@@ -2,8 +2,26 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/database');
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = '1234';
+// Admin credentials come from env. ADMIN_PASSWORD_HASH is a bcrypt hash.
+// Legacy fallback (admin/1234) only when ADMIN_PASSWORD_HASH is unset -> loud warning.
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || '';
+const LEGACY_ADMIN_PASSWORD = '1234';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
+const INVALID_LOGIN = 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+
+if (!ADMIN_PASSWORD_HASH) {
+  console.warn('\n' + '!'.repeat(72) +
+    '\n!! SECURITY WARNING: ADMIN_PASSWORD_HASH is not set.' +
+    '\n!! Falling back to the legacy default admin password. Set ADMIN_USERNAME and' +
+    '\n!! ADMIN_PASSWORD_HASH (bcrypt) in the environment before production use.\n' +
+    '!'.repeat(72) + '\n');
+}
+
+async function checkAdminPassword(password) {
+  if (ADMIN_PASSWORD_HASH) return bcrypt.compare(String(password), ADMIN_PASSWORD_HASH);
+  return password === LEGACY_ADMIN_PASSWORD;
+}
 
 const authController = {
   // Login - supports admin, teacher code, or student code
@@ -13,8 +31,8 @@ const authController = {
 
       // 1. Check for Admin login
       if (username === ADMIN_USERNAME) {
-        if (password !== ADMIN_PASSWORD) {
-          return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง' });
+        if (!(await checkAdminPassword(password))) {
+          return res.status(401).json({ error: INVALID_LOGIN });
         }
 
         // Find or create admin user
@@ -23,7 +41,7 @@ const authController = {
         });
 
         if (!adminUser) {
-          const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+          const hashedPassword = await bcrypt.hash(String(password), 10);
           adminUser = await prisma.user.create({
             data: {
               email: 'admin@system.local',
@@ -36,7 +54,7 @@ const authController = {
         const token = jwt.sign(
           { userId: adminUser.id, role: 'ADMIN' },
           process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+          { expiresIn: JWT_EXPIRES_IN }
         );
 
         return res.json({
@@ -61,12 +79,12 @@ const authController = {
         if (teacher.user) {
           const isValidPassword = await bcrypt.compare(password, teacher.user.password);
           if (!isValidPassword) {
-            return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง' });
+            return res.status(401).json({ error: INVALID_LOGIN });
           }
         } else {
           // Auto-create user for teacher (password = teacherCode by default)
           if (password !== teacher.teacherCode) {
-            return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง (ใช้รหัสครูเป็นรหัสผ่านครั้งแรก)' });
+            return res.status(401).json({ error: INVALID_LOGIN });
           }
           const hashedPassword = await bcrypt.hash(password, 10);
           await prisma.user.create({
@@ -89,7 +107,7 @@ const authController = {
         const token = jwt.sign(
           { userId: user.id, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+          { expiresIn: JWT_EXPIRES_IN }
         );
 
         return res.json({
@@ -116,7 +134,7 @@ const authController = {
       if (student) {
         // For students, use studentCode as password (simple login)
         if (password !== student.studentCode) {
-          return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง (ใช้รหัสนักเรียนเป็นรหัสผ่าน)' });
+          return res.status(401).json({ error: INVALID_LOGIN });
         }
 
         // Auto-create user if not exists
@@ -146,7 +164,7 @@ const authController = {
         const token = jwt.sign(
           { userId: user.id, role: 'STUDENT' },
           process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+          { expiresIn: JWT_EXPIRES_IN }
         );
 
         return res.json({
@@ -162,7 +180,7 @@ const authController = {
       }
 
       // Not found
-      return res.status(401).json({ error: 'ไม่พบผู้ใช้งาน กรุณาตรวจสอบรหัสผู้ใช้' });
+      return res.status(401).json({ error: INVALID_LOGIN });
 
     } catch (error) {
       console.error('Login error:', error);
@@ -180,7 +198,7 @@ const authController = {
       });
 
       if (existingUser) {
-        return res.status(400).json({ error: 'Email already registered' });
+        return res.status(400).json({ error: 'อีเมลนี้ถูกใช้ลงทะเบียนแล้ว' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -202,7 +220,7 @@ const authController = {
       const token = jwt.sign(
         { userId: user.id, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        { expiresIn: JWT_EXPIRES_IN }
       );
 
       res.status(201).json({
@@ -217,7 +235,7 @@ const authController = {
       });
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({ error: 'Registration failed' });
+      res.status(500).json({ error: 'ลงทะเบียนไม่สำเร็จ' });
     }
   },
 
@@ -250,13 +268,13 @@ const authController = {
       });
     } catch (error) {
       console.error('Get current user error:', error);
-      res.status(500).json({ error: 'Failed to get user data' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
   // Logout
   async logout(req, res) {
-    res.json({ message: 'Logged out successfully' });
+    res.json({ message: 'ออกจากระบบแล้ว' });
   },
 
   // Change password

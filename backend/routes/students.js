@@ -1,17 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
-const { authenticate, isAdmin, isTeacher } = require('../middleware/auth');
+const { authenticate, authorize, isAdmin, isTeacher } = require('../middleware/auth');
+const staff = authorize('ADMIN', 'TEACHER');
 const { validate, schemas } = require('../middleware/validate');
 
 // Get all students
-router.get('/', authenticate, studentController.getAll);
+router.get('/', authenticate, staff, studentController.getAll);
 
 // Get student by ID
-router.get('/:id', authenticate, studentController.getById);
+router.get('/:id', authenticate, staff, studentController.getById);
 
 // Get student submissions
-router.get('/:id/submissions', authenticate, studentController.getSubmissions);
+router.get('/:id/submissions', authenticate, staff, studentController.getSubmissions);
 
 // Create student (Admin only)
 router.post('/', authenticate, isAdmin, validate(schemas.student), studentController.create);

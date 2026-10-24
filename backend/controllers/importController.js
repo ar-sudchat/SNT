@@ -2,6 +2,7 @@ const csv = require('csv-parser');
 const xlsx = require('xlsx');
 const { Readable } = require('stream');
 const prisma = require('../config/database');
+const { IMPORT_TEMPLATES } = require('../config/importTemplates');
 
 const importController = {
   // Download template
@@ -9,15 +10,7 @@ const importController = {
     try {
       const { type } = req.params;
 
-      const templates = {
-        academicYear: 'Year,Name,StartDate,EndDate,IsCurrent,Status\n2567,ปีการศึกษา 2567,2024-05-16,2025-03-31,true,Active\n2568,ปีการศึกษา 2568,2025-05-16,2026-03-31,false,Active',
-        grade: 'GradeName,Description,Status\nม.1,มัธยมศึกษาปีที่ 1,Active\nม.2,มัธยมศึกษาปีที่ 2,Active',
-        class: 'ClassName,GradeName,TeacherCode,AcademicYear,Capacity,Status\nม.1/1,ม.1,T001,2567,40,Active',
-        student: 'StudentCode,StudentNumber,Name,ClassName,Email,Status\n6001,1,นก ทองคำ,ม.1/1,nok@school.ac.th,Active\n6002,2,ก้อง มั่นคง,ม.1/1,kong@school.ac.th,Active',
-        teacher: 'TeacherCode,Name,Email,Status\nT001,นาย ปรีชา สมใจ,preecha@school.ac.th,Active',
-        subject: 'SubjectCode,SubjectName,GradeName,AcademicYear,TeacherCode,Description,Status\nMA101,คณิตศาสตร์ ม.1,ม.1,2567,T001,วิชาคณิตศาสตร์ ม.1,Active',
-        task: 'SubjectCode,TaskName,TaskNumber,Description,Deadline,ScoringType,MaxScore,Status\nMA101,การบ้านเศษส่วน,1,แสดงวิธีทำโจทย์เศษส่วน,2025-02-10,PASS_FAIL,,Active'
-      };
+      const templates = IMPORT_TEMPLATES;
 
       if (!templates[type]) {
         return res.status(400).json({ error: 'ประเภท template ไม่ถูกต้อง' });
@@ -37,16 +30,18 @@ const importController = {
     const buffer = file.buffer;
     const mimetype = file.mimetype;
 
-    if (mimetype === 'application/json') {
-      return JSON.parse(buffer.toString());
+    const name = (file.originalname || '').toLowerCase();
+
+    if (mimetype === 'application/json' || name.endsWith('.json')) {
+      return JSON.parse(importController.decodeText(buffer));
     }
 
-    if (mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    if (mimetype === 'text/csv' || name.endsWith('.csv')) {
       return new Promise((resolve, reject) => {
         const results = [];
-        const stream = Readable.from(buffer.toString());
+        const stream = Readable.from(importController.decodeText(buffer));
         stream
-          .pipe(csv())
+          .pipe(csv({ mapHeaders: ({ header }) => header.trim() }))
           .on('data', (data) => results.push(data))
           .on('end', () => resolve(results))
           .on('error', reject);
@@ -57,7 +52,20 @@ const importController = {
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    return xlsx.utils.sheet_to_json(sheet);
+    return xlsx.utils.sheet_to_json(sheet).map(row =>
+      Object.fromEntries(Object.entries(row).map(([key, value]) => [String(key).trim(), value]))
+    );
+  },
+
+  // แปลงไฟล์ข้อความเป็น string: ตัด BOM, รองรับ UTF-8 และ Windows-874 (CSV จาก Excel ภาษาไทย)
+  decodeText(buffer) {
+    let text;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch (e) {
+      text = new TextDecoder('windows-874').decode(buffer);
+    }
+    return text.replace(/^\uFEFF/, '');
   },
 
   // Import academic years

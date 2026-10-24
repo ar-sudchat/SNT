@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { assertTeacherOwnsTask } = require('../middleware/ownership');
 
 const submissionController = {
   // Get all submissions
@@ -31,7 +32,7 @@ const submissionController = {
       res.json(submissions);
     } catch (error) {
       console.error('Get submissions error:', error);
-      res.status(500).json({ error: 'Failed to fetch submissions' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -54,13 +55,13 @@ const submissionController = {
       });
 
       if (!submission) {
-        return res.status(404).json({ error: 'Submission not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลการส่งงาน' });
       }
 
       res.json(submission);
     } catch (error) {
       console.error('Get submission error:', error);
-      res.status(500).json({ error: 'Failed to fetch submission' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -68,6 +69,9 @@ const submissionController = {
   async createOrUpdate(req, res) {
     try {
       const { studentId, taskId, status, notes, score } = req.body;
+
+      const denied = await assertTeacherOwnsTask(req, taskId);
+      if (denied) return res.status(denied.status).json({ error: denied.error });
 
       // Get teacher ID from user
       const reviewedById = req.user.teacherId || req.user.teacher?.id;
@@ -124,7 +128,7 @@ const submissionController = {
       res.json(submission);
     } catch (error) {
       console.error('Create/update submission error:', error);
-      res.status(500).json({ error: 'Failed to save submission' });
+      res.status(500).json({ error: 'บันทึกข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -132,6 +136,16 @@ const submissionController = {
   async bulkUpdate(req, res) {
     try {
       const { submissions } = req.body; // Array of { studentId, taskId, status, notes, score }
+
+      if (!Array.isArray(submissions)) {
+        return res.status(400).json({ error: 'submissions ต้องเป็นอาร์เรย์' });
+      }
+      // Ownership: every distinct task in the batch must belong to this teacher's subjects
+      const taskIds = [...new Set(submissions.map(s => s.taskId))];
+      for (const tid of taskIds) {
+        const denied = await assertTeacherOwnsTask(req, tid);
+        if (denied) return res.status(denied.status).json({ error: denied.error });
+      }
 
       const reviewedById = req.user.teacherId || req.user.teacher?.id;
       const results = {
@@ -191,12 +205,12 @@ const submissionController = {
       }
 
       res.json({
-        message: `Updated ${results.success.length} submissions, ${results.failed.length} failed`,
+        message: `à¸­à¸±à¸à¹à¸à¸ ${results.success.length} à¸£à¸²à¸¢à¸à¸²à¸£, à¹à¸¡à¹à¸ªà¸³à¹à¸£à¹à¸ ${results.failed.length} à¸£à¸²à¸¢à¸à¸²à¸£`,
         results
       });
     } catch (error) {
       console.error('Bulk update submissions error:', error);
-      res.status(500).json({ error: 'Failed to update submissions' });
+      res.status(500).json({ error: 'แก้ไขข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -217,7 +231,7 @@ const submissionController = {
       });
 
       if (!submission) {
-        return res.status(404).json({ error: 'Submission not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลการส่งงาน' });
       }
 
       res.json({
@@ -226,7 +240,7 @@ const submissionController = {
       });
     } catch (error) {
       console.error('Get submission history error:', error);
-      res.status(500).json({ error: 'Failed to fetch history' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   }
 };

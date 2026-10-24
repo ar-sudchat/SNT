@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { assertTeacherOwnsSubject, assertTeacherOwnsTask } = require('../middleware/ownership');
 
 const taskController = {
   // Get all tasks
@@ -103,6 +104,9 @@ const taskController = {
     try {
       const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
 
+      const denied = await assertTeacherOwnsSubject(req, subjectId);
+      if (denied) return res.status(denied.status).json({ error: denied.error });
+
       // Get subject to find the responsible teacher
       const subject = await prisma.subject.findUnique({
         where: { id: subjectId },
@@ -122,9 +126,7 @@ const taskController = {
       });
 
       if (existingTask) {
-        return res.status(400).json({
-          error: `งานที่ ${taskNumber} มีอยู่แล้วในวิชานี้`
-        });
+        return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });
       }
 
       // Use the subject's teacher as the task owner
@@ -150,6 +152,9 @@ const taskController = {
 
       res.status(201).json(task);
     } catch (error) {
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });
+      }
       console.error('Create task error:', error);
       res.status(500).json({ error: 'ไม่สามารถเพิ่มงานได้' });
     }
@@ -161,6 +166,12 @@ const taskController = {
       const { id } = req.params;
       const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
 
+      // Must own the task's current subject AND the target subject
+      const deniedTask = await assertTeacherOwnsTask(req, id);
+      if (deniedTask) return res.status(deniedTask.status).json({ error: deniedTask.error });
+      const denied = await assertTeacherOwnsSubject(req, subjectId);
+      if (denied) return res.status(denied.status).json({ error: denied.error });
+
       // Check for duplicate task number in subject
       const existingTask = await prisma.task.findFirst({
         where: {
@@ -171,9 +182,7 @@ const taskController = {
       });
 
       if (existingTask) {
-        return res.status(400).json({
-          error: `งานที่ ${taskNumber} มีอยู่แล้วในวิชานี้`
-        });
+        return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });
       }
 
       const task = await prisma.task.update({
@@ -196,6 +205,9 @@ const taskController = {
 
       res.json(task);
     } catch (error) {
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });
+      }
       console.error('Update task error:', error);
       res.status(500).json({ error: 'ไม่สามารถแก้ไขข้อมูลงานได้' });
     }
@@ -205,6 +217,9 @@ const taskController = {
   async delete(req, res) {
     try {
       const { id } = req.params;
+
+      const denied = await assertTeacherOwnsTask(req, id);
+      if (denied) return res.status(denied.status).json({ error: denied.error });
 
       // Delete related submissions first
       await prisma.submission.deleteMany({

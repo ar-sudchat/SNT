@@ -21,7 +21,7 @@ const monitorController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       // Determine which academic year to use
@@ -143,7 +143,7 @@ const monitorController = {
       });
     } catch (error) {
       console.error('Get student monitor error:', error);
-      res.status(500).json({ error: 'Failed to fetch student monitor data' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -168,7 +168,7 @@ const monitorController = {
       });
 
       if (!classData) {
-        return res.status(404).json({ error: 'Class not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลห้องเรียน' });
       }
 
       // Get subjects for this class's grade
@@ -289,7 +289,7 @@ const monitorController = {
       });
     } catch (error) {
       console.error('Get class monitor error:', error);
-      res.status(500).json({ error: 'Failed to fetch class monitor data' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -314,7 +314,7 @@ const monitorController = {
       });
 
       if (!subject) {
-        return res.status(404).json({ error: 'Subject not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลวิชา' });
       }
 
       // Build student filter - match subject's grade and academic year, optionally filter by class
@@ -432,7 +432,7 @@ const monitorController = {
       });
     } catch (error) {
       console.error('Get subject monitor error:', error);
-      res.status(500).json({ error: 'Failed to fetch subject monitor data' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -442,7 +442,7 @@ const monitorController = {
       const { qrData } = req.body;
 
       if (!qrData) {
-        return res.status(400).json({ error: 'QR data is required' });
+        return res.status(400).json({ error: 'กรุณาระบุข้อมูล QR' });
       }
 
       // QR format: SNT-{studentCode}-{subjectCode}-{academicYear}
@@ -450,7 +450,7 @@ const monitorController = {
       const parts = qrData.split('-');
 
       if (parts.length < 4 || parts[0] !== 'SNT') {
-        return res.status(400).json({ error: 'Invalid QR code format' });
+        return res.status(400).json({ error: 'รูปแบบ QR code ไม่ถูกต้อง' });
       }
 
       const studentCode = parts[1];
@@ -471,7 +471,7 @@ const monitorController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       // Find subject
@@ -508,7 +508,7 @@ const monitorController = {
       });
     } catch (error) {
       console.error('Parse QR code error:', error);
-      res.status(500).json({ error: 'Failed to parse QR code' });
+      res.status(500).json({ error: 'อ่านข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -530,7 +530,7 @@ const monitorController = {
       });
 
       if (!subject) {
-        return res.status(404).json({ error: 'Subject not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลวิชา' });
       }
 
       // Get student
@@ -544,7 +544,7 @@ const monitorController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
       }
 
       // Get submissions
@@ -584,7 +584,7 @@ const monitorController = {
       });
     } catch (error) {
       console.error('Get subject tasks error:', error);
-      res.status(500).json({ error: 'Failed to fetch subject tasks' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   }
 };

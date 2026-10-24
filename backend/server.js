@@ -7,6 +7,9 @@ dotenv.config();
 
 const app = express();
 
+// อยู่หลัง reverse proxy (nginx / แพลตฟอร์ม) — ให้ req.ip เป็น IP จริงของผู้ใช้ ไม่ใช่ของ proxy
+app.set('trust proxy', 1);
+
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
@@ -26,6 +29,8 @@ app.use(cors({
   // round-trip every request (matters on a high-latency Thailand<->EU link)
   maxAge: 86400
 }));
+app.disable('x-powered-by');
+app.use(require('./middleware/securityHeaders'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -44,6 +49,8 @@ const importRoutes = require('./routes/import');
 const reportRoutes = require('./routes/reports');
 const transferRoutes = require('./routes/transfer');
 const monitorRoutes = require('./routes/monitor');
+const aiRoutes = require('./routes/ai');
+const parentRoutes = require('./routes/parent');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -60,6 +67,9 @@ app.use('/api/import', importRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/transfer', transferRoutes);
 app.use('/api/monitor', monitorRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/parent-links', parentRoutes.linksRouter);
+app.use('/api/public/parent', parentRoutes.publicRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -68,16 +78,21 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  // ไฟล์อัปโหลดไม่ผ่าน (ชนิดไฟล์ผิด / ใหญ่เกิน) → แจ้งผู้ใช้เป็นภาษาไทย
+  if (err.name === 'MulterError' || err.status === 400) {
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'ไฟล์ใหญ่เกิน 10MB' : err.message;
+    return res.status(400).json({ error: message });
+  }
   console.error(err.stack);
   res.status(500).json({
-    error: 'Something went wrong!',
+    error: 'เกิดข้อผิดพลาด กรุณาลองใหม่',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'ไม่พบข้อมูล' });
 });
 
 const PORT = process.env.PORT || 5000;

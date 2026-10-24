@@ -28,6 +28,6 @@ router.get('/teacher/student/:studentId', authenticate, isTeacher, reportControl
 router.get('/student/my-submissions', authenticate, reportController.studentSubmissions);
 
 // Export report to CSV/Excel
-router.get('/export/:type', authenticate, reportController.exportReport);
+router.get('/export/:type', authenticate, isTeacher, reportController.exportReport);
 
 module.exports = router;

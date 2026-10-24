@@ -16,10 +16,15 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/json'
     ];
-    if (allowedMimes.includes(file.mimetype)) {
+    // บาง browser ส่ง CSV มาเป็น application/octet-stream หรือ text/plain จึงตรวจนามสกุลด้วย
+    const allowedExts = ['.csv', '.xlsx', '.xls', '.json'];
+    const name = (file.originalname || '').toLowerCase();
+    if (allowedMimes.includes(file.mimetype) || allowedExts.some(ext => name.endsWith(ext))) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only CSV, Excel, and JSON files are allowed.'));
+      const err = new Error('รองรับเฉพาะไฟล์ CSV, Excel (.xlsx, .xls) และ JSON');
+      err.status = 400;
+      cb(err);
     }
   }
 });

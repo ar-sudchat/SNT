@@ -32,7 +32,7 @@ const schemas = {
   register: Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    role: Joi.string().valid('ADMIN', 'TEACHER', 'STUDENT').required(),
+    role: Joi.string().valid('TEACHER', 'STUDENT').required(), // ADMIN cannot be created via API
     teacherId: Joi.number().integer().optional(),
     studentId: Joi.number().integer().optional()
   }),

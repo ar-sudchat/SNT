@@ -19,7 +19,7 @@ const academicYearController = {
       res.json(academicYears);
     } catch (error) {
       console.error('Get academic years error:', error);
-      res.status(500).json({ error: 'Failed to fetch academic years' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -39,13 +39,13 @@ const academicYearController = {
       });
 
       if (!currentYear) {
-        return res.status(404).json({ error: 'No current academic year set' });
+        return res.status(404).json({ error: 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน' });
       }
 
       res.json(currentYear);
     } catch (error) {
       console.error('Get current academic year error:', error);
-      res.status(500).json({ error: 'Failed to fetch current academic year' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -78,13 +78,13 @@ const academicYearController = {
       });
 
       if (!academicYear) {
-        return res.status(404).json({ error: 'Academic year not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลปีการศึกษา' });
       }
 
       res.json(academicYear);
     } catch (error) {
       console.error('Get academic year error:', error);
-      res.status(500).json({ error: 'Failed to fetch academic year' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -99,7 +99,7 @@ const academicYearController = {
       });
 
       if (existingYear) {
-        return res.status(400).json({ error: 'Academic year already exists' });
+        return res.status(400).json({ error: 'มีปีการศึกษานี้แล้ว' });
       }
 
       // If setting as current, unset all other current years
@@ -124,7 +124,7 @@ const academicYearController = {
       res.status(201).json(academicYear);
     } catch (error) {
       console.error('Create academic year error:', error);
-      res.status(500).json({ error: 'Failed to create academic year' });
+      res.status(500).json({ error: 'สร้างข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -143,7 +143,7 @@ const academicYearController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Academic year already exists' });
+        return res.status(400).json({ error: 'มีปีการศึกษานี้แล้ว' });
       }
 
       // If setting as current, unset all other current years
@@ -172,7 +172,7 @@ const academicYearController = {
       res.json(academicYear);
     } catch (error) {
       console.error('Update academic year error:', error);
-      res.status(500).json({ error: 'Failed to update academic year' });
+      res.status(500).json({ error: 'แก้ไขข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -196,7 +196,7 @@ const academicYearController = {
       res.json(academicYear);
     } catch (error) {
       console.error('Set current academic year error:', error);
-      res.status(500).json({ error: 'Failed to set current academic year' });
+      res.status(500).json({ error: 'ตั้งค่าข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -216,7 +216,7 @@ const academicYearController = {
 
       if (classCount > 0 || subjectCount > 0) {
         return res.status(400).json({
-          error: 'Cannot delete academic year with existing classes or subjects'
+          error: 'ลบไม่ได้ เพราะยังมีห้องเรียนหรือวิชาในปีการศึกษานี้'
         });
       }
 
@@ -224,10 +224,10 @@ const academicYearController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Academic year deleted successfully' });
+      res.json({ message: 'ลบปีการศึกษาเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete academic year error:', error);
-      res.status(500).json({ error: 'Failed to delete academic year' });
+      res.status(500).json({ error: 'ลบข้อมูลไม่สำเร็จ' });
     }
   }
 };

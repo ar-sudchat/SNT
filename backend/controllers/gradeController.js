@@ -16,7 +16,7 @@ const gradeController = {
       res.json(grades);
     } catch (error) {
       console.error('Get grades error:', error);
-      res.status(500).json({ error: 'Failed to fetch grades' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -40,13 +40,13 @@ const gradeController = {
       });
 
       if (!grade) {
-        return res.status(404).json({ error: 'Grade not found' });
+        return res.status(404).json({ error: 'ไม่พบข้อมูลระดับชั้น' });
       }
 
       res.json(grade);
     } catch (error) {
       console.error('Get grade error:', error);
-      res.status(500).json({ error: 'Failed to fetch grade' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -60,7 +60,7 @@ const gradeController = {
       });
 
       if (existingGrade) {
-        return res.status(400).json({ error: 'Grade name already exists' });
+        return res.status(400).json({ error: 'มีชื่อระดับชั้นนี้แล้ว' });
       }
 
       const grade = await prisma.grade.create({
@@ -70,7 +70,7 @@ const gradeController = {
       res.status(201).json(grade);
     } catch (error) {
       console.error('Create grade error:', error);
-      res.status(500).json({ error: 'Failed to create grade' });
+      res.status(500).json({ error: 'สร้างข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -88,7 +88,7 @@ const gradeController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'Grade name already exists' });
+        return res.status(400).json({ error: 'มีชื่อระดับชั้นนี้แล้ว' });
       }
 
       const grade = await prisma.grade.update({
@@ -99,7 +99,7 @@ const gradeController = {
       res.json(grade);
     } catch (error) {
       console.error('Update grade error:', error);
-      res.status(500).json({ error: 'Failed to update grade' });
+      res.status(500).json({ error: 'แก้ไขข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -115,7 +115,7 @@ const gradeController = {
 
       if (classCount > 0) {
         return res.status(400).json({
-          error: 'Cannot delete grade with existing classes'
+          error: 'ลบไม่ได้ เพราะยังมีห้องเรียนในระดับชั้นนี้'
         });
       }
 
@@ -123,10 +123,10 @@ const gradeController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Grade deleted successfully' });
+      res.json({ message: 'ลบระดับชั้นเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete grade error:', error);
-      res.status(500).json({ error: 'Failed to delete grade' });
+      res.status(500).json({ error: 'ลบข้อมูลไม่สำเร็จ' });
     }
   }
 };

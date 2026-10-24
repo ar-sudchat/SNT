@@ -1,17 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const taskController = require('../controllers/taskController');
-const { authenticate, isAdmin, isTeacher } = require('../middleware/auth');
+const { authenticate, authorize, isAdmin, isTeacher } = require('../middleware/auth');
+const staff = authorize('ADMIN', 'TEACHER');
 const { validate, schemas } = require('../middleware/validate');
 
 // Get all tasks
-router.get('/', authenticate, taskController.getAll);
+router.get('/', authenticate, staff, taskController.getAll);
 
 // Get task by ID
-router.get('/:id', authenticate, taskController.getById);
+router.get('/:id', authenticate, staff, taskController.getById);
 
 // Get task submissions
-router.get('/:id/submissions', authenticate, taskController.getSubmissions);
+router.get('/:id/submissions', authenticate, staff, taskController.getSubmissions);
 
 // Create task (Admin/Teacher)
 router.post('/', authenticate, isTeacher, validate(schemas.task), taskController.create);

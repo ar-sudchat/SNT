@@ -14,7 +14,7 @@ const qrcodeController = {
       });
 
       if (existing) {
-        return res.status(400).json({ error: 'QR code already exists for this student and subject' });
+        return res.status(400).json({ error: 'มี QR code ของนักเรียนและวิชานี้แล้ว' });
       }
 
       // Generate unique QR code data
@@ -48,7 +48,7 @@ const qrcodeController = {
       res.status(201).json(qrcode);
     } catch (error) {
       console.error('Generate QR code error:', error);
-      res.status(500).json({ error: 'Failed to generate QR code' });
+      res.status(500).json({ error: 'สร้างข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -105,12 +105,12 @@ const qrcodeController = {
       }
 
       res.json({
-        message: `Generated ${results.success.length} QR codes, ${results.failed.length} failed`,
+        message: `à¸ªà¸£à¹à¸²à¸ QR code ${results.success.length} à¸£à¸²à¸¢à¸à¸²à¸£, à¹à¸¡à¹à¸ªà¸³à¹à¸£à¹à¸ ${results.failed.length} à¸£à¸²à¸¢à¸à¸²à¸£`,
         results
       });
     } catch (error) {
       console.error('Generate bulk QR codes error:', error);
-      res.status(500).json({ error: 'Failed to generate QR codes' });
+      res.status(500).json({ error: 'สร้างข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -141,11 +141,11 @@ const qrcodeController = {
       });
 
       if (!qrcode) {
-        return res.status(404).json({ error: 'Invalid QR code' });
+        return res.status(404).json({ error: 'QR code ไม่ถูกต้อง' });
       }
 
       if (qrcode.status === 'INACTIVE') {
-        return res.status(400).json({ error: 'QR code is inactive' });
+        return res.status(400).json({ error: 'QR code นี้ถูกปิดใช้งาน' });
       }
 
       // Get submissions for this student and subject
@@ -183,7 +183,7 @@ const qrcodeController = {
       });
     } catch (error) {
       console.error('Scan QR code error:', error);
-      res.status(500).json({ error: 'Failed to scan QR code' });
+      res.status(500).json({ error: 'สแกนข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -203,13 +203,13 @@ const qrcodeController = {
       });
 
       if (!qrcode) {
-        return res.status(404).json({ error: 'QR code not found' });
+        return res.status(404).json({ error: 'ไม่พบ QR code' });
       }
 
       res.json(qrcode);
     } catch (error) {
       console.error('Get QR code error:', error);
-      res.status(500).json({ error: 'Failed to fetch QR code' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -223,14 +223,14 @@ const qrcodeController = {
       });
 
       if (!qrcode || !qrcode.qrcodeImage) {
-        return res.status(404).json({ error: 'QR code image not found' });
+        return res.status(404).json({ error: 'ไม่พบรูป QR code' });
       }
 
       // Return the base64 image
       res.json({ image: qrcode.qrcodeImage });
     } catch (error) {
       console.error('Get QR code image error:', error);
-      res.status(500).json({ error: 'Failed to fetch QR code image' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -240,7 +240,7 @@ const qrcodeController = {
       const { studentCode, subjectId } = req.body;
 
       if (!studentCode) {
-        return res.status(400).json({ error: 'Student code is required' });
+        return res.status(400).json({ error: 'กรุณาระบุรหัสนักเรียน' });
       }
 
       // Find student by code
@@ -320,7 +320,7 @@ const qrcodeController = {
       });
     } catch (error) {
       console.error('Search by student error:', error);
-      res.status(500).json({ error: 'Failed to search student' });
+      res.status(500).json({ error: 'ค้นหาข้อมูลไม่สำเร็จ' });
     }
   },
 
@@ -356,7 +356,7 @@ const qrcodeController = {
       res.json(printData);
     } catch (error) {
       console.error('Print QR codes error:', error);
-      res.status(500).json({ error: 'Failed to get print data' });
+      res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
     }
   }
 };

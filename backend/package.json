@@ -10,7 +10,8 @@
     "migrate": "npx prisma migrate dev",
     "migrate:prod": "npx prisma migrate deploy",
     "seed": "node prisma/seed.js",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "test": "node --test tests/*.test.js"
   },
   "keywords": [
     "student",

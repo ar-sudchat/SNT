@@ -146,7 +146,7 @@ const teacherController = {
         where: { id: parseInt(id) }
       });
 
-      res.json({ message: 'Teacher deleted successfully' });
+      res.json({ message: 'ลบครูเรียบร้อยแล้ว' });
     } catch (error) {
       console.error('Delete teacher error:', error);
       res.status(500).json({ error: 'ไม่สามารถลบครูได้' });
