@@ -37,6 +37,12 @@ import Profile from './pages/Profile';
 import Landing from './pages/landing/Landing';
 import { OpsTenants } from './pages/ops';
 import GroupSettings from './pages/groups/GroupSettings';
+import LessonLogHome from './pages/lessonlog/LessonLogHome';
+import CreateRecord from './pages/lessonlog/CreateRecord';
+import RecordPage from './pages/lessonlog/RecordPage';
+import ExportPage from './pages/lessonlog/ExportPage';
+import SummaryPage from './pages/lessonlog/SummaryPage';
+import TemplatesPage from './pages/lessonlog/TemplatesPage';
 
 // เส้นทางเก่า → หน้าติดตามใหม่
 const LegacySubjectRedirect = () => {
@@ -285,6 +291,56 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN']}>
                   <PlanPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* บันทึกหลังแผน: เส้นทางตายตัวต้องมาก่อน :id */}
+            <Route
+              path="lesson-log"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <LessonLogHome />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="lesson-log/new"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <CreateRecord />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="lesson-log/export"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <ExportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="lesson-log/summary"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <SummaryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="lesson-log/templates"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <TemplatesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="lesson-log/:id"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <RecordPage />
                 </ProtectedRoute>
               }
             />

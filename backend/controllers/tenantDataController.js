@@ -4,8 +4,10 @@ const audit = require('../services/audit');
 
 const DELETE_GRACE_DAYS = 30;
 // Tenant-scoped models exported (scoped client adds tenantId filter automatically).
+// If a purge job is ever added, delete in FK order: assessmentScore -> assessmentRecord -> assessmentTemplate.
 const EXPORT_MODELS = ['academicYear', 'grade', 'class', 'student', 'teacher', 'subject', 'task',
-  'qRCode', 'submission', 'aiConversation', 'aiMessage', 'invite', 'auditLog'];
+  'qRCode', 'submission', 'aiConversation', 'aiMessage', 'invite', 'auditLog',
+  'assessmentTemplate', 'assessmentRecord', 'assessmentScore'];
 const SECRET_KEY = /pass(word)?$|^pin$|secret|token$/i;
 
 const strip = (v) => JSON.parse(JSON.stringify(v, (k, val) => (k && SECRET_KEY.test(k) && k !== 'qrcodeData' ? undefined : val)));

@@ -51,6 +51,7 @@ const Layout = () => {
         { path: homePath, label: 'หน้าแรก', icon: ICON.home },
         { path: '/monitor', label: 'ติดตามงาน', icon: ICON.chart },
         { path: '/admin/tasks', label: 'งาน', icon: ICON.task },
+        { path: '/lesson-log', label: 'บันทึกหลังแผน', icon: ICON.lessonlog },
         { path: '/ai', label: 'ผู้ช่วย AI', icon: ICON.ai },
         { path: '/tools', label: 'เครื่องมือห้องเรียน', icon: ICON.tools },
         ...(canManage ? [{ path: '/admin/settings', label: 'ตั้งค่าระบบ', icon: ICON.gear }] : [])
@@ -184,7 +185,7 @@ const Layout = () => {
               type="button"
               onClick={() => setMoreOpen(true)}
               aria-expanded={moreOpen}
-              className={tabCls(moreOpen || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile') || isActive('/group'))}
+              className={tabCls(moreOpen || isActive('/lesson-log') || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile') || isActive('/group'))}
             >
               <Icon d={ICON.more} className="h-6 w-6" />เพิ่มเติม
             </button>
@@ -202,6 +203,7 @@ const Layout = () => {
               <button type="button" onClick={() => setMoreOpen(false)} className="min-h-[44px] px-3 text-sm text-gray-600">ปิด</button>
             </div>
             <div className="divide-y divide-gray-100">
+              <Link to="/lesson-log" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.lessonlog} /> บันทึกหลังแผน</Link>
               <Link to="/ai" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.ai} /> ผู้ช่วย AI</Link>
               <Link to="/tools" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.tools} /> เครื่องมือห้องเรียน</Link>
               {canManage && (

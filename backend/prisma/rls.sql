@@ -9,7 +9,8 @@ DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['AcademicYear','Grade','Class','Student','Teacher','Subject','Task',
-                           'QRCode','Submission','AiConversation','AiMessage','Invite','AuditLog']
+                           'QRCode','Submission','AiConversation','AiMessage','Invite','AuditLog',
+                           'AssessmentTemplate','AssessmentRecord','AssessmentScore']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

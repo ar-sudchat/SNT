@@ -263,6 +263,25 @@ export const aiAPI = {
   draftTask: (data) => api.post('/ai/draft-task', data, { timeout: AI_TIMEOUT })
 };
 
+// บันทึกหลังแผน — contract: docs/LESSON-LOG.md
+export const assessmentAPI = {
+  templates: () => api.get('/assessments/templates'),
+  createTemplate: (data) => api.post('/assessments/templates', data),
+  updateTemplate: (id, data) => api.put(`/assessments/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/assessments/templates/${id}`),
+  settings: () => api.get('/assessments/settings'),
+  saveSettings: (data) => api.put('/assessments/settings', data),
+  records: (params) => api.get('/assessments/records', { params }),
+  createRecord: (data) => api.post('/assessments/records', data),
+  record: (id) => api.get(`/assessments/records/${id}`),
+  updateRecord: (id, data) => api.put(`/assessments/records/${id}`, data),
+  saveScores: (id, scores) => api.put(`/assessments/records/${id}/scores`, { scores }),
+  deleteRecord: (id) => api.delete(`/assessments/records/${id}`),
+  fillFromTask: (id, data) => api.post(`/assessments/records/${id}/fill-from-task`, data),
+  summary: (params) => api.get('/assessments/summary', { params }),
+  exportDocx: (ids) => api.get('/assessments/export', { params: { ids: ids.join(',') }, responseType: 'blob', timeout: 120000 })
+};
+
 export const tenantAPI = {
   memberships: () => api.get('/auth/memberships'),
   switchTenant: (tenantId) => api.post('/auth/switch-tenant', { tenantId })

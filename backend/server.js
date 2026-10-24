@@ -78,6 +78,7 @@ app.use('/api/monitor', monitorRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tenant', require('./routes/tenantData'));
 app.use('/api/plan', require('./routes/plan'));
+app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/parent-links', parentRoutes.linksRouter);
 app.use('/api/public/parent', parentRoutes.publicRouter);
 app.use('/api/public/tenant', require('./routes/publicTenant'));
