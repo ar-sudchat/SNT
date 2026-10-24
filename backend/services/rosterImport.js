@@ -13,10 +13,11 @@ const clean = v => String(v ?? '').trim();
 const normalizeHeader = s => clean(s).toLowerCase().replace(/[\s.\-_/()]/g, '');
 const known = s => fields.find(f => synonyms[f].includes(normalizeHeader(s)));
 const prefixRE = /^(เด็กชาย|เด็กหญิง|นางสาว|ด\.ช\.|ด\.ญ\.|น\.ส\.|นาย|นาง)/;
-function readTable(file) {
-  let raw, sheetName = '';
+const toRows = raw => raw.map((r, i) => { const a = Array.from(r, clean); Object.defineProperty(a, 'fileRow', { value: i + 1 }); return a; }).filter(r => r.some(Boolean));
+// Every sheet of the file (CSV = one sheet). School lists often keep one room per sheet.
+function readSheets(file) {
   if (/\.csv$/i.test(file.originalname || '') || file.mimetype === 'text/csv') {
-    const text = decodeText(file.buffer); raw = []; let row = [], cell = '', quoted = false;
+    const text = decodeText(file.buffer); const raw = []; let row = [], cell = '', quoted = false;
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
       if (c === '"') { if (quoted && text[i + 1] === '"') { cell += '"'; i++; } else quoted = !quoted; }
@@ -26,13 +27,16 @@ function readTable(file) {
       } else cell += c;
     }
     row.push(cell); raw.push(row);
-  } else {
-    const book = xlsx.read(file.buffer, { type: 'buffer' }); sheetName = book.SheetNames[0];
-    raw = xlsx.utils.sheet_to_json(book.Sheets[sheetName], { header: 1, defval: '', raw: false, blankrows: true });
+    return [{ sheetName: '', rows: toRows(raw) }];
   }
-  const rows = raw.map((r, i) => { const a = Array.from(r, clean); Object.defineProperty(a, 'fileRow', { value: i + 1 }); return a; }).filter(r => r.some(Boolean));
-  return { sheetName, rows };
+  const book = xlsx.read(file.buffer, { type: 'buffer' });
+  return book.SheetNames.map(sheetName => ({
+    sheetName,
+    rows: toRows(xlsx.utils.sheet_to_json(book.Sheets[sheetName], { header: 1, defval: '', raw: false, blankrows: true })),
+  }));
 }
+// First sheet only (kept for callers that read one table).
+function readTable(file) { return readSheets(file)[0]; }
 function findHeaderRow(rows) {
   let best = 0, score = 0;
   rows.slice(0, 15).forEach((r, i) => { const n = r.filter(known).length; if (n > score) { best = i; score = n; } }); return best;
@@ -70,6 +74,9 @@ function columnProfiles(headers, rows) {
 function guessMapping(headers, rows) {
   const mapping = Object.fromEntries(fields.map(f => [f, null]));
   headers.forEach((h, i) => { const f = known(h); if (f && mapping[f] === null) mapping[f] = i; });
+  // "เลขที่" (number in the room) beats a running "ลำดับ" column when a file has both.
+  const noIdx = headers.findIndex(h => normalizeHeader(h) === 'เลขที่');
+  if (noIdx >= 0) mapping.studentNumber = noIdx;
   const shapes = columnProfiles(headers, rows);
   const infer = { 'ตัวเลข 4 หลักขึ้นไป ไม่ซ้ำ': 'studentCode', 'เลขลำดับ 1..N': 'studentNumber', 'ข้อความไทย ขึ้นต้นด้วยคำนำหน้าชื่อ': 'fullName', 'คำนำหน้าเท่านั้น': 'prefix', 'รูปแบบห้อง เช่น ป.4/1': 'className' };
   shapes.forEach(p => { const f = infer[p.shape]; if (f && mapping[f] === null && !Object.values(mapping).includes(p.index)) mapping[f] = p.index; });
@@ -89,7 +96,7 @@ function validateMapping(input, count) {
   return Object.fromEntries(fields.map(f => [f, input[f] ?? null]));
 }
 function buildStudents(rows, mapping, { defaultClass = '', startRow = 2 } = {}) {
-  const students = [], issues = [], seen = new Set();
+  const students = [], issues = [], seen = new Set(), draft = [];
   rows.forEach((r, i) => {
     const row = r.fileRow || startRow + i, get = f => mapping[f] == null ? '' : clean(r[mapping[f]]);
     const name = (get('fullName') || (get('firstName') ? get('prefix') + get('firstName') + ' ' + get('lastName') : '')).replace(/\s+/g, ' ').trim();
@@ -98,11 +105,33 @@ function buildStudents(rows, mapping, { defaultClass = '', startRow = 2 } = {}) 
     if (!className) issues.push({ row, message: 'ไม่มีห้อง' });
     const number = get('studentNumber');
     const studentNumber = /^\d+$/.test(number) && +number > 0 && +number <= 2147483647 ? +number : null;
-    const codeGenerated = !get('studentCode');
-    const studentCode = get('studentCode') || `${className.replace(/[./\s]/g, '')}-${String(studentNumber ?? i + 1).padStart(2, '0')}`;
-    if (seen.has(studentCode)) { issues.push({ row, message: 'รหัสซ้ำในไฟล์' }); return; }
-    seen.add(studentCode); students.push({ row, studentCode, studentNumber, name, className, codeGenerated });
-  }); return { students, issues };
+    draft.push({ row, order: i, code: get('studentCode'), studentNumber, name, className });
+  });
+  restartNumbersPerClass(draft);
+  draft.forEach(d => {
+    const codeGenerated = !d.code;
+    const studentCode = d.code || `${d.className.replace(/[./\s]/g, '')}-${String(d.studentNumber ?? d.order + 1).padStart(2, '0')}`;
+    if (seen.has(studentCode)) { issues.push({ row: d.row, message: 'รหัสซ้ำในไฟล์' }); return; }
+    seen.add(studentCode); students.push({ row: d.row, studentCode, studentNumber: d.studentNumber, name: d.name, className: d.className, codeGenerated });
+  });
+  issues.sort((a, b) => a.row - b.row);
+  return { students, issues };
+}
+// A multi-room file often numbers students in one running sequence (room 1: 1–34, room 2: 35–69).
+// When a room's numbers are one consecutive run that does not start at 1, restart them at 1 for that room.
+// Single-room files are left alone (a teacher may add students 31–35 to an existing room).
+function restartNumbersPerClass(list) {
+  const byClass = new Map();
+  for (const s of list) if (s.studentNumber != null) {
+    if (!byClass.has(s.className)) byClass.set(s.className, []);
+    byClass.get(s.className).push(s);
+  }
+  if (byClass.size < 2) return;
+  for (const group of byClass.values()) {
+    const nums = group.map(s => s.studentNumber);
+    const min = Math.min(...nums), max = Math.max(...nums);
+    if (min > 1 && max - min + 1 === group.length && new Set(nums).size === group.length) group.forEach(s => { s.studentNumber -= min - 1; });
+  }
 }
 async function aiMapping(headers, profiles) {
   // Unknown headers may themselves contain student data (e.g. a headerless file).
@@ -127,4 +156,4 @@ async function planImport(students) {
   const codes = new Set(existing.map(s => s.studentCode)); const update = students.filter(s => codes.has(s.studentCode)).length;
   return { create: students.length - update, update, newClasses: names.filter(n => !classes.some(c => c.className === n)), newGrades: grades.filter(n => !foundGrades.some(g => g.gradeName === n)), currentYear: year?.year || null };
 }
-module.exports = { readTable, findHeaderRow, normalizeHeader, guessMapping, classFromContext, normalizeClassName, gradeOf, buildStudents, aiMapping, columnProfiles, validateMapping, confidenceOf, planImport };
+module.exports = { readSheets, readTable, restartNumbersPerClass, findHeaderRow, normalizeHeader, guessMapping, classFromContext, normalizeClassName, gradeOf, buildStudents, aiMapping, columnProfiles, validateMapping, confidenceOf, planImport };

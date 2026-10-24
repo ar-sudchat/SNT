@@ -54,3 +54,16 @@ test('term/year in a title is not a class', () => {
   assert.equal(r.normalizeClassName('1/2569'), '1/2569');
 });
 test('quoted CSV and empty rows', () => { const { rows } = csv('Name,ClassName\n"สมชาย, ใจดี",ป.4/1\n\n'); assert.equal(rows.length, 2); assert.equal(rows[1][0], 'สมชาย, ใจดี'); });
+test('running numbers across rooms restart at 1 per room; single room untouched', () => {
+  const m = r.guessMapping(['ลำดับ', 'ชื่อ-สกุล', 'ห้อง'], []).mapping;
+  const rows = [['1', 'ก ก', 'ป.4/1'], ['2', 'ข ข', 'ป.4/1'], ['3', 'ค ค', 'ป.4/2'], ['4', 'ง ง', 'ป.4/2'], ['5', 'จ จ', 'ป.4/2']];
+  const { students } = r.buildStudents(rows, m);
+  assert.deepEqual(students.map(s => `${s.className}:${s.studentNumber}`), ['ป.4/1:1', 'ป.4/1:2', 'ป.4/2:1', 'ป.4/2:2', 'ป.4/2:3']);
+  assert.deepEqual(students.filter(s => s.className === 'ป.4/2').map(s => s.studentCode), ['ป42-01', 'ป42-02', 'ป42-03']);
+  const one = r.buildStudents([['31', 'ก ก', 'ป.4/1'], ['32', 'ข ข', 'ป.4/1']], m).students;
+  assert.deepEqual(one.map(s => s.studentNumber), [31, 32]);
+});
+test('เลขที่ wins over ลำดับ when both exist', () => {
+  const { mapping } = r.guessMapping(['ลำดับ', 'เลขที่', 'ชื่อ-สกุล', 'ห้อง'], [['70', '1', 'ก ก', 'ป.4/2']]);
+  assert.equal(mapping.studentNumber, 1);
+});

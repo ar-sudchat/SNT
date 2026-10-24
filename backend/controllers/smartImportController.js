@@ -8,36 +8,72 @@ exports.preview = async (req, res) => {
   try {
     if (!req.file) return fail(res, 'กรุณาเลือกไฟล์ที่ต้องการนำเข้า');
     if (!/\.(csv|xlsx|xls)$/i.test(req.file.originalname)) return fail(res, 'รองรับไฟล์ Excel หรือ CSV');
-    const { rows, sheetName } = roster.readTable(req.file);
-    if (!rows.length) return fail(res, 'ไฟล์ไม่มีข้อมูล');
-    let index = roster.findHeaderRow(rows);
-    if (req.body.headerRow !== undefined) {
-      const value = Number(req.body.headerRow);
-      index = rows.findIndex((r, i) => (r.fileRow !== undefined ? r.fileRow - 1 : i) === value);
-      if (!Number.isInteger(value) || index < 0) return fail(res, 'แถวหัวคอลัมน์ไม่ถูกต้อง');
-    }
-    const headers = rows[index], data = rows.slice(index + 1);
-    if (data.length > 3000) return fail(res, 'นำเข้าได้ครั้งละไม่เกิน 3,000 คน');
-    const defaultClass = roster.normalizeClassName(req.body.defaultClass !== undefined ? req.body.defaultClass : roster.classFromContext(rows.slice(0, index), sheetName));
-    let { mapping } = roster.guessMapping(headers, data), mappingSource = 'rules';
+    // Read every sheet; each one finds its own header row, columns and room (from the sheet name or a title line).
+    const sheets = roster.readSheets(req.file).filter(sh => sh.rows.length);
+    if (!sheets.length) return fail(res, 'ไฟล์ไม่มีข้อมูล');
+    const single = sheets.length === 1;
     const notes = [];
-    if (req.body.mapping !== undefined) {
-      try { mapping = roster.validateMapping(JSON.parse(req.body.mapping), headers.length); } catch (_) { mapping = null; }
-      if (!mapping) return fail(res, 'การเลือกคอลัมน์ไม่ถูกต้อง');
-      mappingSource = 'user';
-    } else if (roster.confidenceOf(mapping, defaultClass) === 'low' && ai.getConfig().apiKey) {
-      try {
-        const quietResponse = { status() { return this; }, json() { return this; } };
-        if (await enforceAiQuota(req, quietResponse)) {
-          const suggested = await roster.aiMapping(headers, roster.columnProfiles(headers, data));
-          if (suggested) { mapping = suggested; mappingSource = 'ai'; }
-          else notes.push('AI จับคอลัมน์ไม่ได้ ใช้การจับคอลัมน์ของระบบแทน');
-        } else notes.push('โควตา AI เต็มแล้ว ใช้การจับคอลัมน์ของระบบแทน');
-      } catch (_) { notes.push('AI ไม่พร้อม ใช้การจับคอลัมน์ของระบบแทน'); }
+    let first = null, students = [], issues = [], mappingSource = 'rules';
+    const summary = [];
+    for (const [n, sh] of sheets.entries()) {
+      let index = roster.findHeaderRow(sh.rows);
+      if (n === 0 && req.body.headerRow !== undefined) {
+        const value = Number(req.body.headerRow);
+        index = sh.rows.findIndex((r, i) => (r.fileRow !== undefined ? r.fileRow - 1 : i) === value);
+        if (!Number.isInteger(value) || index < 0) return fail(res, 'แถวหัวคอลัมน์ไม่ถูกต้อง');
+      }
+      const headers = sh.rows[index], data = sh.rows.slice(index + 1);
+      if (!data.length) continue;
+      const fromContext = roster.classFromContext(sh.rows.slice(0, index), sh.sheetName);
+      const typed = req.body.defaultClass !== undefined ? req.body.defaultClass : '';
+      // One sheet: what the teacher typed wins (as before). Several sheets: each sheet's own room wins.
+      const defaultClass = roster.normalizeClassName(single ? (req.body.defaultClass !== undefined ? typed : fromContext) : (fromContext || typed));
+      let mapping;
+      const sameLayout = first && headers.length === first.headers.length && headers.every((h, i) => h === first.headers[i]);
+      if (req.body.mapping !== undefined && (n === 0 || sameLayout)) {
+        try { mapping = roster.validateMapping(JSON.parse(req.body.mapping), headers.length); } catch (_) { mapping = null; }
+        if (!mapping) return fail(res, 'การเลือกคอลัมน์ไม่ถูกต้อง');
+        mappingSource = 'user';
+      } else if (sameLayout) {
+        mapping = first.mapping;
+      } else {
+        mapping = roster.guessMapping(headers, data).mapping;
+        if (n === 0 && roster.confidenceOf(mapping, defaultClass) === 'low' && ai.getConfig().apiKey) {
+          try {
+            const quietResponse = { status() { return this; }, json() { return this; } };
+            if (await enforceAiQuota(req, quietResponse)) {
+              const suggested = await roster.aiMapping(headers, roster.columnProfiles(headers, data));
+              if (suggested) { mapping = suggested; mappingSource = 'ai'; }
+              else notes.push('AI จับคอลัมน์ไม่ได้ ใช้การจับคอลัมน์ของระบบแทน');
+            } else notes.push('โควตา AI เต็มแล้ว ใช้การจับคอลัมน์ของระบบแทน');
+          } catch (_) { notes.push('AI ไม่พร้อม ใช้การจับคอลัมน์ของระบบแทน'); }
+        }
+      }
+      const built = roster.buildStudents(data, mapping, { defaultClass });
+      const tag = single ? {} : { sheet: sh.sheetName };
+      students.push(...built.students.map(s => ({ ...s, ...tag })));
+      issues.push(...built.issues.map(i => ({ ...i, ...tag })));
+      summary.push({ name: sh.sheetName, students: built.students.length, classes: [...new Set(built.students.map(s => s.className))] });
+      if (!first) first = { headers, mapping, headerRow: headers.fileRow - 1, defaultClass };
     }
-    const { students, issues } = roster.buildStudents(data, mapping, { defaultClass });
+    if (!first) return fail(res, 'ไฟล์ไม่มีข้อมูลนักเรียน');
+    if (students.length > 3000) return fail(res, 'นำเข้าได้ครั้งละไม่เกิน 3,000 คน');
+    // Running numbers can continue across sheets (sheet 2 starting at 35): restart each room at 1.
+    if (!single) {
+      roster.restartNumbersPerClass(students);
+      students.forEach(s => { if (s.codeGenerated) s.studentCode = `${s.className.replace(/[./\s]/g, '')}-${String(s.studentNumber ?? s.row).padStart(2, '0')}`; });
+    }
+    // Same student code in two sheets: keep the first.
+    const seen = new Set();
+    students = students.filter(s => {
+      if (!seen.has(s.studentCode)) { seen.add(s.studentCode); return true; }
+      issues.push({ row: s.row, sheet: s.sheet, message: 'รหัสซ้ำกับ sheet ก่อนหน้า' });
+      return false;
+    });
     const plan = await roster.planImport(students);
-    res.json({ fileName: req.file.originalname, sheetName, headerRow: headers.fileRow - 1, headers, mapping, mappingSource, confidence: roster.confidenceOf(mapping, defaultClass), defaultClass, students, issues, notes, plan, total: students.length });
+    res.json({ fileName: req.file.originalname, sheetName: sheets[0].sheetName, sheets: summary, headerRow: first.headerRow, headers: first.headers,
+      mapping: first.mapping, mappingSource, confidence: roster.confidenceOf(first.mapping, first.defaultClass), defaultClass: first.defaultClass,
+      students, issues, notes, plan, total: students.length });
   } catch (err) {
     console.error('smart import preview error:', err && err.message);
     fail(res, 'อ่านไฟล์ไม่สำเร็จ ตรวจสอบไฟล์แล้วลองใหม่');

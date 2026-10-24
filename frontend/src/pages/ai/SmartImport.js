@@ -58,6 +58,7 @@ export default function SmartImport() {
     {preview && <>
       <p className="font-medium break-words">พบนักเรียน {preview.total} คน · ห้อง {[...new Set(preview.students.map(s => s.className || 'ยังไม่ระบุ'))].join(', ')} · เพิ่มใหม่ {preview.plan.create} · อัปเดต {preview.plan.update}</p>
       <span className="inline-block rounded-full bg-brand-50 text-brand-700 px-3 py-1 text-sm">{sources[preview.mappingSource]}</span>
+      {preview.sheets?.length > 1 && <p className="text-sm text-gray-600 break-words">อ่าน {preview.sheets.length} sheet: {preview.sheets.map(sh => `${sh.name} (${sh.classes.join(', ') || 'ไม่ระบุห้อง'} · ${sh.students} คน)`).join(' · ')}</p>}
       <details open={preview.confidence === 'low'} className="rounded-lg border p-3">
         <summary className="cursor-pointer select-none min-h-[44px] flex flex-col justify-center">
           <span className="font-semibold">คอลัมน์ที่ระบบจับให้ (แตะเพื่อแก้)</span>
@@ -76,13 +77,13 @@ export default function SmartImport() {
         </label>
       </fieldset>
       </details>
-      {!!preview.issues.length && <ul className="bg-amber-50 text-amber-800 rounded-lg p-3 max-h-60 overflow-y-auto">{preview.issues.map((issue, i) => <li key={i}>แถว {issue.row}: {issue.message}</li>)}</ul>}
+      {!!preview.issues.length && <ul className="bg-amber-50 text-amber-800 rounded-lg p-3 max-h-60 overflow-y-auto">{preview.issues.map((issue, i) => <li key={i}>{issue.sheet ? `${issue.sheet} · ` : ''}แถว {issue.row}: {issue.message}</li>)}</ul>}
       {preview.notes?.map((note, i) => <p key={i} className="text-amber-800">{note}</p>)}
       {!!preview.plan.newClasses.length && <p className="break-words">สร้างห้องใหม่: {preview.plan.newClasses.join(', ')}</p>}
       {preview.students.some(s => s.codeGenerated) && <p className="text-amber-800">บางคนไม่มีเลขประจำตัว ระบบสร้างรหัสจากห้องและเลขที่ให้ ตรวจสอบก่อนนำเข้า</p>}
       {!preview.plan.currentYear && <p className="text-amber-800">ยังไม่มีปีการศึกษาปัจจุบัน ตั้งค่าที่ ตั้งค่าระบบ → ปีการศึกษา ก่อน</p>}
-      <div className="hidden md:block"><table className="w-full table-fixed text-sm text-left"><thead><tr>{['เลขที่','ชื่อ','ห้อง','เลขประจำตัว'].map(h => <th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{preview.students.slice(0, 20).map(s => <tr key={s.row} className="border-t">{[s.studentNumber ?? '—', s.name, s.className || '—', s.studentCode].map((v, i) => <td key={i} className="p-2 break-words">{v}</td>)}</tr>)}</tbody></table></div>
-      <div className="md:hidden space-y-2">{preview.students.slice(0, 20).map(s => <div key={s.row} className="border rounded-lg p-3 break-words"><p className="font-medium">{s.studentNumber ?? '—'} · {s.name}</p><p className="text-sm text-gray-600">ห้อง {s.className || '—'} · เลขประจำตัว {s.studentCode}</p></div>)}</div>
+      <div className="hidden md:block"><table className="w-full table-fixed text-sm text-left"><thead><tr>{['เลขที่','ชื่อ','ห้อง','เลขประจำตัว'].map(h => <th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{preview.students.slice(0, 20).map(s => <tr key={`${s.sheet || ''}-${s.row}`} className="border-t">{[s.studentNumber ?? '—', s.name, s.className || '—', s.studentCode].map((v, i) => <td key={i} className="p-2 break-words">{v}</td>)}</tr>)}</tbody></table></div>
+      <div className="md:hidden space-y-2">{preview.students.slice(0, 20).map(s => <div key={`${s.sheet || ''}-${s.row}`} className="border rounded-lg p-3 break-words"><p className="font-medium">{s.studentNumber ?? '—'} · {s.name}</p><p className="text-sm text-gray-600">ห้อง {s.className || '—'} · เลขประจำตัว {s.studentCode}</p></div>)}</div>
       {preview.total > 20 && <p className="text-sm text-gray-500">และอีก {preview.total - 20} คน</p>}
       <button type="button" disabled={loading || saving || !preview.total || !preview.plan.currentYear || preview.students.some(s => !s.className) || defaultClass !== preview.defaultClass} onClick={commit} className="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-brand-600 text-white rounded-lg disabled:opacity-50">{saving ? 'กำลังนำเข้า...' : `นำเข้า ${preview.total} คน`}</button>
     </>}
