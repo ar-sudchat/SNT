@@ -7,7 +7,7 @@ const stub = (rel, exports) => {
   require.cache[p] = { id: p, filename: p, loaded: true, exports };
 };
 const logs = [];
-const state = { tenant: { id: 't1', plan: 'free', aiEnabled: true }, students: 10 };
+const state = { tenant: { id: 't1', plan: 'starter', aiEnabled: true }, students: 10 };
 stub('config/database.js', {
   tenant: { findUnique: async () => state.tenant },
   student: { count: async () => state.students },
@@ -25,7 +25,8 @@ const req = { tenantId: 't1', user: { id: 1 }, route: { path: '/ask' } };
 
 test('plans: unknown falls back to free', () => {
   assert.equal(getPlan('nope').id, 'free');
-  assert.equal(PLANS.free.limits.aiPerMonth, 50);
+  assert.equal(PLANS.free.limits.aiPerMonth, null);
+  assert.equal(PLANS.starter.limits.aiPerMonth, 50);
 });
 
 test('no tenant passes through', async () => {
@@ -52,18 +53,18 @@ test('last month usage does not count', async () => {
 });
 
 test('aiEnabled false -> 429', async () => {
-  state.tenant = { id: 't1', plan: 'free', aiEnabled: false };
+  state.tenant = { id: 't1', plan: 'starter', aiEnabled: false };
   const res = mkRes();
   assert.equal(await enforceAiQuota(req, res), false);
   assert.equal(res.code, 429);
-  state.tenant = { id: 't1', plan: 'free', aiEnabled: true };
+  state.tenant = { id: 't1', plan: 'starter', aiEnabled: true };
 });
 
 test('pro plan has higher quota', async () => {
   logs.length = 0; state.tenant = { id: 't1', plan: 'pro', aiEnabled: true };
   for (let i = 0; i < 60; i++) logs.push({ tenantId: 't1', action: 'ai.call', createdAt: new Date() });
   assert.equal(await enforceAiQuota(req, mkRes()), true);
-  state.tenant = { id: 't1', plan: 'free', aiEnabled: true };
+  state.tenant = { id: 't1', plan: 'starter', aiEnabled: true };
 });
 
 test('student quota 402 when over free cap', async () => {
