@@ -1,0 +1,15 @@
+{
+  "name": "snt-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smoke test แบบ end-to-end ของKruScan (Playwright)",
+  "scripts": {
+    "test": "playwright test",
+    "test:phone": "playwright test --project=phone",
+    "test:desktop": "playwright test --project=desktop",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.0"
+  }
+}

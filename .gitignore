@@ -49,3 +49,10 @@ backend/uploads/*
 
 # Prisma
 backend/prisma/migrations/
+
+# ข้อมูลจริง / ไฟล์ทดสอบในเครื่อง — ห้าม commit
+student_template*.csv
+*.db
+templates/skill.md
+e2e/test-results/
+e2e/playwright-report/
