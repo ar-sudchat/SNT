@@ -69,7 +69,7 @@ const Layout = () => {
       {/* Sidebar (จอใหญ่เท่านั้น) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col overflow-y-auto bg-side lg:flex print:hidden">
         <div className="flex h-16 shrink-0 items-center justify-center border-b border-side-fg/15 px-4">
-          <Logo size={36} tone="side" />
+          <Link to={homePath} aria-label="หน้าแรก" className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><Logo size={36} tone="side" /></Link>
         </div>
         {isStaff && (
           <div className="px-4 pt-4">
