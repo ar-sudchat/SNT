@@ -281,6 +281,7 @@ const SmartTable = ({
   const isMobileAllSelected = mobileData.length > 0 &&
     mobileData.every(row => selectedRows.has(idOf(row)));
   const selectedCount = selectedList.length;
+  const hasBulkActions = Array.isArray(bulkActions) && bulkActions.length > 0;
   const canSelectAllFiltered = selectedCount > 0 && selectedCount < sortedData.length &&
     (isAllSelected || isMobileAllSelected);
 
@@ -430,7 +431,7 @@ const SmartTable = ({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className={`overflow-x-auto relative ${stickyHeader ? 'md:max-h-[70vh] md:overflow-y-auto print:max-h-none print:overflow-visible' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Soft Loading Overlay - shows on top of existing data */}
         {loading && paginatedData.length > 0 && (
           <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
@@ -441,11 +442,11 @@ const SmartTable = ({
           </div>
         )}
         <table className="hidden md:table print:table min-w-full divide-y divide-gray-200">
-          <thead className={`bg-th border-b-2 border-brand-200 print:bg-none ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
+          <thead className="bg-th border-b-2 border-brand-200 print:bg-none">
             <tr>
               {/* Checkbox Column */}
               {selectable && (
-                <th className="w-12 px-4 py-3 print:hidden">
+                <th className={`w-12 px-4 py-3 print:hidden ${stickyHeader ? 'sticky top-0 z-10 bg-th' : ''}`}>
                   <input
                     type="checkbox"
                     aria-label="เลือกทั้งหมดในหน้านี้"
@@ -462,7 +463,7 @@ const SmartTable = ({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-left text-sm font-semibold text-th-fg print:text-black tracking-wide ${
+                  className={`px-4 py-3 text-left text-sm font-semibold text-th-fg print:text-black tracking-wide ${stickyHeader ? 'sticky top-0 z-10 bg-th shadow-[inset_0_-2px_0_0_rgb(var(--th-fg)/0.15)] print:static print:shadow-none' : ''} ${
                     col.sortable ? 'cursor-pointer hover:brightness-95 select-none' : ''
                   } ${col.className || ''}`}
                   style={{ width: col.width, minWidth: col.minWidth }}
@@ -491,7 +492,7 @@ const SmartTable = ({
                   </div>
                 </th>
               ))}
-              {onRowClick && <th className="w-8 print:hidden" aria-hidden="true"></th>}
+              {onRowClick && <th className={`w-8 print:hidden ${stickyHeader ? 'sticky top-0 z-10 bg-th' : ''}`} aria-hidden="true"></th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -646,7 +647,7 @@ const SmartTable = ({
       )}
 
       {/* แถบการทำงานกับแถวที่เลือก (ไม่พิมพ์ ไม่ส่งออก) */}
-      {selectable && selectedCount > 0 && (
+      {selectable && hasBulkActions && selectedCount > 0 && (
         <>
           <div className="h-16 print:hidden" aria-hidden="true" />
           <div

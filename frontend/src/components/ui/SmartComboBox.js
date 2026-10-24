@@ -432,7 +432,7 @@ const SmartComboBox = ({
         aria-haspopup="listbox"
         aria-disabled={disabled}
         className={`
-          flex items-center justify-between w-full min-h-[42px] px-3 py-2 bg-white border rounded-lg cursor-pointer
+          flex items-center justify-between w-full min-h-[44px] px-3 py-2 bg-white border rounded-lg cursor-pointer
           ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
           ${isOpen ? 'ring-2 ring-brand-500 border-brand-500' : 'border-gray-300'}
           ${error ? 'border-red-500 ring-red-500' : ''}

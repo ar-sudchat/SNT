@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { classAPI } from '../../services/api';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { classAPI, gradeAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
 import RandomPicker from './RandomPicker';
 import GroupMaker from './GroupMaker';
@@ -12,12 +12,23 @@ const TABS = [
   { key: 'timer', label: 'จับเวลา' },
 ];
 
+const ALL = 'ALL';
+const GRADE_KEY = 'kruscan.tools.gradeId';
+const CLASS_KEY = 'kruscan.tools.classId';
+const readStored = (k) => { try { return window.localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const writeStored = (k, v) => {
+  try { if (v === null || v === undefined || v === '') window.localStorage.removeItem(k); else window.localStorage.setItem(k, String(v)); } catch (e) { /* storage ปิดอยู่ */ }
+};
+
 const asList = (d) => (Array.isArray(d) ? d : d?.data || d?.classes || []);
 
 const ClassroomTools = () => {
   const [tab, setTab] = useState('pick');
   const [classes, setClasses] = useState([]);
-  const [classId, setClassId] = useState(null);
+  const [grades, setGrades] = useState([]);
+  const [gradeId, setGradeId] = useState(() => readStored(GRADE_KEY) || ALL);
+  const [classId, setClassId] = useState(() => readStored(CLASS_KEY) || null);
+  const [classesLoaded, setClassesLoaded] = useState(false);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,10 +37,42 @@ const ClassroomTools = () => {
   useEffect(() => {
     let alive = true;
     classAPI.getAll()
-      .then((r) => { if (alive) setClasses(asList(r.data)); })
+      .then((r) => { if (alive) { setClasses(asList(r.data)); setClassesLoaded(true); } })
       .catch((e) => { if (alive) setError(e.response?.data?.error || 'ไม่สามารถโหลดรายชื่อห้องได้'); });
+    gradeAPI.getAll()
+      .then((r) => { if (alive) setGrades(asList(r.data)); })
+      .catch(() => { /* ไม่มีรายชื่อชั้น: ใช้ตัวกรอง "ทุกชั้น" ต่อไป */ });
     return () => { alive = false; };
   }, []);
+
+  const gradeOptions = useMemo(() => [{ id: ALL, gradeName: 'ทุกชั้น' }, ...grades], [grades]);
+  const visibleClasses = useMemo(
+    () => (gradeId === ALL ? classes : classes.filter((c) => String(c.gradeId) === String(gradeId))),
+    [classes, gradeId],
+  );
+  // ค่าที่จำไว้เป็น string: แปลงกลับเป็น id จริงของห้อง
+  const normalizedClassId = useMemo(() => {
+    if (!classId) return null;
+    const hit = classes.find((c) => String(c.id) === String(classId));
+    return hit ? hit.id : null;
+  }, [classes, classId]);
+
+  // ห้องปัจจุบันไม่อยู่ในชั้นที่เลือก -> เลือกห้องแรกของชั้นนั้น (หรือล้าง)
+  useEffect(() => {
+    if (!classesLoaded) return;
+    const inView = visibleClasses.some((c) => c.id === normalizedClassId);
+    let next = normalizedClassId;
+    if (!inView) next = gradeId !== ALL && visibleClasses.length > 0 ? visibleClasses[0].id : null;
+    if (next !== classId) setClassId(next);
+    writeStored(CLASS_KEY, next);
+  }, [classesLoaded, visibleClasses, normalizedClassId, gradeId, classId]);
+
+  const changeGrade = (g) => {
+    const next = g || ALL;
+    setGradeId(next);
+    writeStored(GRADE_KEY, next === ALL ? '' : next);
+  };
+  const changeClass = (c) => { setClassId(c); writeStored(CLASS_KEY, c); };
 
   useEffect(() => {
     if (!classId) { setStudents([]); return undefined; }
@@ -68,12 +111,21 @@ const ClassroomTools = () => {
 
       <div ref={panelRef} className="space-y-4 bg-ink-50 [&:fullscreen]:p-6 [&:fullscreen]:overflow-auto">
         <div className="flex flex-wrap gap-3 items-end print:hidden">
-          <div className="w-full sm:w-72">
-            <label className="block text-sm text-ink-600 mb-1">ห้องเรียน</label>
-            <SmartComboBox
-              options={classes} value={classId} onChange={setClassId}
-              labelKey="className" valueKey="id" placeholder="เลือกห้อง" clearable={false}
-            />
+          <div className="grid grid-cols-2 gap-3 w-full md:w-auto md:flex">
+            <div className="min-w-0 md:w-48">
+              <label className="block text-sm text-ink-600 mb-1">ชั้นปี</label>
+              <SmartComboBox
+                options={gradeOptions} value={gradeId} onChange={changeGrade}
+                labelKey="gradeName" valueKey="id" placeholder="ทุกชั้น" clearable={false}
+              />
+            </div>
+            <div className="min-w-0 md:w-64">
+              <label className="block text-sm text-ink-600 mb-1">ห้องเรียน</label>
+              <SmartComboBox
+                options={visibleClasses} value={classId} onChange={changeClass}
+                labelKey="className" valueKey="id" placeholder="เลือกห้อง" clearable={false}
+              />
+            </div>
           </div>
           {classId && <p className="text-sm text-ink-500 pb-3">{loading ? 'กำลังโหลด...' : `นักเรียน ${students.length} คน`}</p>}
         </div>

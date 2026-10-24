@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { qrcodeAPI, classAPI, subjectAPI, academicYearAPI } from '../../services/api';
 import { SmartTable, SmartComboBox } from '../../components/ui';
 
@@ -163,6 +164,26 @@ const QRCodeGenerator = () => {
     }
   };
 
+  // วิชาที่ใช้ได้กับห้องที่เลือก: วิชาของระดับชั้นเดียวกัน หรือวิชาที่ไม่ได้ระบุระดับชั้น
+  const classSubjects = useMemo(() => {
+    if (!selectedClass) return subjects;
+    const cls = classes.find((c) => c.id === selectedClass);
+    if (!cls) return subjects;
+    return subjects.filter((s) => s.gradeId == null || s.gradeId === cls.gradeId);
+  }, [subjects, classes, selectedClass]);
+
+  // ถ้าวิชาที่เลือกไว้ไม่อยู่ในห้องใหม่ ให้ล้าง เพื่อไม่ให้สร้างผิดวิชาแบบเงียบๆ
+  useEffect(() => {
+    if (selectedSubject && !classSubjects.some((s) => s.id === parseInt(selectedSubject))) {
+      setSelectedSubject(null);
+      setExistingQRCodes([]);
+      setGeneratedQRCodes([]);
+    }
+  }, [classSubjects, selectedSubject]);
+
+  const noSubjectsForClass = !!selectedClass && classSubjects.length === 0;
+  const generateDisabled = generating || selectedStudents.length === 0 || !selectedSubject;
+
   // Student table columns
   const studentColumns = useMemo(() => [
     {
@@ -255,7 +276,7 @@ const QRCodeGenerator = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
             <SmartComboBox
-              options={subjects}
+              options={classSubjects}
               value={selectedSubject}
               onChange={(val) => {
                 setSelectedSubject(val);
@@ -310,9 +331,29 @@ const QRCodeGenerator = () => {
               <span className="text-sm text-gray-500">
                 เลือก {selectedStudents.length} จาก {students.length} คน
               </span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                {!generating && generateDisabled && (
+                  <p id="qr-generate-hint" className="text-sm text-amber-700" role="status">
+                    {!selectedSubject ? (
+                      noSubjectsForClass ? (
+                        <>
+                          ห้องนี้ยังไม่มีวิชา{' '}
+                          <Link to="/admin/subjects" className="inline-flex min-h-[44px] items-center font-medium text-brand-600 underline hover:text-brand-700">
+                            ไปเพิ่มวิชา
+                          </Link>
+                        </>
+                      ) : (
+                        'เลือกวิชาก่อนสร้าง QR Code'
+                      )
+                    ) : (
+                      'เลือกนักเรียนอย่างน้อย 1 คน'
+                    )}
+                  </p>
+                )}
               <button
                 onClick={handleGenerate}
-                disabled={generating || selectedStudents.length === 0 || !selectedSubject}
+                disabled={generateDisabled}
+                aria-describedby={generateDisabled && !generating ? 'qr-generate-hint' : undefined}
                 className="px-6 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (
@@ -329,6 +370,7 @@ const QRCodeGenerator = () => {
                   </>
                 )}
               </button>
+              </div>
             </div>
           </>
         )}
