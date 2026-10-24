@@ -29,7 +29,12 @@ const inflight = new Map(); // `${tenantId}:${userId}` -> Promise (dedupe concur
 
 async function findOrCreate(user, tenantId) {
   const own = await prisma.teacher.findFirst({ where: { userId: user.id }, orderBy: { id: 'asc' } });
-  if (own) return own;
+  if (own) {
+    // Keep the teacher name in step with the profile name (it is what greetings, lists and Word files show).
+    const want = String(user.displayName || '').trim().slice(0, 100);
+    if (want && own.name !== want) return prisma.teacher.update({ where: { id: own.id }, data: { name: want } });
+    return own;
+  }
   // Legacy link (User.teacherId) into this same group: adopt it instead of creating a duplicate.
   if (user.teacherId) {
     const legacy = await prisma.teacher.findFirst({ where: { id: user.teacherId } });

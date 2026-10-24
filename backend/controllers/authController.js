@@ -309,6 +309,10 @@ const authController = {
         where: { id: req.user.id }, data,
         select: { avatar: true, avatarPreset: true, displayName: true, bio: true, accent: true }
       });
+      // A new name shows up everywhere at once: the teacher row of this user in every group.
+      if (u.displayName) {
+        await prisma.basePrisma.teacher.updateMany({ where: { userId: req.user.id }, data: { name: u.displayName.slice(0, 100) } });
+      }
       res.json(u);
     } catch (error) {
       console.error('Update profile error:', error);
