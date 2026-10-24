@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { studentAPI, classAPI, gradeAPI } from '../../services/api';
+import { studentAPI, classAPI, gradeAPI, transferAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { useNavigate } from 'react-router-dom';
 import { AddFab } from '../../components/ui/SmartTable';
+import { useDialog } from '../../components/ui/DialogProvider';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 const ManageStudents = () => {
+  const dialog = useDialog();
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -20,6 +22,9 @@ const ManageStudents = () => {
   const [filterGrade, setFilterGrade] = useState(null);
   const [filterClass, setFilterClass] = useState(null);
   const { validate, reset: resetErrors, errorFor } = useFormErrors();
+  // Move-to-another-class dialog: rows being moved, all classes for the picker, chosen target.
+  const [move, setMove] = useState({ open: false, rows: [], toClassId: null, busy: false });
+  const [allClasses, setAllClasses] = useState([]);
   const [formData, setFormData] = useState({
     studentCode: '',
     studentNumber: '',
@@ -102,6 +107,74 @@ const ManageStudents = () => {
       }
     }
   };
+
+  const fmtCount = (n) => n.toLocaleString('th-TH');
+
+  // Shared by 'ลบที่เลือก' and 'ลบนักเรียนทั้งห้องนี้'.
+  const deleteMany = async (rows, { wholeClass = null } = {}) => {
+    if (!rows.length) return;
+    const n = fmtCount(rows.length);
+    const warn = `\n\nรหัส QR ของนักเรียนเหล่านี้ และผลงาน/คะแนนที่ส่งแล้วทั้งหมดจะถูกลบไปด้วย\nลบแล้วกู้คืนไม่ได้`;
+    const ok = await dialog.confirm({
+      title: wholeClass ? `ลบนักเรียนทั้งห้อง ${wholeClass}` : `ลบนักเรียน ${n} คน`,
+      message: wholeClass
+        ? `จะลบนักเรียนทุกคนในห้อง "${wholeClass}" รวม ${n} คน${warn}`
+        : `ต้องการลบนักเรียนที่เลือก ${n} คนหรือไม่?${warn}`,
+      confirmText: wholeClass ? `ลบทั้งห้อง ${n} คน` : `ลบ ${n} คน`,
+      type: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await studentAPI.bulkDelete(rows.map(r => r.id));
+      const deleted = Array.isArray(res.data?.deleted) ? res.data.deleted.length : Number(res.data?.deleted) || 0;
+      const failed = res.data?.failed || [];
+      fetchData();
+      await dialog.alert({
+        title: 'ลบนักเรียนเสร็จแล้ว',
+        type: failed.length ? 'warning' : 'success',
+        message: `ลบแล้ว ${deleted} คน · ลบไม่ได้ ${failed.length} คน` +
+          (failed.length ? '\n\n' + failed.map(f => `${f.name || f.id}: ${f.reason}`).join('\n') : ''),
+      });
+    } catch (err) {
+      fetchData();
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง' });
+    }
+  };
+
+  const openMove = async (rows) => {
+    if (!rows.length) return;
+    setMove({ open: true, rows, toClassId: null, busy: false });
+    try {
+      const r = await classAPI.getAll();
+      setAllClasses(r.data || []);
+    } catch (err) {
+      setAllClasses(classes);
+    }
+  };
+
+  const closeMove = () => setMove(m => ({ ...m, open: false, busy: false }));
+
+  const handleMove = async () => {
+    const toClassId = toId(move.toClassId);
+    if (toClassId === null) {
+      setErrorAlert({ show: true, message: 'กรุณาเลือกห้องปลายทาง' });
+      return;
+    }
+    setMove(m => ({ ...m, busy: true }));
+    try {
+      const res = await transferAPI.transferBulk({ toClassId, studentIds: move.rows.map(r => r.id) });
+      const count = res.data?.count ?? move.rows.length;
+      const target = allClasses.find(c => c.id === toClassId)?.className || '';
+      closeMove();
+      fetchData();
+      await dialog.alert({ title: 'ย้ายห้องเสร็จแล้ว', type: 'success', message: `ย้าย ${count} คน ไปห้อง ${target}` });
+    } catch (err) {
+      setMove(m => ({ ...m, busy: false }));
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'ย้ายห้องไม่สำเร็จ ลองใหม่อีกครั้ง' });
+    }
+  };
+
+  const filteredClassName = filterClass ? (classes.find(c => c.id === toId(filterClass))?.className || '') : '';
 
   const openModal = (student = null) => {
     if (student) {
@@ -199,6 +272,17 @@ const ManageStudents = () => {
             searchable
           />
         </div>
+        {filterClass && students.length > 0 && (
+          <div className="sm:self-end">
+            <button
+              type="button"
+              onClick={() => deleteMany(students, { wholeClass: filteredClassName || 'ที่เลือก' })}
+              className="min-h-[44px] w-full rounded-lg border border-red-300 px-4 text-red-600 hover:bg-red-50 sm:w-auto"
+            >
+              ลบนักเรียนทั้งห้องนี้ ({students.length})
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -237,6 +321,12 @@ const ManageStudents = () => {
         exportable
         pagination
         pageSize={10}
+        selectable
+        getRowId={(row) => row.id}
+        bulkActions={[
+          { label: 'ย้ายห้อง', onClick: openMove },
+          { label: 'ลบที่เลือก', danger: true, onClick: (rows) => deleteMany(rows) },
+        ]}
         onClearFilters={() => { setFilterGrade(null); setFilterClass(null); }}
         emptyAction={
           <>
@@ -369,6 +459,41 @@ const ManageStudents = () => {
               </details>
 
           </form>
+        </div>
+      </WindowModal>
+
+      {/* Move selected students to another class */}
+      <WindowModal
+        open={move.open}
+        title={`ย้ายห้อง ${move.rows.length} คน`}
+        onClose={closeMove}
+        id="student-move"
+        initialWidth="max-w-md"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button type="button" onClick={closeMove} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">ยกเลิก</button>
+            <button
+              type="button"
+              onClick={handleMove}
+              disabled={move.busy || toId(move.toClassId) === null}
+              className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {move.busy ? 'กำลังย้าย…' : `ย้าย ${move.rows.length} คน`}
+            </button>
+          </div>
+        }
+      >
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-gray-600">เลือกห้องปลายทางที่จะย้ายนักเรียนไป (ที่นั่งในห้องต้องพอ)</p>
+          <SmartComboBox
+            options={allClasses}
+            value={move.toClassId}
+            onChange={(val) => setMove(m => ({ ...m, toClassId: val }))}
+            labelKey="className"
+            valueKey="id"
+            placeholder="เลือกห้องปลายทาง"
+            searchable
+          />
         </div>
       </WindowModal>
 

@@ -10,6 +10,10 @@ const staff = authorize('ADMIN', 'TEACHER');
 // Get all grades
 router.get('/', authenticate, gradeController.getAll);
 
+// Bulk create / delete (registered before the '/:id' routes)
+router.post('/bulk', authenticate, staff, gradeController.bulkCreate);
+router.post('/bulk-delete', authenticate, staff, gradeController.bulkDelete);
+
 // Get grade by ID
 router.get('/:id', authenticate, gradeController.getById);
 

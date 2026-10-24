@@ -27,6 +27,7 @@ import ParentView from './pages/parent/ParentView';
 import PrivacyNotice from './pages/legal/PrivacyNotice';
 import { StudentMonitor, MonitorPage, MonitorRedirect } from './pages/monitor';
 import SettingsHub from './pages/admin/SettingsHub';
+import SetupWizard from './pages/admin/SetupWizard';
 import SignupPage from './pages/signup/SignupPage';
 import InviteAccept from './pages/signup/InviteAccept';
 import JoinGroup from './pages/groups/JoinGroup';
@@ -264,6 +265,15 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ClassTransfer />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="admin/setup"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <SetupWizard />
                 </ProtectedRoute>
               }
             />

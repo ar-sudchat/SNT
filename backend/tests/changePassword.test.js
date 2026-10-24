@@ -39,18 +39,13 @@ test('changePassword', async (t) => {
     db.users.a = { id: 'a', role: 'ADMIN', email: 'admin@system.local', password: 'x', passwordSetAt: null };
     const login = (pw) => call(ctrl.login, null, { username: 'admin', password: pw }).then(r => r.status);
     assert.strictEqual(await login('envpass123'), 200);
-    let r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'wrong', newPassword: 'adminNew99' });
-    assert.strictEqual(r.status, 400); assert.match(r.body.error, /ปัจจุบันไม่ถูกต้อง/);
-    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'short' });
+    let r = await call(ctrl.changePassword, db.users.a, { newPassword: 'short' });
     assert.strictEqual(r.status, 400);
-    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'adminNew99' });
+    r = await call(ctrl.changePassword, db.users.a, { newPassword: 'adminNew99' });
     assert.strictEqual(r.status, 200);
     assert.ok(db.users.a.passwordSetAt instanceof Date);
     assert.strictEqual(await login('envpass123'), 401);
     assert.strictEqual(await login('adminNew99'), 200);
-    // second change verifies against DB hash
-    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'adminNew77' });
-    assert.strictEqual(r.status, 400);
     process.env.ADMIN_PASSWORD_RESET = 'true';
     try {
       assert.strictEqual(await login('envpass123'), 200);
@@ -59,19 +54,18 @@ test('changePassword', async (t) => {
     assert.strictEqual(await login('adminNew99'), 200);
     delete db.users.a; delete process.env.ADMIN_PASSWORD_HASH;
   });
-  await t.test('wrong current password -> 400 not 401', async () => {
+  await t.test('no current password needed: signed-in user sets a new one', async () => {
     const u = teacherUser();
-    const r = await call(ctrl.changePassword, u, { currentPassword: 'nope', newPassword: 'abcdefgh1' });
-    assert.strictEqual(r.status, 400); assert.match(r.body.error, /ปัจจุบันไม่ถูกต้อง/);
+    const r = await call(ctrl.changePassword, u, { newPassword: 'abcdefgh1' });
+    assert.strictEqual(r.status, 200);
+    assert.ok(await bcrypt.compare('abcdefgh1', db.users.u1.password));
   });
-  await t.test('validation: short, equals code, equals current', async () => {
+  await t.test('validation: short, equals code', async () => {
     const u = teacherUser();
     for (const [np, re] of [['short', /8 ตัว/], ['teacher01', /รหัสผู้ใช้/]]) {
-      const r = await call(ctrl.changePassword, u, { currentPassword: 'T001', newPassword: np });
+      const r = await call(ctrl.changePassword, u, { newPassword: np });
       assert.strictEqual(r.status, 400); assert.match(r.body.error, re);
     }
-    const r = await call(ctrl.changePassword, u, { currentPassword: 'samepass1', newPassword: 'samepass1' });
-    assert.strictEqual(r.status, 400); assert.match(r.body.error, /ปัจจุบัน/);
     assert.strictEqual(db.users.u1.password, hash);
   });
   await t.test('success updates hash', async () => {

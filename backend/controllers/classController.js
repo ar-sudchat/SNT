@@ -111,6 +111,117 @@ const classController = {
     }
   },
 
+  // Bulk create: { items: [{ className, gradeId, academicYearId?, teacherId?, capacity? }] } (1-200)
+  async bulkCreate(req, res) {
+    try {
+      const items = req.body && req.body.items;
+      if (!Array.isArray(items) || items.length < 1 || items.length > 200) {
+        return res.status(400).json({ error: 'ต้องส่งรายการห้องเรียน 1-200 รายการ' });
+      }
+
+      const isId = (v) => Number.isInteger(v) && v > 0;
+      const wanted = (key) => [...new Set(items.map(i => i && i[key]).filter(isId))];
+
+      const [existingClasses, grades, teachers, years, currentYear] = await Promise.all([
+        prisma.class.findMany({ select: { className: true } }),
+        prisma.grade.findMany({ where: { id: { in: wanted('gradeId') } }, select: { id: true } }),
+        prisma.teacher.findMany({ where: { id: { in: wanted('teacherId') } }, select: { id: true } }),
+        prisma.academicYear.findMany({ where: { id: { in: wanted('academicYearId') } }, select: { id: true } }),
+        prisma.academicYear.findFirst({ where: { isCurrent: true }, orderBy: { id: 'desc' } })
+      ]);
+      const existing = new Set(existingClasses.map(c => c.className));
+      const gradeIds = new Set(grades.map(g => g.id));
+      const teacherIds = new Set(teachers.map(t => t.id));
+      const yearIds = new Set(years.map(y => y.id));
+      const seen = new Set();
+      const created = [];
+      const skipped = [];
+
+      for (const item of items) {
+        const className = item && typeof item.className === 'string' ? item.className.trim() : '';
+        if (!className) { skipped.push({ className: '', reason: 'ไม่มีชื่อห้องเรียน' }); continue; }
+        if (className.length > 50) { skipped.push({ className, reason: 'ชื่อยาวเกิน 50 ตัวอักษร' }); continue; }
+        if (seen.has(className)) { skipped.push({ className, reason: 'ซ้ำในรายการ' }); continue; }
+        seen.add(className);
+        if (existing.has(className)) { skipped.push({ className, reason: 'มีอยู่แล้ว' }); continue; }
+        if (!gradeIds.has(item.gradeId)) { skipped.push({ className, reason: 'ไม่พบชั้นปี' }); continue; }
+
+        const hasTeacher = item.teacherId !== undefined && item.teacherId !== null;
+        if (hasTeacher && !teacherIds.has(item.teacherId)) { skipped.push({ className, reason: 'ไม่พบครู' }); continue; }
+        const hasYear = item.academicYearId !== undefined && item.academicYearId !== null;
+        if (hasYear && !yearIds.has(item.academicYearId)) { skipped.push({ className, reason: 'ไม่พบปีการศึกษา' }); continue; }
+        const hasCapacity = item.capacity !== undefined && item.capacity !== null;
+        if (hasCapacity && !isId(item.capacity)) { skipped.push({ className, reason: 'ความจุไม่ถูกต้อง' }); continue; }
+
+        try {
+          created.push(await prisma.class.create({
+            data: {
+              className,
+              gradeId: item.gradeId,
+              teacherId: hasTeacher ? item.teacherId : undefined,
+              academicYearId: hasYear ? item.academicYearId : (currentYear ? currentYear.id : undefined),
+              capacity: hasCapacity ? item.capacity : undefined
+            },
+            include: { grade: true, homeTeacher: true, academicYear: true }
+          }));
+        } catch (err) {
+          if (err.code === 'P2002') skipped.push({ className, reason: 'มีอยู่แล้ว' });
+          else { console.error('Bulk create class item error:', err); skipped.push({ className, reason: 'สร้างไม่สำเร็จ' }); }
+        }
+      }
+
+      res.json({ created, skipped });
+    } catch (error) {
+      console.error('Bulk create classes error:', error);
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มห้องเรียนได้' });
+    }
+  },
+
+  // Bulk delete: { ids: [int] } (1-500). Rows still referenced are reported in `failed`.
+  async bulkDelete(req, res) {
+    try {
+      const ids = req.body && req.body.ids;
+      if (!Array.isArray(ids) || ids.length < 1 || ids.length > 500 || !ids.every(Number.isInteger)) {
+        return res.status(400).json({ error: 'ต้องส่งรายการ id 1-500 รายการ' });
+      }
+      const unique = [...new Set(ids)];
+
+      const rows = await prisma.class.findMany({
+        where: { id: { in: unique } },
+        include: { _count: { select: { students: true, assessmentRecords: true } } }
+      });
+      const byId = new Map(rows.map(c => [c.id, c]));
+
+      let deleted = 0;
+      const failed = [];
+      for (const id of unique) {
+        const cls = byId.get(id);
+        if (!cls) { failed.push({ id, name: null, reason: 'ไม่พบ' }); continue; }
+        if (cls._count.students > 0) {
+          failed.push({ id, name: cls.className, reason: 'ยังมีนักเรียนอยู่ในห้องนี้' });
+          continue;
+        }
+        if (cls._count.assessmentRecords > 0) {
+          failed.push({ id, name: cls.className, reason: 'ยังมีบันทึกการประเมินของห้องนี้' });
+          continue;
+        }
+        try {
+          await prisma.class.delete({ where: { id } });
+          deleted++;
+        } catch (err) {
+          if (err.code === 'P2025') failed.push({ id, name: cls.className, reason: 'ไม่พบ' });
+          else if (err.code === 'P2003' || err.code === 'P2014') failed.push({ id, name: cls.className, reason: 'ยังมีข้อมูลที่อ้างถึงห้องนี้อยู่' });
+          else { console.error('Bulk delete class item error:', err); failed.push({ id, name: cls.className, reason: 'ลบไม่สำเร็จ' }); }
+        }
+      }
+
+      res.json({ deleted, failed });
+    } catch (error) {
+      console.error('Bulk delete classes error:', error);
+      res.status(500).json({ error: 'ไม่สามารถลบห้องเรียนได้' });
+    }
+  },
+
   // Update class
   async update(req, res) {
     try {

@@ -28,8 +28,15 @@ import { EmptyBox } from '../illustrations';
  *   searchable
  *   exportable
  *   selectable
+ *   bulkActions={[{ label: 'ลบ', danger: true, onClick: async (rows) => { await removeMany(rows); } }]}
  *   onRowClick={(row) => console.log(row)}
  * />
+ *
+ * Selection props (all optional):
+ * - selectable: bool - แสดง checkbox (ตาราง) / checkbox ในการ์ด (มือถือ)
+ * - getRowId: (row) => id - ค่าเริ่มต้น row.id
+ * - bulkActions: [{ label, danger?, onClick: (selectedRows) => Promise|void }]
+ * - onSelectionChange: (rows) => void - ถูกเรียกเมื่อผู้ใช้เปลี่ยนการเลือก
  */
 
 const SmartTable = ({
@@ -46,6 +53,8 @@ const SmartTable = ({
   exportFileName = 'export',
   onRowClick,
   onSelectionChange,
+  getRowId,
+  bulkActions,
   actions,
   emptyMessage = 'ไม่พบข้อมูล',
   searchPlaceholder = 'ค้นหา...',
@@ -62,7 +71,8 @@ const SmartTable = ({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
-  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [selectedRows, setSelectedRows] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [mobileLimit, setMobileLimit] = useState(50);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterSheet, setFilterSheet] = useState(false);
@@ -158,41 +168,88 @@ const SmartTable = ({
 
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
-    setSelectedRows(new Set());
   }, []);
 
   const handlePageSizeChange = useCallback((newSize) => {
     setPageSize(newSize);
     setCurrentPage(1);
-    setSelectedRows(new Set());
   }, []);
 
-  const handleSelectAll = useCallback((checked) => {
-    if (checked) {
-      const allIds = paginatedData.map((row, idx) => row.id || idx);
-      setSelectedRows(new Set(allIds));
-    } else {
-      setSelectedRows(new Set());
+  // id ของแถว: getRowId -> row.id -> ลำดับใน data (กรณีแถวไม่มี id)
+  const dataIndexMap = useMemo(() => {
+    const map = new Map();
+    data.forEach((row, i) => map.set(row, i));
+    return map;
+  }, [data]);
+  const idOf = useCallback((row) => {
+    const id = getRowId ? getRowId(row) : row?.id;
+    return id === undefined || id === null ? `__idx_${dataIndexMap.get(row)}` : id;
+  }, [getRowId, dataIndexMap]);
+
+  // ค่าล่าสุดสำหรับ callback ที่เรียกนอกรอบ render
+  const latestRef = useRef({});
+  latestRef.current = { data, idOf, onSelectionChange };
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  const commitSelection = useCallback((nextIds) => {
+    setSelectedRows(nextIds);
+    const { data: rows, idOf: getId, onSelectionChange: notify } = latestRef.current;
+    notify?.(rows.filter(r => nextIds.has(getId(r))));
+  }, []);
+
+  // ตัด id ที่ไม่อยู่ในข้อมูลที่กรองแล้วออก (data เปลี่ยน/ค้นหา/กรอง) - คง id ที่ยังอยู่
+  useEffect(() => {
+    if (!selectable) return;
+    const existing = new Set(filteredData.map(r => idOf(r)));
+    const prune = (prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set([...prev].filter(id => existing.has(id)));
+      return next.size === prev.size ? prev : next;
+    };
+    const pruned = prune(selectedRows);
+    if (pruned !== selectedRows) commitSelection(pruned);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredData, selectable, idOf]);
+
+  const handleSelectAll = useCallback((checked, rows) => {
+    const next = new Set(selectedRows);
+    rows.forEach(r => (checked ? next.add(idOf(r)) : next.delete(idOf(r))));
+    commitSelection(next);
+  }, [selectedRows, idOf, commitSelection]);
+
+  const handleSelectAllFiltered = useCallback(() => {
+    commitSelection(new Set(sortedData.map(r => idOf(r))));
+  }, [sortedData, idOf, commitSelection]);
+
+  const handleClearSelection = useCallback(() => {
+    commitSelection(new Set());
+  }, [commitSelection]);
+
+  const handleSelectRow = useCallback((row) => {
+    const id = idOf(row);
+    const next = new Set(selectedRows);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    commitSelection(next);
+  }, [selectedRows, idOf, commitSelection]);
+
+  const selectedList = useMemo(
+    () => (selectable && selectedRows.size > 0 ? data.filter(r => selectedRows.has(idOf(r))) : []),
+    [selectable, selectedRows, data, idOf]
+  );
+
+  const runBulkAction = useCallback(async (action) => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await action.onClick?.(selectedList);
+      if (mountedRef.current) commitSelection(new Set());
+    } catch (err) {
+      // ผู้เรียกแสดงข้อผิดพลาดเอง - คงการเลือกไว้ให้ลองใหม่
+    } finally {
+      if (mountedRef.current) setBulkBusy(false);
     }
-    onSelectionChange?.(checked ? paginatedData : []);
-  }, [paginatedData, onSelectionChange]);
-
-  const handleSelectRow = useCallback((row, idx) => {
-    const id = row.id || idx;
-    setSelectedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-
-      const selectedData = paginatedData.filter((r, i) => newSet.has(r.id || i));
-      onSelectionChange?.(selectedData);
-
-      return newSet;
-    });
-  }, [paginatedData, onSelectionChange]);
+  }, [bulkBusy, selectedList, commitSelection]);
 
   const handleExport = useCallback(() => {
     const exportData = sortedData.map(row => {
@@ -219,7 +276,13 @@ const SmartTable = ({
   }, [sortedData, columns, exportFileName]);
 
   const isAllSelected = paginatedData.length > 0 &&
-    paginatedData.every((row, idx) => selectedRows.has(row.id || idx));
+    paginatedData.every(row => selectedRows.has(idOf(row)));
+  const isSomeSelected = !isAllSelected && paginatedData.some(row => selectedRows.has(idOf(row)));
+  const isMobileAllSelected = mobileData.length > 0 &&
+    mobileData.every(row => selectedRows.has(idOf(row)));
+  const selectedCount = selectedList.length;
+  const canSelectAllFiltered = selectedCount > 0 && selectedCount < sortedData.length &&
+    (isAllSelected || isMobileAllSelected);
 
   // ใช้ตัวแสดงผลเดียวกันทั้งตารางและการ์ดบนมือถือ
   const renderCell = (col, row, rowIndex) => col.render
@@ -382,11 +445,14 @@ const SmartTable = ({
             <tr>
               {/* Checkbox Column */}
               {selectable && (
-                <th className="w-12 px-4 py-3">
+                <th className="w-12 px-4 py-3 print:hidden">
                   <input
                     type="checkbox"
+                    aria-label="เลือกทั้งหมดในหน้านี้"
                     checked={isAllSelected}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
+                    disabled={bulkBusy || paginatedData.length === 0}
+                    onChange={(e) => handleSelectAll(e.target.checked, paginatedData)}
                     className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                   />
                 </th>
@@ -450,7 +516,7 @@ const SmartTable = ({
               // Data Rows
               paginatedData.map((row, rowIndex) => {
                 const rowId = row.id || rowIndex;
-                const isSelected = selectedRows.has(rowId);
+                const isSelected = selectable && selectedRows.has(idOf(row));
 
                 return (
                   <tr
@@ -463,11 +529,13 @@ const SmartTable = ({
                     onClick={() => onRowClick?.(row)}
                   >
                     {selectable && (
-                      <td className="w-12 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="w-12 px-4 py-3 print:hidden" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
+                          aria-label="เลือกแถวนี้"
                           checked={isSelected}
-                          onChange={() => handleSelectRow(row, rowIndex)}
+                          disabled={bulkBusy}
+                          onChange={() => handleSelectRow(row)}
                           className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                         />
                       </td>
@@ -494,7 +562,7 @@ const SmartTable = ({
         <div className="md:hidden print:hidden p-3 space-y-3">
           {selectable && paginatedData.length > 0 && (
             <label className="flex min-h-[44px] items-center gap-3 text-sm">
-              <input type="checkbox" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
+              <input type="checkbox" checked={isMobileAllSelected} disabled={bulkBusy} onChange={(e) => handleSelectAll(e.target.checked, mobileData)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
               เลือกทั้งหมด
             </label>
           )}
@@ -505,15 +573,15 @@ const SmartTable = ({
           ) : mobileData.map((row, rowIndex) => (
             <div
               key={row.id || rowIndex}
-              className={`min-w-0 min-h-[56px] rounded-lg border px-3 py-2.5 space-y-2 ${selectedRows.has(row.id || rowIndex) ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-200'} ${onRowClick ? 'cursor-pointer active:bg-gray-100' : ''}`}
+              className={`min-w-0 min-h-[56px] rounded-lg border px-3 py-2.5 space-y-2 ${selectable && selectedRows.has(idOf(row)) ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-200'} ${onRowClick ? 'cursor-pointer active:bg-gray-100' : ''}`}
               onClick={() => onRowClick?.(row)}
               role={onRowClick ? 'button' : undefined}
               tabIndex={onRowClick ? 0 : undefined}
               onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row); } } : undefined}
             >
               {selectable && (
-                <label className="flex min-h-[44px] items-center gap-3 text-sm" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedRows.has(row.id || rowIndex)} onChange={() => handleSelectRow(row, rowIndex)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
+                <label className="flex min-h-[44px] min-w-[44px] items-center gap-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={selectedRows.has(idOf(row))} disabled={bulkBusy} onChange={() => handleSelectRow(row)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
                   เลือก
                 </label>
               )}
@@ -575,6 +643,55 @@ const SmartTable = ({
         >
           <div className="p-4 space-y-4">{filters}</div>
         </WindowModal>
+      )}
+
+      {/* แถบการทำงานกับแถวที่เลือก (ไม่พิมพ์ ไม่ส่งออก) */}
+      {selectable && selectedCount > 0 && (
+        <>
+          <div className="h-16 print:hidden" aria-hidden="true" />
+          <div
+            role="toolbar"
+            aria-label="จัดการรายการที่เลือก"
+            aria-busy={bulkBusy}
+            className="print:hidden fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-lg lg:inset-x-auto lg:right-6 lg:bottom-4 lg:max-w-3xl"
+          >
+            <span className="text-sm font-medium text-gray-800" aria-live="polite">เลือกแล้ว {selectedCount} รายการ</span>
+            {canSelectAllFiltered && (
+              <button
+                type="button"
+                onClick={handleSelectAllFiltered}
+                disabled={bulkBusy}
+                className="min-h-[44px] px-1 text-sm text-brand-600 hover:text-brand-700 disabled:opacity-50"
+              >
+                เลือกทั้งหมด {sortedData.length} รายการ
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              disabled={bulkBusy}
+              className="min-h-[44px] px-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+            >
+              ยกเลิกการเลือก
+            </button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {bulkBusy && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label="กำลังดำเนินการ" />}
+              {(bulkActions || []).map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => runBulkAction(action)}
+                  disabled={bulkBusy}
+                  className={`min-h-[44px] rounded-lg px-4 text-sm font-medium text-white disabled:opacity-50 ${
+                    action.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-600 hover:bg-brand-700'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Pagination (เฉพาะจอ md ขึ้นไป) */}

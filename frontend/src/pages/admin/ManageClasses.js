@@ -3,10 +3,12 @@ import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import { useDialog } from '../../components/ui/DialogProvider';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 const ManageClasses = () => {
+  const dialog = useDialog();
   const [classes, setClasses] = useState([]);
   const [grades, setGrades] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -33,7 +35,9 @@ const ManageClasses = () => {
   // Repeated-pattern helpers: all classes (unfiltered) to number the next room, and whether the name was auto-filled.
   const [allClasses, setAllClasses] = useState([]);
   const autoName = useRef(false);
-  const [bulk, setBulk] = useState({ on: false, count: 3 });
+  // Bulk add: several grades at once, e.g. ป.4 x 3 and ป.5 x 2.
+  const [bulk, setBulk] = useState({ on: false, rows: [{ gradeId: null, count: 3 }] });
+  const [creating, setCreating] = useState(false);
   const squash = (v) => String(v || '').replace(/[\s.]/g, '');
   const gradeById = (id) => grades.find(g => g.id === toId(id));
   // Room numbers already used for a grade, e.g. "ป.4" -> [1, 2].
@@ -47,6 +51,24 @@ const ManageClasses = () => {
     const used = new Set(roomsOf(gradeName));
     return Array.from({ length: Math.max(0, Math.min(20, count)) }, (_, i) => i + 1).filter(n => !used.has(n)).map(n => `${gradeName}/${n}`);
   };
+  // Preview of the whole bulk form: every wanted room, flagged when it already exists.
+  const bulkPlan = () => {
+    const seen = new Map();
+    bulk.rows.forEach((row) => {
+      const grade = gradeById(row.gradeId);
+      if (!grade) return;
+      const used = new Set(roomsOf(grade.gradeName));
+      const count = Math.max(0, Math.min(20, Number(row.count) || 0));
+      for (let n = 1; n <= count; n += 1) {
+        const className = `${grade.gradeName}/${n}`;
+        if (!seen.has(className)) seen.set(className, { className, gradeId: grade.id, exists: used.has(n) });
+      }
+    });
+    return Array.from(seen.values());
+  };
+  const plan = bulk.on && !editingClass ? bulkPlan() : [];
+  const toCreate = plan.filter(p => !p.exists);
+  const setBulkRow = (i, patch) => setBulk(b => ({ ...b, rows: b.rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) }));
   const onNameChange = (value) => {
     autoName.current = false;
     const m = value.trim().match(/^(.*?)\s*\/\s*\d+$/);
@@ -99,20 +121,30 @@ const ManageClasses = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (bulk.on && !editingClass) {
-      const grade = gradeById(formData.gradeId);
-      if (!grade) { setErrorAlert({ show: true, message: 'กรุณาเลือกชั้นปี' }); return; }
-      const names = bulkNames(grade.gradeName, Number(bulk.count) || 0);
-      if (!names.length) { setErrorAlert({ show: true, message: 'ห้องที่ต้องการมีอยู่แล้วทั้งหมด' }); return; }
+      if (!toCreate.length) {
+        setErrorAlert({ show: true, message: plan.length ? 'ห้องที่ต้องการมีอยู่แล้วทั้งหมด' : 'กรุณาเลือกชั้นปีและจำนวนห้อง' });
+        return;
+      }
+      const yearId = toId(formData.academicYearId);
+      const capacity = parseInt(formData.capacity) || 40;
+      const items = toCreate.map(p => ({ className: p.className, gradeId: p.gradeId, academicYearId: yearId, capacity }));
+      setCreating(true);
       try {
-        for (const className of names) {
-          await classAPI.create({ ...formData, className, gradeId: grade.id, teacherId: null,
-            academicYearId: toId(formData.academicYearId), capacity: parseInt(formData.capacity) || 40 });
-        }
+        const res = await classAPI.bulkCreate(items);
+        const created = Array.isArray(res.data?.created) ? res.data.created.length : Number(res.data?.created) || 0;
+        const skipped = res.data?.skipped || [];
         fetchData();
         closeModal();
+        await dialog.alert({
+          title: 'เพิ่มห้องเรียนเสร็จแล้ว',
+          type: skipped.length ? 'warning' : 'success',
+          message: `สร้างแล้ว ${created} · ข้าม ${skipped.length}` +
+            (skipped.length ? '\n\n' + skipped.map(s => `${s.className}: ${s.reason}`).join('\n') : ''),
+        });
       } catch (err) {
-        fetchData();
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'สร้างห้องได้ไม่ครบ ลองใหม่อีกครั้ง' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || 'สร้างห้องไม่สำเร็จ ลองใหม่อีกครั้ง' });
+      } finally {
+        setCreating(false);
       }
       return;
     }
@@ -161,9 +193,38 @@ const ManageClasses = () => {
     }
   };
 
+  const handleBulkDelete = async (rows) => {
+    if (!rows.length) return;
+    const withStudents = rows.reduce((n, r) => n + (r._count?.students || 0), 0);
+    const ok = await dialog.confirm({
+      title: `ลบห้องเรียน ${rows.length} ห้อง`,
+      message: `ต้องการลบห้องเรียนที่เลือก ${rows.length} ห้องหรือไม่?` +
+        (withStudents ? `\n\nห้องเหล่านี้มีนักเรียนรวม ${withStudents} คน ระบบอาจลบห้องที่ยังมีนักเรียนไม่ได้` : '') +
+        '\n\nลบแล้วกู้คืนไม่ได้',
+      confirmText: `ลบ ${rows.length} ห้อง`,
+      type: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await classAPI.bulkDelete(rows.map(r => r.id));
+      const deleted = Array.isArray(res.data?.deleted) ? res.data.deleted.length : Number(res.data?.deleted) || 0;
+      const failed = res.data?.failed || [];
+      fetchData();
+      await dialog.alert({
+        title: 'ลบห้องเรียนเสร็จแล้ว',
+        type: failed.length ? 'warning' : 'success',
+        message: `ลบแล้ว ${deleted} · ลบไม่ได้ ${failed.length}` +
+          (failed.length ? '\n\n' + failed.map(f => `${f.name || f.id}: ${f.reason}`).join('\n') : ''),
+      });
+    } catch (err) {
+      fetchData();
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง' });
+    }
+  };
+
   const openModal = (classData = null) => {
     autoName.current = false;
-    setBulk({ on: false, count: 3 });
+    setBulk({ on: false, rows: [{ gradeId: toId(filterGrade), count: 3 }] });
     classAPI.getAll().then(r => setAllClasses(r.data || [])).catch(() => setAllClasses(classes));
     // Find current academic year for default
     const currentAcademicYear = academicYears.find(ay => ay.isCurrent);
@@ -311,6 +372,9 @@ const ManageClasses = () => {
         searchable
         exportable
         pagination
+        selectable
+        getRowId={(row) => row.id}
+        bulkActions={[{ label: 'ลบที่เลือก', danger: true, onClick: handleBulkDelete }]}
         onClearFilters={() => { setFilterGrade(null); setFilterAcademicYear(null); }}
         emptyAction={
           <>
@@ -343,8 +407,8 @@ const ManageClasses = () => {
                 <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
                   ยกเลิก
                 </button>
-                <button type="submit" form="class-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                  บันทึก
+                <button type="submit" form="class-form" disabled={creating || (bulk.on && !editingClass && !toCreate.length)} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {bulk.on && !editingClass ? (creating ? 'กำลังสร้าง…' : `สร้าง ${toCreate.length} ห้อง`) : 'บันทึก'}
                 </button>
           </div>
         }
@@ -352,9 +416,11 @@ const ManageClasses = () => {
         <div className="p-4">
           <form id="class-form" onSubmit={handleSubmit} noValidate className="space-y-4">
               <div data-field="className">
+                {!(bulk.on && !editingClass) && (
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ชื่อห้องเรียน <span className="text-red-500">*</span>
                 </label>
+                )}
                 {!(bulk.on && !editingClass) && (
                 <input
                   type="text"
@@ -374,23 +440,60 @@ const ManageClasses = () => {
                 )}
                 {!editingClass && (
                   <label className="mt-3 flex min-h-[44px] items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" checked={bulk.on} onChange={(e) => setBulk(b => ({ ...b, on: e.target.checked }))} className="h-5 w-5" />
+                    <input type="checkbox" checked={bulk.on} onChange={(e) => setBulk(b => ({ ...b, on: e.target.checked, rows: b.rows.map((r, i) => (i === 0 && r.gradeId == null ? { ...r, gradeId: toId(formData.gradeId) } : r)) }))} className="h-5 w-5" />
                     เพิ่มหลายห้องพร้อมกัน
                   </label>
                 )}
                 {bulk.on && !editingClass && (
-                  <div className="mt-1 rounded-lg bg-gray-50 p-3 text-sm">
-                    <label className="flex items-center gap-2">จำนวนห้อง
-                      <input type="number" min="1" max="20" value={bulk.count} onChange={(e) => setBulk(b => ({ ...b, count: e.target.value }))}
-                        className="w-20 rounded-lg border px-2 py-1 text-base" /> ห้อง (สูงสุด 20)</label>
-                    <p className="mt-2 text-gray-600">{gradeById(formData.gradeId)
-                      ? (bulkNames(gradeById(formData.gradeId).gradeName, Number(bulk.count) || 0).join(', ') || 'มีครบแล้วทุกห้อง') + ' · ห้องที่มีอยู่แล้วจะข้าม'
-                      : 'เลือกชั้นปีด้านล่างก่อน'}</p>
+                  <div className="mt-1 space-y-3 rounded-lg bg-gray-50 p-3 text-sm">
+                    {bulk.rows.map((row, i) => (
+                      <div key={i} className="flex items-end gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="mb-1 block text-gray-700">ชั้นปี</span>
+                          <SmartComboBox
+                            options={grades}
+                            value={row.gradeId}
+                            onChange={(val) => setBulkRow(i, { gradeId: val })}
+                            labelKey="gradeName"
+                            valueKey="id"
+                            placeholder="เลือกชั้นปี"
+                            searchable
+                          />
+                        </div>
+                        <label className="w-20 shrink-0">
+                          <span className="mb-1 block text-gray-700">จำนวนห้อง</span>
+                          <input type="number" min="1" max="20" inputMode="numeric" value={row.count}
+                            onChange={(e) => setBulkRow(i, { count: e.target.value })}
+                            className="min-h-[44px] w-full rounded-lg border px-2 py-1 text-base" />
+                        </label>
+                        {bulk.rows.length > 1 && (
+                          <button type="button" aria-label="เอาชั้นนี้ออก"
+                            onClick={() => setBulk(b => ({ ...b, rows: b.rows.filter((_, idx) => idx !== i) }))}
+                            className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-gray-300 text-gray-600 hover:bg-white">✕</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setBulk(b => ({ ...b, rows: [...b.rows, { gradeId: null, count: 3 }] }))}
+                      className="min-h-[44px] rounded-lg border border-dashed border-brand-400 px-3 text-brand-700 hover:bg-white">+ เพิ่มชั้น</button>
+                    <div>
+                      <p className="mb-1 text-gray-700">จะสร้าง (สูงสุด 20 ห้องต่อชั้น)</p>
+                      {plan.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {plan.map(p => (
+                            <span key={p.className} className={`rounded-full border px-3 py-1 ${p.exists ? 'border-gray-200 bg-gray-100 text-gray-400' : 'border-brand-300 bg-brand-50 text-brand-800'}`}>
+                              {p.className}{p.exists ? ' · มีแล้ว' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      ) : <p className="text-gray-500">เลือกชั้นปีและจำนวนห้องด้านบน</p>}
+                    </div>
                   </div>
                 )}
-                  {errorFor('className', !String(formData.className ?? '').trim()) && <p className="mt-1 text-sm text-red-500">{errorFor('className', !String(formData.className ?? '').trim())}</p>}
+                  {!bulk.on && errorFor('className', !String(formData.className ?? '').trim()) && <p className="mt-1 text-sm text-red-500">{errorFor('className', !String(formData.className ?? '').trim())}</p>}
               </div>
 
+
+              {!(bulk.on && !editingClass) && (
               <div data-field="gradeId">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ชั้นปี <span className="text-red-500">*</span>
@@ -406,7 +509,9 @@ const ManageClasses = () => {
                     error={errorFor('gradeId', toId(formData.gradeId) === null)}
                   />
               </div>
+              )}
 
+              {!(bulk.on && !editingClass) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ครูประจำชั้น</label>
                 <SmartComboBox
@@ -420,6 +525,7 @@ const ManageClasses = () => {
                   clearable
                 />
               </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

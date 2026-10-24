@@ -79,6 +79,10 @@ export const academicYearAPI = {
 };
 
 export const gradeAPI = {
+  // Many at once (one request): { created, skipped } / { deleted, failed }
+  bulkCreate: (items) => api.post('/grades/bulk', { items }),
+  bulkDelete: (ids) => api.post('/grades/bulk-delete', { ids }),
+
   getAll: () => api.get('/grades'),
   getById: (id) => api.get(`/grades/${id}`),
   create: (data) => api.post('/grades', data),
@@ -87,6 +91,10 @@ export const gradeAPI = {
 };
 
 export const classAPI = {
+  // Many at once (one request): { created, skipped } / { deleted, failed }
+  bulkCreate: (items) => api.post('/classes/bulk', { items }),
+  bulkDelete: (ids) => api.post('/classes/bulk-delete', { ids }),
+
   getAll: (params) => api.get('/classes', { params }),
   getById: (id) => api.get(`/classes/${id}`),
   getStudents: (id) => api.get(`/classes/${id}/students`),
@@ -96,6 +104,9 @@ export const classAPI = {
 };
 
 export const studentAPI = {
+  // Many at once (one request): { created, skipped } / { deleted, failed }
+  bulkDelete: (ids) => api.post('/students/bulk-delete', { ids }),
+
   getAll: (params) => api.get('/students', { params }),
   getById: (id) => api.get(`/students/${id}`),
   getSubmissions: (id, params) => api.get(`/students/${id}/submissions`, { params }),
@@ -114,6 +125,10 @@ export const teacherAPI = {
 };
 
 export const subjectAPI = {
+  // Many at once (one request): { created, skipped } / { deleted, failed }
+  bulkCreate: (items) => api.post('/subjects/bulk', { items }),
+  bulkDelete: (ids) => api.post('/subjects/bulk-delete', { ids }),
+
   getAll: (params) => api.get('/subjects', { params }),
   getById: (id) => api.get(`/subjects/${id}`),
   getTasks: (id) => api.get(`/subjects/${id}/tasks`),

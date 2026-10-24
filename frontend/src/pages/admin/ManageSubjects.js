@@ -5,11 +5,49 @@ import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useDialog } from '../../components/ui/DialogProvider';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
+const SKIP_DETAIL_MAX = 5;
+const normCode = (c) => String(c || '').replace(/\s+/g, '').toLowerCase();
+
+// รับ "ว14101 วิทยาศาสตร์ 4" / "ว14101, วิทยาศาสตร์" / วางสองคอลัมน์จาก Excel (คั่นด้วย tab)
+const parseSubjectLines = (text) => {
+  const rows = [];
+  const seen = new Map();
+  String(text || '').split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    let code = '';
+    let name = '';
+    if (line.includes('\t')) {
+      const parts = line.split('\t').map((x) => x.trim()).filter(Boolean);
+      code = parts[0] || '';
+      name = parts.slice(1).join(' ');
+    } else {
+      const m = line.match(/^([^\s,，]+)[\s,，]+(.+)$/);
+      if (m) { code = m[1]; name = m[2].replace(/^[\s,，]+|[\s,，]+$/g, ''); }
+      else code = line;
+    }
+    let problem = '';
+    if (!name) problem = 'ไม่มีชื่อวิชา';
+    else if (seen.has(normCode(code))) problem = `รหัสซ้ำกับบรรทัด ${seen.get(normCode(code))}`;
+    if (!seen.has(normCode(code))) seen.set(normCode(code), rows.length + 1);
+    rows.push({ line: rows.length + 1, code, name, problem });
+  });
+  return rows;
+};
+
 const ManageSubjects = () => {
   const { user } = useAuth();
+  const dialog = useDialog();
+  const [notice, setNotice] = useState('');
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState('');
+  const [bulkDefaults, setBulkDefaults] = useState({ gradeId: null, teacherId: null, academicYearId: null });
   const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -178,6 +216,91 @@ const ManageSubjects = () => {
     setEditingSubject(null);
   };
 
+  // ---- เพิ่มหลายวิชา ----
+  const bulkRows = parseSubjectLines(bulkText);
+  const existingCodes = new Set(subjects.map((x) => normCode(x.subjectCode)));
+  const bulkValid = bulkRows.filter((r) => !r.problem);
+  const bulkTeacherOk = toId(bulkDefaults.teacherId) !== null;
+
+  const openBulk = () => {
+    const currentAcademicYear = academicYears.find((ay) => ay.isCurrent);
+    const myId = toId(user?.teacher?.id);
+    const myListed = myId !== null && teachers.some((t) => Number(t.id) === myId);
+    setBulkDefaults({
+      teacherId: myListed ? myId : (teachers.length === 1 ? toId(teachers[0].id) : null),
+      gradeId: filterGrade || null,
+      academicYearId: filterAcademicYear || currentAcademicYear?.id || null,
+    });
+    setBulkText('');
+    setBulkError('');
+    setShowBulk(true);
+  };
+  const closeBulk = () => {
+    if (bulkBusy) return;
+    setShowBulk(false);
+  };
+
+  const handleBulkCreate = async () => {
+    if (!bulkValid.length || !bulkTeacherOk || bulkBusy) return;
+    setBulkBusy(true);
+    setBulkError('');
+    try {
+      const items = bulkValid.map((r) => ({
+        subjectCode: r.code,
+        subjectName: r.name,
+        gradeId: toId(bulkDefaults.gradeId),
+        teacherId: toId(bulkDefaults.teacherId),
+        academicYearId: toId(bulkDefaults.academicYearId),
+      }));
+      const res = await subjectAPI.bulkCreate(items);
+      const { created = 0, skipped = [] } = res.data || {};
+      const createdN = Array.isArray(created) ? created.length : created;
+      let msg = `เพิ่มแล้ว ${createdN}`;
+      if (skipped.length) {
+        const detail = skipped.slice(0, SKIP_DETAIL_MAX).map((x) => `${x.subjectCode}: ${x.reason}`).join(', ');
+        msg += ` · ข้าม ${skipped.length} (${detail}${skipped.length > SKIP_DETAIL_MAX ? ' ...' : ''})`;
+      }
+      setNotice(msg);
+      setShowBulk(false);
+      setBulkText('');
+      fetchData();
+    } catch (err) {
+      setBulkError(err.response?.data?.error || 'เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  // ---- ลบที่เลือก ----
+  const handleBulkDelete = async (rows) => {
+    if (!rows || !rows.length) return;
+    const preview = rows.slice(0, 8).map((r) => `${r.subjectCode} ${r.subjectName}`).join('\n') + (rows.length > 8 ? '\n...' : '');
+    const ok = await dialog.confirm({
+      title: 'ลบวิชาที่เลือก',
+      message: `ต้องการลบ ${rows.length} วิชา\n${preview}\nวิชาที่มีงานอยู่อาจลบไม่ได้`,
+      type: 'danger',
+      confirmText: `ลบ ${rows.length} รายการ`,
+      cancelText: 'ยกเลิก',
+    });
+    if (!ok) return;
+    try {
+      const res = await subjectAPI.bulkDelete(rows.map((r) => r.id));
+      const { deleted = 0, failed = [] } = res.data || {};
+      const deletedN = Array.isArray(deleted) ? deleted.length : deleted;
+      setNotice(`ลบแล้ว ${deletedN}${failed.length ? ` · ลบไม่ได้ ${failed.length}` : ''}`);
+      await fetchData();
+      if (failed.length) {
+        await dialog.alert({
+          title: `ลบไม่ได้ ${failed.length} รายการ`,
+          message: failed.map((f) => `${f.name}: ${f.reason}`).join('\n'),
+          type: 'danger',
+        });
+      }
+    } catch (err) {
+      setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+    }
+  };
+
   // Table columns
   const columns = [
     {
@@ -270,16 +393,37 @@ const ManageSubjects = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800">วิชา</h1>
-        <button
-          onClick={() => openModal()}
-          className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มวิชา
-        </button>
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={openBulk}
+            className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+          >
+            เพิ่มหลายวิชา
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            เพิ่มวิชา
+          </button>
+        </div>
       </div>
+
+      {/* ผลลัพธ์ */}
+      {notice && (
+        <div role="status" className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start justify-between gap-3">
+          <span className="break-words min-w-0">{notice}</span>
+          <button onClick={() => setNotice('')} aria-label="ปิด" className="min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-green-600 hover:text-green-800 shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -297,12 +441,15 @@ const ManageSubjects = () => {
         searchable
         exportable
         pagination
+        selectable
+        getRowId={(row) => row.id}
+        bulkActions={[{ label: 'ลบที่เลือก', danger: true, onClick: handleBulkDelete }]}
         onClearFilters={() => { setFilterAcademicYear(null); setFilterGrade(null); }}
         emptyAction={
-          <>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มวิชา</button>
-            
-          </>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button type="button" onClick={openBulk} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มหลายวิชา</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">เพิ่มทีละวิชา</button>
+          </div>
         }
         emptyMessage="ยังไม่มีวิชา"
         onRowClick={(row) => openModal(row)}
@@ -435,6 +582,123 @@ const ManageSubjects = () => {
               </details>
 
           </form>
+        </div>
+      </WindowModal>
+
+      {/* เพิ่มหลายวิชา */}
+      <WindowModal
+        open={showBulk}
+        title="เพิ่มหลายวิชา"
+        onClose={closeBulk}
+        id="subject-bulk"
+        initialWidth="max-w-2xl"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button type="button" onClick={closeBulk} disabled={bulkBusy} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkCreate}
+              disabled={!bulkValid.length || !bulkTeacherOk || bulkBusy}
+              className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkBusy ? 'กำลังเพิ่ม...' : bulkValid.length ? `เพิ่ม ${bulkValid.length} วิชา` : 'เพิ่มวิชา'}
+            </button>
+          </div>
+        }
+      >
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+              <SmartComboBox
+                options={grades}
+                value={bulkDefaults.gradeId}
+                onChange={(val) => setBulkDefaults((d) => ({ ...d, gradeId: val }))}
+                labelKey="gradeName"
+                valueKey="id"
+                placeholder="ไม่ระบุชั้น"
+                searchable
+                clearable
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ครูผู้สอน <span className="text-red-500">*</span>
+              </label>
+              <SmartComboBox
+                options={teachers}
+                value={bulkDefaults.teacherId}
+                onChange={(val) => setBulkDefaults((d) => ({ ...d, teacherId: val }))}
+                labelKey="name"
+                valueKey="id"
+                placeholder="เลือกครูผู้สอน"
+                searchable
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+              <SmartComboBox
+                options={academicYears}
+                value={bulkDefaults.academicYearId}
+                onChange={(val) => setBulkDefaults((d) => ({ ...d, academicYearId: val }))}
+                labelKey="year"
+                valueKey="id"
+                placeholder="เลือกปีการศึกษา"
+                searchable
+                clearable
+              />
+            </div>
+          </div>
+          {!bulkTeacherOk && <p className="text-sm text-amber-700">เลือกครูผู้สอนก่อนจึงจะเพิ่มได้</p>}
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="subject-bulk-text" className="block text-sm font-medium text-gray-700">รหัส ชื่อวิชา — หนึ่งบรรทัดต่อหนึ่งวิชา</label>
+              {bulkText && (
+                <button type="button" onClick={() => setBulkText('')} className="min-h-[44px] px-2 text-sm text-gray-500 hover:text-gray-700 underline shrink-0">
+                  ล้าง
+                </button>
+              )}
+            </div>
+            <textarea
+              id="subject-bulk-text"
+              data-autofocus
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              rows={7}
+              placeholder={'ว14101 วิทยาศาสตร์ 4\nค14101 คณิตศาสตร์ 4\nท14101 ภาษาไทย 4'}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="mt-1 text-xs text-gray-500">คั่นรหัสกับชื่อด้วยเว้นวรรคหรือจุลภาค · วางสองคอลัมน์ (รหัส, ชื่อ) จาก Excel ได้เลย</p>
+          </div>
+
+          {bulkRows.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                จะสร้าง {bulkValid.length} วิชา{bulkRows.length > bulkValid.length ? ` · มีปัญหา ${bulkRows.length - bulkValid.length} บรรทัด (จะไม่ถูกเพิ่ม)` : ''}
+              </p>
+              <ul className="border rounded-lg divide-y max-h-72 overflow-y-auto">
+                {bulkRows.map((r) => {
+                  const exists = !r.problem && existingCodes.has(normCode(r.code));
+                  return (
+                    <li key={r.line} className={`px-3 py-2 min-h-[44px] flex items-start gap-3 text-sm ${r.problem ? 'bg-red-50' : ''}`}>
+                      <span className="text-gray-400 w-6 shrink-0 text-right">{r.line}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-gray-900 break-all">{r.code}</span>
+                        {r.name && <span className="text-gray-700 break-words"> {r.name}</span>}
+                        {r.problem && <p className="text-xs text-red-600 mt-0.5">{r.problem}</p>}
+                        {exists && <p className="text-xs text-amber-700 mt-0.5">มีรหัสนี้ในรายการแล้ว อาจถูกข้าม</p>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {bulkError && <p role="alert" className="text-sm text-red-600">{bulkError}</p>}
         </div>
       </WindowModal>
 

@@ -9,6 +9,10 @@ const { validate, schemas } = require('../middleware/validate');
 // Get all classes
 router.get('/', authenticate, staff, classController.getAll);
 
+// Bulk create / delete (registered before the '/:id' routes)
+router.post('/bulk', authenticate, staff, classController.bulkCreate);
+router.post('/bulk-delete', authenticate, staff, classController.bulkDelete);
+
 // Get class by ID
 router.get('/:id', authenticate, staff, classController.getById);
 

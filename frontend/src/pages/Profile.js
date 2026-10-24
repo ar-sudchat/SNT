@@ -242,10 +242,8 @@ function PasswordCard({ code, isAdmin, notify }) {
   const set = (k) => (v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
   const toggle = (k) => () => setShow(s => ({ ...s, [k]: !s[k] }));
   const validate = () => {
-    if (!form.current) return 'กรุณากรอกรหัสผ่านปัจจุบัน';
     if (form.next.length < 8) return 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร';
     if (code && form.next.toLowerCase() === code.toLowerCase()) return 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผู้ใช้';
-    if (form.next === form.current) return 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน';
     if (form.next !== form.confirm) return 'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน';
     return '';
   };
@@ -255,7 +253,7 @@ function PasswordCard({ code, isAdmin, notify }) {
     if (v) { setError(v); return; }
     setSaving(true);
     try {
-      await authAPI.changePassword({ currentPassword: form.current, newPassword: form.next });
+      await authAPI.changePassword({ newPassword: form.next });
       setForm({ current: '', next: '', confirm: '' });
       setShow({ current: false, next: false, confirm: false });
       notify('เปลี่ยนรหัสผ่านสำเร็จ ครั้งหน้าเข้าสู่ระบบด้วยรหัสใหม่');
@@ -272,7 +270,6 @@ function PasswordCard({ code, isAdmin, notify }) {
         {isAdmin ? 'เปลี่ยนแล้ว รหัสเดิมที่ตั้งไว้ที่เซิร์ฟเวอร์จะใช้ไม่ได้อีก' : 'ครั้งแรกรหัสผ่านคือรหัสผู้ใช้ ควรเปลี่ยนเป็นรหัสใหม่อย่างน้อย 8 ตัวอักษร'}
       </p>
       <form onSubmit={submit} noValidate className="mt-4 space-y-4">
-        <PasswordField id="pw-current" label="รหัสผ่านปัจจุบัน" value={form.current} onChange={set('current')} show={show.current} onToggle={toggle('current')} autoComplete="current-password" />
         <div>
           <PasswordField id="pw-new" label="รหัสผ่านใหม่" value={form.next} onChange={set('next')} show={show.next} onToggle={toggle('next')} autoComplete="new-password" />
           {strength ? (

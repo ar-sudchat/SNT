@@ -5,6 +5,10 @@ const { authenticate, authorize, isTeacher } = require('../middleware/auth');
 const staff = authorize('ADMIN', 'TEACHER');
 const { validate, schemas } = require('../middleware/validate');
 
+// Bulk create / delete (before '/:id' routes)
+router.post('/bulk', authenticate, staff, subjectController.bulkCreate);
+router.post('/bulk-delete', authenticate, staff, subjectController.bulkDelete);
+
 // Get all subjects
 router.get('/', authenticate, staff, subjectController.getAll);
 
