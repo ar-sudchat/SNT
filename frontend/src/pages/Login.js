@@ -112,7 +112,7 @@ const Login = () => {
 
         {/* Login hints */}
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600">ลืมรหัสผ่าน แจ้งผู้ดูแลระบบ · <a href="/privacy" className="underline">ความเป็นส่วนตัว</a></p>
+          <p className="text-xs text-gray-600">ลืมรหัสผ่าน แจ้งผู้ดูแลระบบ · <a href="/privacy" className="underline">ความเป็นส่วนตัว</a> · <a href="/guide/" target="_blank" rel="noopener noreferrer" className="underline">คู่มือการใช้งาน</a></p>
         </div>
       </div>
 

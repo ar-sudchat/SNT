@@ -26,6 +26,7 @@ import PrivacyNotice from './pages/legal/PrivacyNotice';
 import { StudentMonitor, MonitorPage, MonitorRedirect } from './pages/monitor';
 import SettingsHub from './pages/admin/SettingsHub';
 import Layout from './components/Layout';
+import Profile from './pages/Profile';
 
 // เส้นทางเก่า → หน้าติดตามใหม่
 const LegacySubjectRedirect = () => {
@@ -83,6 +84,7 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="profile" element={<Profile />} />
 
             {/* Teacher Routes */}
             <Route

@@ -132,8 +132,12 @@ const authController = {
       });
 
       if (student) {
-        // For students, use studentCode as password (simple login)
-        if (password !== student.studentCode) {
+        // Default password = studentCode until a User row exists; after that the
+        // stored hash wins (so change-password takes effect).
+        const okStudent = student.user
+          ? await bcrypt.compare(String(password), student.user.password)
+          : password === student.studentCode;
+        if (!okStudent) {
           return res.status(401).json({ error: INVALID_LOGIN });
         }
 
@@ -245,7 +249,12 @@ const authController = {
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
         include: {
-          teacher: true,
+          teacher: {
+            include: {
+              subjects: { where: { status: 'ACTIVE' }, select: { id: true, subjectCode: true, subjectName: true } },
+              homeClass: { select: { id: true, className: true } }
+            }
+          },
           student: {
             include: {
               class: {
@@ -277,26 +286,33 @@ const authController = {
     res.json({ message: 'ออกจากระบบแล้ว' });
   },
 
-  // Change password
+  // Change password (teacher/student). Wrong current password -> 400, not 401,
+  // because the frontend treats 401 as "session expired" and logs out.
   async changePassword(req, res) {
     try {
-      const { currentPassword, newPassword } = req.body;
+      if (req.user.role === 'ADMIN') {
+        return res.status(400).json({ error: 'รหัสผู้ดูแลระบบตั้งที่เซิร์ฟเวอร์ (ADMIN_PASSWORD_HASH) เปลี่ยนจากหน้านี้ไม่ได้' });
+      }
+      const currentPassword = String((req.body && req.body.currentPassword) || '');
+      const newPassword = String((req.body && req.body.newPassword) || '');
+      if (!currentPassword) return res.status(400).json({ error: 'กรุณากรอกรหัสผ่านปัจจุบัน' });
+      if (newPassword.length < 8) return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
+      if (newPassword.length > 128) return res.status(400).json({ error: 'รหัสผ่านใหม่ยาวเกินไป' });
+      const code = req.user.teacher?.teacherCode || req.user.student?.studentCode || '';
+      if (code && newPassword.toLowerCase() === String(code).toLowerCase()) {
+        return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผู้ใช้' });
+      }
+      if (newPassword === currentPassword) {
+        return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน' });
+      }
 
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.id }
-      });
-
-      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+        return res.status(400).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: { password: hashedPassword }
-      });
+      await prisma.user.update({ where: { id: req.user.id }, data: { password: hashedPassword } });
 
       res.json({ message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
     } catch (error) {

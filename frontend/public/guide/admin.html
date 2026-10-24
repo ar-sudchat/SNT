@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>คู่มือผู้ดูแล KruScan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<style>
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;font-size:15px}
+.card h3{font-size:17px;margin-bottom:6px}
+code{font-size:14px;background:var(--surface-2);padding:1px 6px;border-radius:6px;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<header class="top gut"><div class="wrap">
+  <a class="brand" href="index.html"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="4" width="56" height="56" rx="14" fill="#1b3366"/><rect x="16" y="14" width="7" height="36" rx="2" fill="#fff"/><path d="M27 32L44 15" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M29 36l7 7 13-14" fill="none" stroke="#f6a92e" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Kru</b>Scan</span></a>
+  <nav class="nav" aria-label="หน้าในคู่มือ"><a href="index.html">หน้าแรก</a><a href="teacher.html">คู่มือครู</a><a href="admin.html" aria-current="page">คู่มือผู้ดูแล</a></nav>
+</div></header>
+
+<main class="gut"><div class="wrap">
+<section class="phead">
+  <span class="kicker">คู่มือผู้ดูแลระบบ</span>
+  <h1>ตั้งค่าโรงเรียนให้พร้อมใช้</h1>
+  <p>งานตั้งต้นทำครั้งเดียวตอนต้นปีการศึกษา แล้วแก้เมื่อมีการเปลี่ยนแปลง ลำดับที่แนะนำ: ปีการศึกษา → ชั้นปี → ครู → ห้องเรียน → นักเรียน → วิชา → งาน แล้วพิมพ์ QR ติดสมุด</p>
+  <nav class="toc" aria-label="สารบัญ">
+    <a href="#a-home">1 หน้าแรกผู้ดูแล</a><a href="#a-hub">2 ตั้งค่าระบบ</a><a href="#a-data">3 ข้อมูลหลัก</a><a href="#a-import">4 นำเข้าข้อมูล</a><a href="#a-qr">5 พิมพ์ QR</a><a href="#a-move">6 ย้ายชั้น</a><a href="#a-ai">7 ตั้งค่า AI</a><a href="#a-sec">8 ความปลอดภัย/PDPA</a>
+  </nav>
+</section>
+
+<section class="ch desk" id="a-home">
+  <div class="ch-text"><span class="ch-num">บทที่ 1</span><h2>หน้าแรกผู้ดูแล · ความพร้อมของระบบ</h2>
+    <ul><li>ภาพรวมโรงเรียนของปีการศึกษาปัจจุบัน: การ์ด <b>ส่งงานแล้ว</b>, <b>รอครูตรวจ</b>, <b>นักเรียน</b>, <b>วิชา</b></li><li><b>วิชาที่ต้องติดตาม</b> เรียงจากวิชาที่ส่งน้อยที่สุด กดเพื่อดูรายวิชานั้น</li><li><b>ความพร้อมของระบบ</b> เช็กลิสต์ ✓ = พร้อม · ! = ยังต้องทำ (เช่น ครูยังไม่มีวิชาสอน, วิชายังไม่ได้สร้าง QR Code) กดแต่ละข้อไปหน้าที่แก้ได้</li></ul></div>
+  <div class="player" data-device="desktop" aria-label="สาธิตหน้าแรกผู้ดูแล"><script type="application/json">[
+    {"i":"desktop-admin","b":[19,20,79,14],"c":"การ์ดภาพรวม ส่งงานแล้ว · รอครูตรวจ · นักเรียน · วิชา"},
+    {"i":"desktop-admin","b":[19,37,52,60],"c":"วิชาที่ต้องติดตาม เรียงจากส่งน้อยที่สุด"},
+    {"i":"desktop-admin","b":[72,37,26,54],"c":"ความพร้อมของระบบ ✓ พร้อม · ! ยังต้องทำ"},
+    {"i":"desktop-admin","b":[72,71,26,5.5],"c":"! ครูยังไม่มีวิชาสอน — กดเพื่อไปแก้","t":1,"z":1.15},
+    {"i":"desktop-admin","b":[72,85.5,26,5.5],"c":"! วิชายังไม่ได้สร้าง QR Code","t":1,"z":1.15}
+  ]</script></div>
+</section>
+
+<section class="ch desk" id="a-hub">
+  <div class="ch-text"><span class="ch-num">บทที่ 2</span><h2>ตั้งค่าระบบ (ศูนย์รวม)</h2>
+    <p>เมนู <b>ตั้งค่าระบบ</b> รวมงานตั้งต้นไว้ที่เดียว: ปีการศึกษา · ชั้นปี · ห้องเรียน · ครู · นักเรียน · วิชา · พิมพ์ QR Code · ย้ายชั้นเรียน · นำเข้าข้อมูล</p>
+    <p class="tip">ทุกหน้าย่อยมีลิงก์ <b>‹ ตั้งค่าระบบ</b> ด้านบนเพื่อย้อนกลับ</p></div>
+  <div class="player" data-device="desktop" aria-label="สาธิตหน้าตั้งค่าระบบ"><script type="application/json">[
+    {"i":"desktop-admin","b":[0,47,18,5],"c":"เมนู ตั้งค่าระบบ ที่แถบซ้าย","t":1,"z":1.12},
+    {"i":"desktop-settings","b":[20,20,78,10],"c":"ปีการศึกษา · ชั้นปี · ห้องเรียน"},
+    {"i":"desktop-settings","b":[20,31,78,10],"c":"ครู · นักเรียน · วิชา"},
+    {"i":"desktop-settings","b":[20,42,78,10],"c":"พิมพ์ QR Code · ย้ายชั้นเรียน · นำเข้าข้อมูล"},
+    {"i":"desktop-settings","b":[72,42,26,10],"c":"เริ่มจาก นำเข้าข้อมูล ประหยัดเวลาที่สุด","t":1,"z":1.12}
+  ]</script></div>
+</section>
+
+<section class="ch" id="a-data">
+  <div class="ch-text"><span class="ch-num">บทที่ 3</span><h2>ปีการศึกษา · ชั้น · ห้อง · ครู · นักเรียน · วิชา</h2>
+    <ul><li><b>ปีการศึกษา</b> เปิดปีใหม่ กำหนดปีที่ใช้งานอยู่</li><li><b>ชั้นปี</b> ม.1 – ม.6 และระดับชั้นอื่น · <b>ห้องเรียน</b> ห้องในแต่ละชั้น และครูประจำชั้น</li><li><b>ครู</b> บัญชีครูและสิทธิ์เข้าใช้</li><li><b>นักเรียน</b> รายชื่อ ค้นหาได้ กรองตามชั้น/ห้อง ปุ่ม <b>+</b> เพิ่มใหม่ กดชื่อเพื่อเปิดหน้าต่าง <b>แก้ไขนักเรียน</b> (ปุ่ม <b>ลบ</b> อยู่ในหน้าต่างนี้ ไม่อยู่บนรายการ)</li><li><b>วิชา</b> แสดงรหัสวิชา ชั้น และครูผู้สอน เพิ่ม/แก้แบบเดียวกัน</li></ul></div>
+  <div class="player" data-device="phone" aria-label="สาธิตจัดการนักเรียนและวิชา"><script type="application/json">[
+    {"i":"phone-settings","b":[3,17,94,9],"c":"ตั้งค่าระบบ: ปีการศึกษา"},
+    {"i":"phone-settings","b":[3,27,94,9],"c":"ชั้นปี"},
+    {"i":"phone-settings","b":[3,37,94,9],"c":"ห้องเรียน และครูประจำชั้น"},
+    {"i":"phone-settings","b":[3,58,94,9],"c":"นักเรียน","t":1},
+    {"i":"phone-students","b":[6,28,74,5],"c":"ค้นหา และกรองตามชั้น/ห้อง"},
+    {"i":"phone-students","b":[84,83,15,7],"c":"ปุ่ม + เพิ่มนักเรียนใหม่"},
+    {"i":"phone-students","b":[3,36,94,9],"c":"กดชื่อเพื่อแก้ไข (ปุ่มลบอยู่ในหน้าต่างแก้ไข)","t":1},
+    {"i":"phone-subjects","b":[3,36,94,9],"c":"วิชา: รหัสวิชา ชั้น และครูผู้สอน"}
+  ]</script></div>
+</section>
+
+<section class="ch" id="a-import">
+  <div class="ch-text"><span class="ch-num">บทที่ 4</span><h2>นำเข้าข้อมูลจากไฟล์ (3 ขั้น)</h2>
+    <ol><li><b>เลือกประเภทข้อมูล</b> ตามลำดับ ปีการศึกษา → ชั้นปี → ครู → ห้องเรียน → นักเรียน → วิชา → งาน</li><li>กด <b>โหลดไฟล์ตัวอย่าง</b> กรอกตามหัวคอลัมน์เดิม (ห้ามลบหรือเปลี่ยนชื่อหัวคอลัมน์) แล้ว <b>เลือกไฟล์</b> CSV, Excel หรือ JSON</li><li>กด <b>นำเข้าข้อมูล</b></li></ol>
+    <p class="tip"><b>CSV ภาษาไทย:</b> อ่านได้ทั้งไฟล์ UTF-8 และไฟล์ CSV ที่บันทึกจาก Excel ภาษาไทย (Windows-874) ภาษาไทยไม่เพี้ยน ถ้าไม่แน่ใจ บันทึกเป็น .xlsx ก็ได้</p></div>
+  <div class="player" data-device="phone" aria-label="สาธิตการนำเข้าข้อมูล"><script type="application/json">[
+    {"i":"phone-import","b":[7,17,90,24],"c":"ขั้น 1 เลือกประเภทข้อมูล"},
+    {"i":"phone-import","b":[7,17,41,5],"c":"เริ่มจาก ปีการศึกษา","t":1},
+    {"i":"phone-import","b":[7,56,90,6],"c":"ขั้น 2 โหลดไฟล์ตัวอย่าง แล้วกรอกตามหัวคอลัมน์","t":1},
+    {"i":"phone-import","b":[7,63,90,6],"c":"เลือกไฟล์ CSV, Excel หรือ JSON","t":1},
+    {"i":"phone-import","b":[7,81,90,6],"c":"ขั้น 3 กด นำเข้าข้อมูล","t":1}
+  ]</script></div>
+</section>
+
+<section class="ch" id="a-qr">
+  <div class="ch-text"><span class="ch-num">บทที่ 5</span><h2>พิมพ์ QR Code</h2>
+    <p><b>ตั้งค่าระบบ › พิมพ์ QR Code</b> เลือก <b>ปีการศึกษา</b> <b>ห้องเรียน</b> และ <b>วิชา</b> สร้าง QR แล้วพิมพ์บัตรไปติดปกสมุดนักเรียน</p>
+    <p class="tip">หน้าแรกผู้ดูแลจะเตือนถ้ายังมีวิชาที่ไม่ได้สร้าง QR Code</p></div>
+  <div class="player" data-device="phone" aria-label="สาธิตการพิมพ์ QR"><script type="application/json">[
+    {"i":"phone-settings","b":[3,80,94,9],"c":"ตั้งค่าระบบ › พิมพ์ QR Code","t":1},
+    {"i":"phone-qrcode","b":[6,25,90,5],"c":"เลือกปีการศึกษา","t":1},
+    {"i":"phone-qrcode","b":[6,35,90,5],"c":"เลือกห้องเรียน","t":1},
+    {"i":"phone-qrcode","b":[6,45,90,5],"c":"เลือกวิชา แล้วพิมพ์บัตรติดปกสมุด","t":1}
+  ]</script></div>
+</section>
+
+<section class="ch" id="a-move">
+  <div class="ch-text"><span class="ch-num">บทที่ 6</span><h2>ย้ายชั้นเรียน</h2>
+    <p><b>ตั้งค่าระบบ › ย้ายชั้นเรียน</b> มี 3 แท็บ</p>
+    <ul><li><b>ย้ายทีละคน</b> เลือกนักเรียนและห้องปลายทาง แล้วกด <b>ย้ายนักเรียน</b></li><li><b>ย้ายทั้งห้อง</b></li><li><b>เลื่อนชั้นปีใหม่</b></li></ul>
+    <p class="tip">ปุ่มย้ายจะกดได้เมื่อเลือกครบทุกช่อง</p></div>
+  <div class="player" data-device="phone" aria-label="สาธิตการย้ายชั้น"><script type="application/json">[
+    {"i":"phone-transfer","b":[3,22,78,5],"c":"3 แท็บ: ย้ายทีละคน · ย้ายทั้งห้อง · เลื่อนชั้นปีใหม่"},
+    {"i":"phone-transfer","b":[7,31,86,5],"c":"เลือกนักเรียน","t":1},
+    {"i":"phone-transfer","b":[7,42,86,5],"c":"เลือกห้องเรียนปลายทาง","t":1},
+    {"i":"phone-transfer","b":[7,50,86,6],"c":"กด ย้ายนักเรียน (กดได้เมื่อเลือกครบ)","t":1}
+  ]</script></div>
+</section>
+
+<section class="sect" id="a-ai"><h2>ตั้งค่า AI</h2></section>
+<div class="cards" style="margin-top:20px">
+  <div class="card"><h3>เปิด/ปิดที่เซิร์ฟเวอร์</h3><p>ผู้ช่วย AI ตั้งค่าผ่านตัวแปรระบบของเซิร์ฟเวอร์ <code>AI_PROVIDER</code>, <code>AI_MODEL</code> และคีย์ของผู้ให้บริการ (Anthropic, OpenAI หรือ Gemini) เว้นว่าง = ปิด AI</p></div>
+  <div class="card"><h3>ตรวจว่าใช้ได้</h3><p>เมื่อตั้งคีย์แล้ว หน้าผู้ช่วย AI ของครูขึ้นป้ายเขียว <b>พร้อมใช้งาน</b> ถ้ายังไม่ตั้ง ครูจะเห็น "ผู้ช่วย AI ยังไม่เปิดใช้"</p></div>
+  <div class="card"><h3>ข้อมูลที่ส่งออก</h3><p>ข้อมูลไปถึงผู้ให้บริการ AI ภายนอกเฉพาะเมื่อโรงเรียนเปิดใช้ และครูกดถามเท่านั้น ห้ามวางคีย์ในแชทหรือในไฟล์ที่แชร์</p></div>
+</div>
+
+<section class="sect" id="a-sec"><h2>ความปลอดภัย / PDPA</h2></section>
+<div class="cards" style="margin-top:20px">
+  <div class="card"><h3>ใครเห็นอะไร</h3><p><b>ผู้ดูแล</b> จัดการข้อมูลทั้งหมด · <b>ครู</b> แก้ไขหรือตรวจงานได้เฉพาะวิชาที่ตนสอน · <b>นักเรียน</b> เห็นเฉพาะการส่งงานของตนเอง · <b>ผู้ปกครอง</b> (ผ่านลิงก์) เห็นสถานะการส่งงาน ไม่เห็นคะแนน</p></div>
+  <div class="card"><h3>ลิงก์ผู้ปกครอง</h3><p>ดูอย่างเดียว มีวันหมดอายุ ครูสร้างได้เฉพาะนักเรียนในห้องที่ประจำชั้นหรือชั้นที่สอน</p></div>
+  <div class="card"><h3>ประกาศความเป็นส่วนตัว</h3><p>หน้าเข้าสู่ระบบมีลิงก์ <b>ความเป็นส่วนตัว</b> อธิบายการใช้ข้อมูล โรงเรียนต้องกรอกข้อมูลผู้ควบคุมข้อมูลของโรงเรียนในประกาศก่อนใช้งานจริง</p></div>
+  <div class="card"><h3>รหัสผ่าน</h3><p>ครูหรือนักเรียนลืมรหัสผ่าน ให้แจ้งผู้ดูแลระบบเพื่อตั้งใหม่ ไม่ส่งรหัสผ่านทางแชทกลุ่ม</p></div>
+</div>
+</div></main>
+
+<footer class="foot gut"><div class="wrap"><span>KruScan (ครูสแกน) · ภาพจากระบบทดสอบ ข้อมูลตัวอย่าง</span><span><a href="teacher.html">← คู่มือครู</a></span></div></footer>
+<script src="guide.js"></script>
+</body>
+</html>

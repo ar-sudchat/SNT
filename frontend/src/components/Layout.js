@@ -7,6 +7,7 @@ import ThemePicker from './ThemePicker';
 import { ICON, SETTINGS_ITEMS, Icon } from './navConfig';
 
 const SCAN_PATH = '/teacher/scan';
+const GUIDE_URL = '/guide/';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -89,6 +90,16 @@ const Layout = () => {
             </Link>
           ))}
         </nav>
+        <div className="shrink-0 border-t border-side-fg/15 px-2 pt-2">
+          <Link to="/profile" aria-current={isActive('/profile') ? 'page' : undefined}
+            className={`flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-sm text-side-fg hover:bg-side-on/80 hover:text-side-on-fg ${isActive('/profile') ? 'bg-side-on text-side-on-fg' : ''}`}>
+            <Icon d={ICON.user} className="h-4 w-4" /> โปรไฟล์ของฉัน
+          </Link>
+          <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer"
+            className="flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-sm text-side-fg hover:bg-side-on/80 hover:text-side-on-fg">
+            <Icon d={ICON.help} className="h-4 w-4" /> คู่มือการใช้งาน<span className="sr-only"> (เปิดแท็บใหม่)</span>
+          </a>
+        </div>
         <div className="shrink-0 px-4 py-2 text-center text-[11px] text-side-fg">v1.2.0</div>
       </aside>
 
@@ -98,7 +109,15 @@ const Layout = () => {
           <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:py-3">
             <Link to={homePath} className="shrink-0 lg:hidden" aria-label="หน้าแรก"><Logo size={30} tone="theme" tagline={false} /></Link>
             <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
-              <span className="min-w-0 max-w-[10rem] truncate text-sm text-gray-700 sm:max-w-[16rem] sm:text-base">{userName}</span>
+              <Link to="/profile" title="โปรไฟล์ของฉัน" className="flex min-h-[44px] min-w-0 max-w-[10rem] items-center truncate text-sm text-gray-700 underline-offset-4 hover:text-brand-700 hover:underline sm:max-w-[16rem] sm:text-base">
+                <span className="truncate">{userName}</span>
+              </Link>
+              {!isStaff && (
+                <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" aria-label="คู่มือการใช้งาน (เปิดแท็บใหม่)" title="คู่มือการใช้งาน"
+                  className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-ink-600 hover:bg-brand-50 hover:text-brand-700">
+                  <Icon d={ICON.help} />
+                </a>
+              )}
               <span className="hidden shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800 ring-1 ring-brand-100 sm:inline">{roleLabel}</span>
               <div className={isStaff ? 'hidden lg:block' : ''}><ThemePicker /></div>
               <button
@@ -155,7 +174,7 @@ const Layout = () => {
               type="button"
               onClick={() => setMoreOpen(true)}
               aria-expanded={moreOpen}
-              className={tabCls(moreOpen || isActive('/ai') || isActive('/tools') || isActive('/admin/settings'))}
+              className={tabCls(moreOpen || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile'))}
             >
               <Icon d={ICON.more} className="h-6 w-6" />เพิ่มเติม
             </button>
@@ -178,6 +197,8 @@ const Layout = () => {
               {isAdmin && (
                 <Link to="/admin/settings" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.gear} /> ตั้งค่าระบบ</Link>
               )}
+              <Link to="/profile" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.user} /> โปรไฟล์ของฉัน</Link>
+              <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.help} /> คู่มือการใช้งาน<span className="sr-only"> (เปิดแท็บใหม่)</span></a>
               <div className="flex min-h-[52px] items-center justify-between gap-3 text-gray-800">
                 <span>ธีมสี</span>
                 <ThemePicker onChoose={() => setMoreOpen(false)} />

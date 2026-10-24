@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>คู่มือ KruScan</title>
+<meta name="description" content="คู่มือใช้งาน KruScan (ครูสแกน) แบบวิดีโอสาธิต สำหรับครู นักเรียน ผู้ปกครอง และผู้ดูแลระบบ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<style>
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px;align-items:center;padding-block:48px 56px}
+.hero h1{font-size:clamp(34px,6vw,60px);line-height:1.15}
+.hero h1 em{font-style:normal;color:var(--gold-ink);display:block}
+.hero p.lead{color:var(--muted);font-size:18px;max-width:46ch;margin-top:16px}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:12px;font-weight:700;text-decoration:none}
+.btn.pri{background:var(--gold);color:#152851}.btn.sec{border:2px solid var(--line);color:var(--fg)}
+.btn.pri:hover{filter:brightness(1.05)}.btn.sec:hover{border-color:var(--brand)}
+.live{margin-top:18px;font-size:14px;color:var(--muted)}
+.roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}
+.role{display:flex;flex-direction:column;gap:8px;padding:22px;border-radius:18px;background:var(--surface);border:1px solid var(--line);text-decoration:none;color:var(--fg);transition:transform .2s,border-color .2s}
+.role:hover{transform:translateY(-3px);border-color:var(--gold)}
+.role .ic{font-size:30px}
+.role h3{font-size:21px}.role p{color:var(--muted);font-size:15px}
+.role .go{margin-top:auto;font-weight:700;color:var(--brand)}
+.steps3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px;counter-reset:s}
+.steps3 li{list-style:none;padding:22px;border-radius:18px;background:var(--surface-2);position:relative}
+.steps3 li::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;margin-bottom:10px}
+.steps3 h3{font-size:19px}.steps3 p{color:var(--muted);font-size:15px;margin-top:4px}
+.blk{padding-top:48px}.blk>h2{font-size:clamp(24px,3.5vw,32px)}
+@media (max-width:820px){.hero{grid-template-columns:minmax(0,1fr);padding-top:28px}.roles,.steps3{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+</head>
+<body>
+<header class="top gut"><div class="wrap">
+  <a class="brand" href="index.html"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="4" width="56" height="56" rx="14" fill="#1b3366"/><rect x="16" y="14" width="7" height="36" rx="2" fill="#fff"/><path d="M27 32L44 15" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M29 36l7 7 13-14" fill="none" stroke="#f6a92e" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Kru</b>Scan</span></a>
+  <nav class="nav" aria-label="หน้าในคู่มือ"><a href="index.html" aria-current="page">หน้าแรก</a><a href="teacher.html">คู่มือครู</a><a href="admin.html">คู่มือผู้ดูแล</a></nav>
+</div></header>
+
+<main class="gut"><div class="wrap">
+  <section class="hero">
+    <div>
+      <span class="kicker">คู่มือใช้งาน · ครูสแกน</span>
+      <h1>สแกนสมุด<em>รู้ทันทีใครส่งงานแล้ว</em></h1>
+      <p class="lead">KruScan ติดตามการส่งงานในสมุดนักเรียนด้วย QR Code ครูสแกนปกสมุด กดผ่านในครั้งเดียว แล้วเห็นทันทีว่าใครยังค้าง ใช้ได้ทั้งมือถือ แท็บเล็ต และคอมพิวเตอร์</p>
+      <div class="cta"><a class="btn pri" href="teacher.html">เริ่มอ่านคู่มือครู</a><a class="btn sec" href="admin.html">ตั้งค่าโรงเรียน (ผู้ดูแล)</a></div>
+      <p class="live">เปิดระบบจริง: <a href="https://kruscan.duckdns.org" rel="noopener">kruscan.duckdns.org</a></p>
+    </div>
+    <div class="player" data-hero data-device="phone" aria-label="สาธิตการสแกนส่งงาน"><script type="application/json">[
+      {"i":"phone-home","b":[3,16,94,7],"c":"กด สแกนส่งงาน จากหน้าแรก","t":1},
+      {"i":"phone-scan","b":[6,41,88,7],"c":"เปิดกล้อง แล้วส่องไปที่ QR บนปกสมุด","t":1},
+      {"i":"phone-scan-pick","b":[6,51,88,9],"c":"พบนักเรียนแล้ว เลือกวิชาที่จะตรวจ","t":1},
+      {"i":"phone-scan-grade","b":[3,54,94,7],"c":"กด ผ่านทั้งหมด ครั้งเดียว ครบทุกงานที่ค้าง","t":1},
+      {"i":"phone-scan-grade","b":[3,62,94,7],"c":"สแกนคนถัดไป ต่อได้เลย","t":1},
+      {"i":"phone-mon-all","b":[3,23,94,8],"c":"หน้าติดตามงาน เห็นทันทีว่าใครยังค้าง"},
+      {"i":"phone-mon-all","b":[42,40,55,5],"c":"คัดลอกข้อความทวงงาน ไปวางในไลน์","t":1}
+    ]</script></div>
+  </section>
+
+  <section class="blk" aria-labelledby="h-roles">
+    <h2 id="h-roles">เลือกคู่มือตามบทบาท</h2>
+    <div class="roles">
+      <a class="role" href="teacher.html"><span class="ic" aria-hidden="true">🧑‍🏫</span><h3>ครู</h3><p>สแกนส่งงาน ติดตามคนค้าง ทวงงานทางไลน์ รายงานรายคน สร้างงาน เครื่องมือห้องเรียน และผู้ช่วย AI</p><span class="go">คู่มือครู →</span></a>
+      <a class="role" href="teacher.html#student"><span class="ic" aria-hidden="true">🎒</span><h3>นักเรียน และผู้ปกครอง</h3><p>นักเรียนดูงานของฉัน ผู้ปกครองเปิดลิงก์จากครูดูสถานะการส่งงานได้โดยไม่ต้องเข้าสู่ระบบ</p><span class="go">ส่วนนักเรียน/ผู้ปกครอง →</span></a>
+      <a class="role" href="admin.html"><span class="ic" aria-hidden="true">🛠️</span><h3>ผู้ดูแลระบบ</h3><p>ตั้งค่าปีการศึกษา ชั้น ห้อง ครู นักเรียน วิชา นำเข้าข้อมูลจากไฟล์ พิมพ์ QR และย้ายชั้น</p><span class="go">คู่มือผู้ดูแล →</span></a>
+    </div>
+  </section>
+
+  <section class="blk" aria-labelledby="h-3">
+    <h2 id="h-3">เริ่มใช้ใน 3 ขั้น</h2>
+    <ol class="steps3">
+      <li><h3>ผู้ดูแลตั้งค่าโรงเรียน</h3><p>นำเข้าปีการศึกษา ชั้น ครู ห้อง นักเรียน และวิชาจากไฟล์ตัวอย่าง แล้วดูเช็กลิสต์ "ความพร้อมของระบบ" จนเป็น ✓</p></li>
+      <li><h3>พิมพ์ QR ติดปกสมุด</h3><p>เลือกห้องและวิชาในหน้า พิมพ์ QR Code แล้วติดบัตรบนปกสมุดนักเรียนทุกเล่ม</p></li>
+      <li><h3>ครูสแกนทุกครั้งที่ตรวจ</h3><p>สแกนสมุด กด ผ่านทั้งหมด แล้วดูหน้าติดตามงานว่าใครยังค้าง ส่งข้อความทวงทางไลน์ได้ทันที</p></li>
+    </ol>
+  </section>
+</div></main>
+
+<footer class="foot gut"><div class="wrap"><span>KruScan (ครูสแกน) · ภาพหน้าจอจากระบบทดสอบ ใช้ข้อมูลตัวอย่าง ไม่ใช่ข้อมูลนักเรียนจริง</span><span>ทุกวิดีโอกด ⏸ หรือใช้ปุ่มลูกศรซ้าย/ขวาได้</span></div></footer>
+<script src="guide.js"></script>
+
+</body>
+</html>
