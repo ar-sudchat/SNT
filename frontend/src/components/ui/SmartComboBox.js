@@ -62,6 +62,7 @@ const SmartComboBox = ({
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const listRef = useRef(null);
+  const listboxId = useRef(`combobox-list-${Math.random().toString(36).slice(2, 9)}`).current;
 
   // Get label from option
   const getLabel = useCallback((option) => {
@@ -116,10 +117,12 @@ const SmartComboBox = ({
     // Decide whether to show above or below
     const showAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
 
+    const width = Math.min(rect.width, window.innerWidth - 16);
+
     setDropdownPosition({
       top: showAbove ? rect.top - maxHeight - 4 : rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      width,
       showAbove
     });
   }, [maxHeight]);
@@ -207,6 +210,8 @@ const SmartComboBox = ({
       default:
         break;
     }
+    // handleSelect ประกาศทีหลัง ใส่ใน deps ไม่ได้ (TDZ)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled, isOpen, displayOptions, highlightedIndex]);
 
   // Scroll highlighted item into view
@@ -270,13 +275,13 @@ const SmartComboBox = ({
           {selected.slice(0, 3).map((opt, idx) => (
             <span
               key={idx}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-sm rounded"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-100 text-brand-800 text-sm rounded"
             >
               {getLabel(opt)}
               <button
                 type="button"
                 onClick={(e) => handleRemoveTag(e, getValue(opt))}
-                className="hover:text-blue-600"
+                className="hover:text-brand-600"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -308,7 +313,7 @@ const SmartComboBox = ({
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className={`fixed z-[9999] bg-white border rounded-lg shadow-lg overflow-hidden ${dropdownClassName}`}
+      className={`fixed w-full max-w-[calc(100vw-1rem)] z-[9999] bg-white border rounded-lg shadow-lg overflow-hidden ${dropdownClassName}`}
       style={{
         top: dropdownPosition.top,
         left: dropdownPosition.left,
@@ -327,7 +332,7 @@ const SmartComboBox = ({
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               placeholder={searchPlaceholder}
-              className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-base sm:text-sm"
             />
             <svg className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -339,12 +344,14 @@ const SmartComboBox = ({
       {/* Options List */}
       <div
         ref={listRef}
-        className="overflow-y-auto"
-        style={{ maxHeight: maxHeight - (searchable ? 60 : 0) }}
+        id={listboxId}
+        role="listbox"
+        className="w-full max-h-60 overflow-auto"
+        style={{ maxHeight: `min(15rem, ${maxHeight - (searchable ? 60 : 0)}px)` }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600 mr-2"></div>
             <span className="text-gray-500">{loadingMessage}</span>
           </div>
         ) : displayOptions.length === 0 ? (
@@ -368,8 +375,8 @@ const SmartComboBox = ({
                   key={optValue ?? index}
                   className={`
                     flex items-center px-3 py-2 cursor-pointer transition-colors
-                    ${isHighlighted ? 'bg-blue-50' : ''}
-                    ${isSelected ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-50'}
+                    ${isHighlighted ? 'bg-brand-50' : ''}
+                    ${isSelected ? 'bg-brand-100 text-brand-900' : 'hover:bg-gray-50'}
                   `}
                   onClick={() => handleSelect(option)}
                   onMouseEnter={() => setHighlightedIndex(index)}
@@ -380,7 +387,7 @@ const SmartComboBox = ({
                       type="checkbox"
                       checked={isSelected}
                       readOnly
-                      className="w-4 h-4 mr-3 text-blue-600 rounded border-gray-300"
+                      className="w-4 h-4 mr-3 text-brand-600 rounded border-gray-300"
                     />
                   )}
                   <div className="flex-1 min-w-0">
@@ -391,7 +398,7 @@ const SmartComboBox = ({
                     )}
                   </div>
                   {!multiple && isSelected && (
-                    <svg className="w-5 h-5 text-blue-600 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-brand-600 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   )}
@@ -420,13 +427,14 @@ const SmartComboBox = ({
         onKeyDown={handleKeyDown}
         tabIndex={disabled ? -1 : 0}
         role="combobox"
+        aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-disabled={disabled}
         className={`
           flex items-center justify-between w-full min-h-[42px] px-3 py-2 bg-white border rounded-lg cursor-pointer
           ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-          ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-300'}
+          ${isOpen ? 'ring-2 ring-brand-500 border-brand-500' : 'border-gray-300'}
           ${error ? 'border-red-500 ring-red-500' : ''}
         `}
       >
@@ -450,7 +458,7 @@ const SmartComboBox = ({
 
           {/* Loading Indicator */}
           {loading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-brand-600"></div>
           )}
 
           {/* Dropdown Arrow */}

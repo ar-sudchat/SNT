@@ -4,3 +4,4 @@
 export { default as SmartTable } from './SmartTable';
 export { default as SmartComboBox } from './SmartComboBox';
 export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as WindowModal } from './WindowModal';

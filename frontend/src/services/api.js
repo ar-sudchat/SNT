@@ -25,9 +25,32 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // รหัสผิดตอนล็อกอินก็ได้ 401 เหมือนกัน — อย่า redirect ไม่งั้นข้อความแจ้งเตือนในหน้า login หาย
+    const isLoginRequest = (error.config?.url || '').includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token');
       window.location.href = '/login';
+    }
+    // แปลงข้อความ error ภาษาอังกฤษจาก backend เป็นไทยสำหรับแสดงผล
+    const res = error.response;
+    if (res && !(res.data instanceof Blob)) {
+      if (!res.data || typeof res.data !== 'object') res.data = {};
+      const data = res.data;
+      {
+        const msg = typeof data.error === 'string' ? data.error : '';
+        const isThai = /[\u0E00-\u0E7F]/.test(msg);
+        const map = {
+          'Admin access required.': 'เฉพาะผู้ดูแลระบบ',
+          'Access denied.': 'คุณไม่มีสิทธิ์ทำรายการนี้',
+          'Insufficient permissions.': 'คุณไม่มีสิทธิ์ทำรายการนี้'
+        };
+        if (map[msg]) data.error = map[msg];
+        else if (!isThai) {
+          if (res.status === 403) data.error = /admin/i.test(msg) ? 'เฉพาะผู้ดูแลระบบ' : 'คุณไม่มีสิทธิ์ทำรายการนี้';
+          else if (res.status >= 500) data.error = 'ระบบขัดข้อง ลองใหม่อีกครั้ง';
+        }
+        if (msg && data.error !== msg) data.originalError = msg;
+      }
     }
     return Promise.reject(error);
   }
@@ -214,4 +237,17 @@ export const monitorAPI = {
   getSubjectMonitor: (subjectId, params) => api.get(`/monitor/subject/${subjectId}`, { params }),
   // Get subject tasks for a specific student
   getSubjectTasks: (studentId, subjectId) => api.get(`/monitor/student/${studentId}/subject/${subjectId}`)
+};
+
+// AI assistant (การเรียก AI อาจใช้เวลานานถึง 60 วินาที)
+const AI_TIMEOUT = 65000;
+export const aiAPI = {
+  status: () => api.get('/ai/status'),
+  ask: (data) => api.post('/ai/ask', data, { timeout: AI_TIMEOUT }),
+  conversations: () => api.get('/ai/conversations'),
+  conversation: (id) => api.get(`/ai/conversations/${id}`),
+  deleteConversation: (id) => api.delete(`/ai/conversations/${id}`),
+  report: (data) => api.post('/ai/report', data, { timeout: AI_TIMEOUT }),
+  importHelp: (data) => api.post('/ai/import-help', data, { timeout: AI_TIMEOUT }),
+  draftTask: (data) => api.post('/ai/draft-task', data, { timeout: AI_TIMEOUT })
 };
