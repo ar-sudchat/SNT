@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { ROOMS, appliesTo } = require('../services/taskRooms');
 
 const monitorController = {
   // Get student monitoring data with all subjects and progress
@@ -40,11 +41,15 @@ const monitorController = {
           teacher: true,
           tasks: {
             where: { status: 'ACTIVE' },
-            orderBy: { taskNumber: 'asc' }
+            orderBy: { taskNumber: 'asc' },
+            include: ROOMS
           }
         },
         orderBy: { subjectName: 'asc' }
       });
+
+      // งานที่ลงเฉพาะบางห้อง: เอาเฉพาะที่ห้องของนักเรียนคนนี้ได้
+      subjects.forEach(sj => { sj.tasks = sj.tasks.filter(t => appliesTo(t, student.classId)); });
 
       // Get all submissions for this student
       const submissions = await prisma.submission.findMany({
@@ -187,11 +192,15 @@ const monitorController = {
           teacher: true,
           tasks: {
             where: { status: 'ACTIVE' },
-            orderBy: { taskNumber: 'asc' }
+            orderBy: { taskNumber: 'asc' },
+            include: ROOMS
           }
         },
         orderBy: { subjectName: 'asc' }
       });
+
+      // งานที่ลงเฉพาะบางห้อง: เอาเฉพาะที่ห้องนี้ได้
+      subjects.forEach(sj => { sj.tasks = sj.tasks.filter(t => appliesTo(t, classData.id)); });
 
       // Get all submissions for students in this class
       const studentIds = classData.students.map(s => s.id);
@@ -308,7 +317,8 @@ const monitorController = {
           academicYear: true,
           tasks: {
             where: { status: 'ACTIVE' },
-            orderBy: { taskNumber: 'asc' }
+            orderBy: { taskNumber: 'asc' },
+            include: ROOMS
           }
         }
       });
@@ -345,6 +355,9 @@ const monitorController = {
         ]
       });
 
+      // ดูทีละห้อง: เอาเฉพาะงานที่ห้องนั้นได้ · ดูทุกห้อง: งานที่ห้องไม่ได้ = NOT_ASSIGNED ไม่นับเป็นค้าง
+      if (classId) subject.tasks = subject.tasks.filter(t => appliesTo(t, classId));
+
       // Get all submissions for these students and this subject's tasks
       const studentIds = students.map(s => s.id);
       const taskIds = subject.tasks.map(t => t.id);
@@ -372,13 +385,13 @@ const monitorController = {
         const submissionsData = subject.tasks.map(task => ({
           taskId: task.id,
           taskNumber: task.taskNumber,
-          status: studentSubs[task.id]?.status || 'NOT_SUBMITTED',
+          status: appliesTo(task, student.classId) ? (studentSubs[task.id]?.status || 'NOT_SUBMITTED') : 'NOT_ASSIGNED',
           score: studentSubs[task.id]?.score
         }));
 
-        // Calculate progress
-        const totalTasks = subject.tasks.length;
-        const submitted = submissionsData.filter(s => s.status !== 'NOT_SUBMITTED').length;
+        // Calculate progress (เฉพาะงานที่ห้องนี้ได้)
+        const totalTasks = submissionsData.filter(s => s.status !== 'NOT_ASSIGNED').length;
+        const submitted = submissionsData.filter(s => s.status !== 'NOT_SUBMITTED' && s.status !== 'NOT_ASSIGNED').length;
         const approved = submissionsData.filter(s => s.status === 'APPROVED').length;
 
         return {
@@ -426,7 +439,8 @@ const monitorController = {
           taskNumber: t.taskNumber,
           deadline: t.deadline,
           scoringType: t.scoringType,
-          maxScore: t.maxScore
+          maxScore: t.maxScore,
+          classIds: t.rooms.length ? t.rooms.map(r => r.classId) : null
         })),
         students: studentsData
       });
@@ -524,7 +538,8 @@ const monitorController = {
           teacher: true,
           tasks: {
             where: { status: 'ACTIVE' },
-            orderBy: { taskNumber: 'asc' }
+            orderBy: { taskNumber: 'asc' },
+            include: ROOMS
           }
         }
       });
@@ -563,7 +578,7 @@ const monitorController = {
         submissionMap[sub.taskId] = sub;
       });
 
-      const tasks = subject.tasks.map(task => ({
+      const tasks = subject.tasks.filter(task => appliesTo(task, student.classId)).map(task => ({
         id: task.id,
         taskName: task.taskName,
         taskNumber: task.taskNumber,

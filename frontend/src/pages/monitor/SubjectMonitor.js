@@ -194,6 +194,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           if (status === 'APPROVED') displayValue = 'ผ่าน';
           else if (status === 'PENDING') displayValue = 'รอตรวจ';
           else if (status === 'REJECTED') displayValue = 'ไม่ผ่าน';
+          else if (status === 'NOT_ASSIGNED') displayValue = 'ไม่ได้รับงาน';
           else displayValue = '-';
 
           // If scored, show score
@@ -278,8 +279,9 @@ const SubjectMonitor = ({ embedded = false }) => {
           }
 
           // Recalculate progress
-          const totalTasks = prev.tasks.length;
-          const submitted = newSubmissions.filter(s => s.status !== 'NOT_SUBMITTED').length;
+          // งานที่ห้องนี้ไม่ได้ (NOT_ASSIGNED) ไม่นับ
+          const totalTasks = newSubmissions.filter(s => s.status !== 'NOT_ASSIGNED').length;
+          const submitted = newSubmissions.filter(s => s.status !== 'NOT_SUBMITTED' && s.status !== 'NOT_ASSIGNED').length;
           const approved = newSubmissions.filter(s => s.status === 'APPROVED').length;
 
           return {
@@ -489,6 +491,38 @@ const SubjectMonitor = ({ embedded = false }) => {
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
       <MonitorFilterBar>
         <MonitorFilterField
+          label="ปีการศึกษา"
+          options={academicYears}
+          value={filterAcademicYear}
+          onChange={(val) => {
+            setFilterAcademicYear(val);
+            setFilterGrade(null);
+            setFilterClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(val, null, null, null);
+          }}
+          labelKey="year"
+          valueKey="id"
+          placeholder="เลือกปีการศึกษา"
+          clearable={false}
+        />
+        <MonitorFilterField
+          label="ชั้น"
+          options={grades}
+          value={filterGrade}
+          onChange={(val) => {
+            setFilterGrade(val);
+            setFilterClass(null);
+            setSelectedSubject(null);
+            setData(null);
+            updateURL(filterAcademicYear, val, null, null);
+          }}
+          labelKey="gradeName"
+          valueKey="id"
+          placeholder="ทุกชั้น"
+        />
+        <MonitorFilterField
           label="วิชา"
           options={subjects}
           value={selectedSubject}
@@ -511,38 +545,6 @@ const SubjectMonitor = ({ embedded = false }) => {
           labelKey="className"
           valueKey="id"
           placeholder="ทุกห้อง"
-        />
-        <MonitorFilterField
-          label="ชั้น"
-          options={grades}
-          value={filterGrade}
-          onChange={(val) => {
-            setFilterGrade(val);
-            setFilterClass(null);
-            setSelectedSubject(null);
-            setData(null);
-            updateURL(filterAcademicYear, val, null, null);
-          }}
-          labelKey="gradeName"
-          valueKey="id"
-          placeholder="ทุกชั้น"
-        />
-        <MonitorFilterField
-          label="ปีการศึกษา"
-          options={academicYears}
-          value={filterAcademicYear}
-          onChange={(val) => {
-            setFilterAcademicYear(val);
-            setFilterGrade(null);
-            setFilterClass(null);
-            setSelectedSubject(null);
-            setData(null);
-            updateURL(val, null, null, null);
-          }}
-          labelKey="year"
-          valueKey="id"
-          placeholder="เลือกปีการศึกษา"
-          clearable={false}
         />
       </MonitorFilterBar>
 
@@ -787,6 +789,14 @@ const SubjectMonitor = ({ embedded = false }) => {
                         const submission = student.submissions.find(s => s.taskId === task.id);
                         const status = submission?.status || 'NOT_SUBMITTED';
                         const isSaving = savingCell?.studentId === student.id && savingCell?.taskId === task.id;
+                        // ห้องนี้ไม่ได้งานนี้: แสดงขีด กดไม่ได้ ไม่นับว่าค้าง
+                        if (status === 'NOT_ASSIGNED') {
+                          return (
+                            <td key={task.id} className="px-2 sm:px-3 py-3 text-center border border-gray-300 bg-gray-50 text-gray-300" title={`${task.taskName} - ห้องนี้ไม่ได้รับงานนี้`}>
+                              —
+                            </td>
+                          );
+                        }
                         return (
                           <td key={task.id} className="px-2 sm:px-3 py-3 text-center border border-gray-300">
                             <div className="flex items-center justify-center">

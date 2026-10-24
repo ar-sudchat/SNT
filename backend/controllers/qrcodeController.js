@@ -1,5 +1,6 @@
 const QRCode = require('qrcode');
 const prisma = require('../config/database');
+const { ROOMS, appliesTo } = require('../services/taskRooms');
 const { withoutTenant, getTenantId } = require('../services/tenantContext');
 const { OTHER_SCHOOL_MSG, formatPayload, parsePayload, isForeign } = require('../services/qrPayload');
 
@@ -149,7 +150,8 @@ const qrcodeController = {
             include: {
               tasks: {
                 where: { status: 'ACTIVE' },
-                orderBy: { taskNumber: 'asc' }
+                orderBy: { taskNumber: 'asc' },
+                include: ROOMS
               }
             }
           }
@@ -163,6 +165,9 @@ const qrcodeController = {
       if (qrcode.status === 'INACTIVE') {
         return res.status(400).json({ error: 'QR code นี้ถูกปิดใช้งาน' });
       }
+
+      // งานที่ลงเฉพาะบางห้อง: เอาเฉพาะที่ห้องของนักเรียนได้
+      qrcode.subject.tasks = qrcode.subject.tasks.filter(t => appliesTo(t, qrcode.student.classId));
 
       // Get submissions for this student and subject
       const taskIds = qrcode.subject.tasks.map(t => t.id);
@@ -280,7 +285,8 @@ const qrcodeController = {
           include: {
             tasks: {
               where: { status: 'ACTIVE' },
-              orderBy: { taskNumber: 'asc' }
+              orderBy: { taskNumber: 'asc' },
+              include: ROOMS
             }
           }
         });
@@ -288,6 +294,8 @@ const qrcodeController = {
         if (!subject) {
           return res.status(404).json({ error: 'ไม่พบวิชา' });
         }
+
+        subject.tasks = subject.tasks.filter(t => appliesTo(t, student.classId));
 
         // Get submissions
         const taskIds = subject.tasks.map(t => t.id);

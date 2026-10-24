@@ -103,7 +103,8 @@ const schemas = {
     deadline: Joi.date().iso().optional().allow(null),
     scoringType: Joi.string().valid('SUBMISSION_ONLY', 'PASS_FAIL', 'SCORED').default('SUBMISSION_ONLY'),
     maxScore: Joi.number().optional().allow(null),
-    status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE')
+    status: Joi.string().valid('ACTIVE', 'INACTIVE').default('ACTIVE'),
+    classIds: Joi.array().items(Joi.number().integer()).max(50).optional() // ห้องที่ได้งาน · ว่าง = ทุกห้องของชั้น
   }),
 
   // Submission schemas

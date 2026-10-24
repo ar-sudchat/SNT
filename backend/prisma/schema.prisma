@@ -104,6 +104,7 @@ model Class {
   academicYear      AcademicYear?      @relation(fields: [academicYearId], references: [id])
   students          Student[]
   assessmentRecords AssessmentRecord[]
+  taskRooms         TaskRoom[]
 
   @@unique([tenantId, className])
   @@index([tenantId])
@@ -207,9 +208,24 @@ model Task {
   subject     Subject      @relation(fields: [subjectId], references: [id])
   createdBy   Teacher      @relation("CreatedBy", fields: [createdById], references: [id])
   submissions Submission[]
+  rooms       TaskRoom[] // ห้องที่ได้งานนี้ · ไม่มีแถว = ทุกห้องของชั้น
 
   @@unique([subjectId, taskNumber])
   @@index([tenantId])
+}
+
+// งานหนึ่งชิ้นลงได้หลายห้องในชั้นเดียวกัน
+model TaskRoom {
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  taskId   Int
+  classId  Int
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  class    Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, classId])
+  @@index([tenantId])
+  @@index([classId])
 }
 
 // ประเภทการให้คะแนน
@@ -339,6 +355,7 @@ model Tenant {
   assessmentTemplates AssessmentTemplate[]
   assessmentRecords   AssessmentRecord[]
   assessmentScores    AssessmentScore[]
+  taskRooms           TaskRoom[]
 }
 
 enum TenantRole {
@@ -431,6 +448,9 @@ model AssessmentRecord {
   name         String // typed by the teacher: plan name / activity name / work name
   dateText     String   @default("") // as written on the paper, e.g. "3, 9, 10 มิ.ย. 69"
   assessedOn   DateTime @default(now()) // for sorting
+  teachDates   DateTime[] @db.Date // ทุกวันที่สอน/ประเมิน (วันจริง ใช้คิวรี) · dateText เป็นแค่ข้อความแสดงผล
+  dateFrom     DateTime?  @db.Date // วันแรก (ใช้กรองช่วงวันที่)
+  dateTo       DateTime?  @db.Date // วันสุดท้าย
   kind         String // copied from template: NOTE | RUBRIC | CLASS
   templateName String
   responseType String   @default("SCORE")
@@ -454,6 +474,7 @@ model AssessmentRecord {
 
   @@index([tenantId, classId])
   @@index([tenantId])
+  @@index([tenantId, dateFrom, dateTo])
 }
 
 model AssessmentScore {

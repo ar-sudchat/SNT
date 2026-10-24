@@ -1,5 +1,9 @@
 const prisma = require('../config/database');
 const { assertTeacherOwnsSubject, assertTeacherOwnsTask } = require('../middleware/ownership');
+const { cleanRoomIds, setRooms } = require('../services/taskRooms');
+
+// ห้องของงานพร้อมชื่อห้อง (ว่าง = ทุกห้องของชั้น)
+const ROOMS_WITH_NAME = { rooms: { select: { classId: true, class: { select: { className: true } } } } };
 
 const taskController = {
   // Get all tasks
@@ -31,6 +35,7 @@ const taskController = {
             }
           },
           createdBy: true,
+          ...ROOMS_WITH_NAME,
           _count: {
             select: { submissions: true }
           }
@@ -102,10 +107,12 @@ const taskController = {
   // Create task
   async create(req, res) {
     try {
-      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
+      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore, classIds } = req.body;
 
       const denied = await assertTeacherOwnsSubject(req, subjectId);
       if (denied) return res.status(denied.status).json({ error: denied.error });
+      const rooms = await cleanRoomIds(subjectId, classIds);
+      if (rooms.error) return res.status(400).json({ error: rooms.error });
 
       // Get subject to find the responsible teacher
       const subject = await prisma.subject.findUnique({
@@ -143,14 +150,11 @@ const taskController = {
           scoringType: scoringType || 'SUBMISSION_ONLY',
           maxScore: maxScore || null,
           createdById
-        },
-        include: {
-          subject: true,
-          createdBy: true
         }
       });
+      await setRooms(task.id, rooms.ids);
 
-      res.status(201).json(task);
+      res.status(201).json(await prisma.task.findUnique({ where: { id: task.id }, include: { subject: true, createdBy: true, ...ROOMS_WITH_NAME } }));
     } catch (error) {
       if (error.code === 'P2002') {
         return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });
@@ -164,13 +168,18 @@ const taskController = {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore } = req.body;
+      const { subjectId, taskName, taskNumber, description, deadline, status, scoringType, maxScore, classIds } = req.body;
 
       // Must own the task's current subject AND the target subject
       const deniedTask = await assertTeacherOwnsTask(req, id);
       if (deniedTask) return res.status(deniedTask.status).json({ error: deniedTask.error });
       const denied = await assertTeacherOwnsSubject(req, subjectId);
       if (denied) return res.status(denied.status).json({ error: denied.error });
+      // ไม่ส่ง classIds มา = คงห้องเดิม (เว้นแต่ย้ายวิชา ห้องเดิมอาจไม่ใช่ชั้นเดียวกัน → ล้างเป็นทุกห้อง)
+      const current = await prisma.task.findUnique({ where: { id: parseInt(id) }, select: { subjectId: true } });
+      const rooms = classIds !== undefined ? await cleanRoomIds(subjectId, classIds)
+        : current && current.subjectId !== subjectId ? { ids: [] } : null;
+      if (rooms && rooms.error) return res.status(400).json({ error: rooms.error });
 
       // Check for duplicate task number in subject
       const existingTask = await prisma.task.findFirst({
@@ -196,14 +205,11 @@ const taskController = {
           status,
           scoringType: scoringType || 'SUBMISSION_ONLY',
           maxScore: maxScore || null
-        },
-        include: {
-          subject: true,
-          createdBy: true
         }
       });
+      if (rooms) await setRooms(task.id, rooms.ids);
 
-      res.json(task);
+      res.json(await prisma.task.findUnique({ where: { id: task.id }, include: { subject: true, createdBy: true, ...ROOMS_WITH_NAME } }));
     } catch (error) {
       if (error.code === 'P2002') {
         return res.status(409).json({ error: 'มีงานลำดับนี้ในวิชานี้แล้ว' });

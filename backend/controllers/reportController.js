@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { ROOMS, appliesTo } = require('../services/taskRooms');
 
 // Neutralise spreadsheet formula injection: prefix cells starting with = + - @ (or tab/CR) with '
 function csvSafe(v) {
@@ -9,8 +10,8 @@ function csvSafe(v) {
 
 // Same student population as monitorController.getSubjectMonitor:
 // all ACTIVE students in ACTIVE classes of the subject's grade + academic year.
-async function getSubjectStudentIds(subject) {
-  const students = await prisma.student.findMany({
+async function getSubjectStudents(subject) {
+  return prisma.student.findMany({
     where: {
       status: 'ACTIVE',
       class: {
@@ -19,10 +20,11 @@ async function getSubjectStudentIds(subject) {
         status: 'ACTIVE'
       }
     },
-    select: { id: true }
+    select: { id: true, classId: true }
   });
-  return students.map(st => st.id);
 }
+// นักเรียนที่ได้งานนี้ (งานที่ลงเฉพาะบางห้อง นับเฉพาะห้องนั้น)
+const taskStudentIds = (task, students) => students.filter(st => appliesTo(task, st.classId)).map(st => st.id);
 
 const reportController = {
   // Admin overview
@@ -64,17 +66,16 @@ const reportController = {
         where: { status: 'ACTIVE' },
         select: {
           id: true, gradeId: true, academicYearId: true,
-          _count: { select: { tasks: { where: { status: 'ACTIVE' } } } }
+          tasks: { where: { status: 'ACTIVE' }, select: { id: true, ...ROOMS } }
         }
       });
       const popCache = new Map();
       let expectedSubmissions = 0;
       for (const subj of subjectsWithTasks) {
-        const n = subj._count.tasks;
-        if (!n) continue;
+        if (!subj.tasks.length) continue;
         const key = `${subj.gradeId}|${subj.academicYearId}`;
-        if (!popCache.has(key)) popCache.set(key, (await getSubjectStudentIds(subj)).length);
-        expectedSubmissions += popCache.get(key) * n;
+        if (!popCache.has(key)) popCache.set(key, await getSubjectStudents(subj));
+        for (const t of subj.tasks) expectedSubmissions += taskStudentIds(t, popCache.get(key)).length;
       }
 
       res.json({
@@ -104,6 +105,7 @@ const reportController = {
         include: {
           subject: true,
           submissions: true,
+          ...ROOMS,
           _count: {
             select: { submissions: true }
           }
@@ -117,7 +119,7 @@ const reportController = {
       const popBySubject = new Map();
       for (const task of tasks) {
         if (!popBySubject.has(task.subjectId)) {
-          popBySubject.set(task.subjectId, new Set(await getSubjectStudentIds(task.subject)));
+          popBySubject.set(task.subjectId, await getSubjectStudents(task.subject));
         }
       }
       const teacherIds = [...new Set(tasks.map(t => t.subject.teacherId))];
@@ -127,7 +129,7 @@ const reportController = {
       const teacherName = new Map(teachers.map(t => [t.id, t.name]));
 
       const taskStats = tasks.map(task => {
-        const pop = popBySubject.get(task.subjectId);
+        const pop = new Set(taskStudentIds(task, popBySubject.get(task.subjectId)));
         const subs = task.submissions.filter(s => pop.has(s.studentId));
         const approved = subs.filter(s => s.status === 'APPROVED').length;
         const rejected = subs.filter(s => s.status === 'REJECTED').length;
@@ -175,7 +177,7 @@ const reportController = {
       const subjects = await prisma.subject.findMany({
         where: { teacherId, status: 'ACTIVE' },
         include: {
-          tasks: { where: { status: 'ACTIVE' } },
+          tasks: { where: { status: 'ACTIVE' }, include: ROOMS },
           _count: { select: { qrcodes: true } }
         }
       });
@@ -184,22 +186,22 @@ const reportController = {
       const taskIds = subjects.flatMap(s => s.tasks.map(t => t.id));
 
       // Students = all active students of each subject's grade/year (same as monitor)
-      const studentIdsBySubject = {};
       const allStudentIds = new Set();
+      const studentsBySubject = {};
       for (const subj of subjects) {
-        const ids = await getSubjectStudentIds(subj);
-        studentIdsBySubject[subj.id] = new Set(ids);
-        ids.forEach(i => allStudentIds.add(i));
+        const list = await getSubjectStudents(subj);
+        studentsBySubject[subj.id] = list;
+        list.forEach(st => allStudentIds.add(st.id));
       }
+      // งาน -> นักเรียนที่ได้งานนี้
+      const taskPop = {};
+      subjects.forEach(sj => sj.tasks.forEach(tk => { taskPop[tk.id] = new Set(taskStudentIds(tk, studentsBySubject[sj.id])); }));
       const studentCount = allStudentIds.size;
 
       // Submissions only from students in each subject's population
       const submissions = (await prisma.submission.findMany({
         where: { taskId: { in: taskIds } }
-      })).filter(sub => {
-        const sj = subjects.find(x => x.tasks.some(tk => tk.id === sub.taskId));
-        return sj && studentIdsBySubject[sj.id].has(sub.studentId);
-      });
+      })).filter(sub => taskPop[sub.taskId] && taskPop[sub.taskId].has(sub.studentId));
 
       const submissionStats = {
         total: submissions.length,
@@ -210,7 +212,7 @@ const reportController = {
       };
 
       // Calculate expected submissions
-      const expectedSubmissions = subjects.reduce((sum, sj) => sum + studentIdsBySubject[sj.id].size * sj.tasks.length, 0);
+      const expectedSubmissions = Object.values(taskPop).reduce((sum, set) => sum + set.size, 0);
       submissionStats.notSubmitted = expectedSubmissions - submissionStats.approved - submissionStats.rejected - submissionStats.pending;
       if (submissionStats.notSubmitted < 0) submissionStats.notSubmitted = 0;
 
@@ -249,7 +251,8 @@ const reportController = {
         },
         include: {
           subject: true,
-          submissions: true
+          submissions: true,
+          ...ROOMS
         },
         orderBy: [
           { subject: { subjectName: 'asc' } },
@@ -261,12 +264,12 @@ const reportController = {
       const subjectStudentIds = {};
       for (const task of tasks) {
         if (!subjectStudentIds[task.subjectId]) {
-          subjectStudentIds[task.subjectId] = new Set(await getSubjectStudentIds(task.subject));
+          subjectStudentIds[task.subjectId] = await getSubjectStudents(task.subject);
         }
       }
 
       const taskStats = tasks.map(task => {
-        const idSet = subjectStudentIds[task.subjectId];
+        const idSet = new Set(taskStudentIds(task, subjectStudentIds[task.subjectId]));
         const totalStudents = idSet.size;
         const subs = task.submissions.filter(s => idSet.has(s.studentId));
         const approved = subs.filter(s => s.status === 'APPROVED').length;
@@ -345,7 +348,8 @@ const reportController = {
         include: {
           tasks: {
             where: { status: 'ACTIVE' },
-            orderBy: { taskNumber: 'asc' }
+            orderBy: { taskNumber: 'asc' },
+            include: ROOMS
           }
         }
       });
@@ -355,12 +359,14 @@ const reportController = {
       }
 
       // All active students of the subject's grade/year (same as monitor)
-      const studentIds = await getSubjectStudentIds(subject);
-      const totalStudents = studentIds.length;
+      const students = await getSubjectStudents(subject);
+      const totalStudents = students.length;
 
       // Get submissions for each task
       const taskSummaries = await Promise.all(
         subject.tasks.map(async (task) => {
+          const studentIds = taskStudentIds(task, students);
+          const taskStudents = studentIds.length;
           const submissions = await prisma.submission.findMany({
             where: {
               taskId: task.id,
@@ -372,7 +378,7 @@ const reportController = {
           const rejected = submissions.filter(s => s.status === 'REJECTED').length;
           const pending = submissions.filter(s => s.status === 'PENDING').length;
           const submitted = submissions.filter(s => s.status !== 'NOT_SUBMITTED').length;
-          const notSubmitted = Math.max(0, totalStudents - submitted);
+          const notSubmitted = Math.max(0, taskStudents - submitted);
 
           return {
             taskId: task.id,
@@ -382,7 +388,7 @@ const reportController = {
             rejected,
             pending,
             notSubmitted,
-            total: totalStudents
+            total: taskStudents
           };
         })
       );
@@ -428,7 +434,8 @@ const reportController = {
             include: {
               tasks: {
                 where: { status: 'ACTIVE' },
-                orderBy: { taskNumber: 'asc' }
+                orderBy: { taskNumber: 'asc' },
+                include: ROOMS
               }
             }
           }
@@ -456,7 +463,7 @@ const reportController = {
           subjectCode: qr.subject.subjectCode,
           subjectName: qr.subject.subjectName
         },
-        tasks: qr.subject.tasks.map(task => ({
+        tasks: qr.subject.tasks.filter(task => appliesTo(task, student.classId)).map(task => ({
           taskId: task.id,
           taskName: task.taskName,
           taskNumber: task.taskNumber,
@@ -488,6 +495,8 @@ const reportController = {
         return res.status(400).json({ error: 'ไม่พบรหัสนักเรียน' });
       }
 
+      const me = await prisma.student.findUnique({ where: { id: studentId }, select: { classId: true } });
+
       // Get all QR codes for this student
       const qrcodes = await prisma.qRCode.findMany({
         where: { studentId },
@@ -496,7 +505,8 @@ const reportController = {
             include: {
               tasks: {
                 where: { status: 'ACTIVE' },
-                orderBy: { taskNumber: 'asc' }
+                orderBy: { taskNumber: 'asc' },
+                include: ROOMS
               }
             }
           }
@@ -524,7 +534,7 @@ const reportController = {
           subjectCode: qr.subject.subjectCode,
           subjectName: qr.subject.subjectName
         },
-        tasks: qr.subject.tasks.map(task => ({
+        tasks: qr.subject.tasks.filter(task => appliesTo(task, me && me.classId)).map(task => ({
           taskId: task.id,
           taskName: task.taskName,
           taskNumber: task.taskNumber,

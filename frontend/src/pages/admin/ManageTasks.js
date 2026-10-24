@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { taskAPI, subjectAPI, academicYearAPI } from '../../services/api';
+import { taskAPI, subjectAPI, academicYearAPI, classAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import PageHeader from '../../components/ui/PageHeader';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
@@ -15,6 +16,7 @@ const ManageTasks = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,8 +25,11 @@ const ManageTasks = () => {
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [filterSubject, setFilterSubject] = useState(null);
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
+  const [filterGrade, setFilterGrade] = useState(null);
   const { validate, reset: resetErrors, errorFor } = useFormErrors();
   const [formData, setFormData] = useState({
+    gradeId: null,
+    classIds: [], // ว่าง = ทุกห้องของชั้น
     subjectId: null,
     taskName: '',
     taskNumber: 1,
@@ -67,22 +72,25 @@ const ManageTasks = () => {
       const taskParams = {};
       if (filterSubject) taskParams.subjectId = filterSubject;
       if (filterAcademicYear) taskParams.academicYearId = filterAcademicYear;
+      if (filterGrade) taskParams.gradeId = filterGrade;
 
       const subjectParams = {};
       if (filterAcademicYear) subjectParams.academicYearId = filterAcademicYear;
 
-      const [taskRes, subjectRes] = await Promise.all([
+      const [taskRes, subjectRes, classRes] = await Promise.all([
         taskAPI.getAll(taskParams),
-        subjectAPI.getAll(subjectParams)
+        subjectAPI.getAll(subjectParams),
+        classAPI.getAll(subjectParams)
       ]);
       setTasks(taskRes.data);
       setSubjects(subjectRes.data);
+      setClasses(classRes.data);
     } catch (err) {
       setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
     } finally {
       setLoading(false);
     }
-  }, [filterSubject, filterAcademicYear]);
+  }, [filterSubject, filterAcademicYear, filterGrade]);
 
   useEffect(() => {
     fetchData();
@@ -101,8 +109,9 @@ const ManageTasks = () => {
       return;
     }
     try {
+      const { gradeId, ...rest } = formData; // ชั้นใช้กรองวิชา/ห้องในฟอร์ม ไม่ส่งไปเซิร์ฟเวอร์
       const data = {
-        ...formData,
+        ...rest,
         subjectId,
         // ช่องนี้อยู่ในส่วนที่พับไว้ ถ้าว่างให้ใช้เลขถัดไปอัตโนมัติ
         taskNumber: parseInt(formData.taskNumber) || nextTaskNumber(formData.subjectId),
@@ -147,6 +156,8 @@ const ManageTasks = () => {
     if (task) {
       setEditingTask(task);
       setFormData({
+        gradeId: toId(task.subject?.gradeId),
+        classIds: (task.rooms || []).map(r => r.classId),
         subjectId: toId(task.subjectId ?? task.subject?.id),
         taskName: task.taskName,
         taskNumber: task.taskNumber,
@@ -158,7 +169,8 @@ const ManageTasks = () => {
       });
     } else {
       setEditingTask(null);
-      setFormData({ subjectId: toId(filterSubject), taskName: '', taskNumber: nextTaskNumber(toId(filterSubject)), description: '', deadline: '', scoringType: 'SUBMISSION_ONLY', maxScore: '', status: 'ACTIVE' });
+      const preSubject = subjects.find(sj => sj.id === toId(filterSubject));
+      setFormData({ gradeId: toId(preSubject?.gradeId ?? filterGrade), classIds: [], subjectId: toId(filterSubject), taskName: '', taskNumber: nextTaskNumber(toId(filterSubject)), description: '', deadline: '', scoringType: 'SUBMISSION_ONLY', maxScore: '', status: 'ACTIVE' });
     }
     setShowModal(true);
   };
@@ -171,6 +183,8 @@ const ManageTasks = () => {
     const scoringType = validTypes.includes(draft.scoringType) ? draft.scoringType : 'SUBMISSION_ONLY';
     setEditingTask(null);
     setFormData({
+      gradeId: null,
+      classIds: [],
       subjectId: null,
       taskName: draft.taskName || '',
       taskNumber: 1,
@@ -191,6 +205,22 @@ const ManageTasks = () => {
     setEditingTask(null);
   };
 
+  // ชั้นจากวิชาและห้องของปีที่เลือก · วิชาและห้องในฟอร์มกรองตามชั้น
+  const grades = (() => {
+    const map = new Map();
+    [...subjects.map(sj => sj.grade), ...classes.map(c => c.grade)].forEach(g => { if (g && !map.has(g.id)) map.set(g.id, g); });
+    return [...map.values()].sort((a, b) => a.gradeName.localeCompare(b.gradeName, 'th'));
+  })();
+  const formSubjects = formData.gradeId ? subjects.filter(sj => sj.gradeId === formData.gradeId) : subjects;
+  const formClasses = formData.gradeId ? classes.filter(c => c.gradeId === formData.gradeId && c.status !== 'INACTIVE') : [];
+  const toggleRoom = (id) => setFormData(f => {
+    const next = f.classIds.includes(id) ? f.classIds.filter(x => x !== id) : [...f.classIds, id];
+    return { ...f, classIds: next.length === formClasses.length ? [] : next }; // ครบทุกห้อง = ทุกห้อง
+  });
+  const roomLabel = (task) => (task.rooms && task.rooms.length
+    ? task.rooms.map(r => r.class?.className).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')).join(', ')
+    : 'ทุกห้อง');
+
   // Table columns
   const columns = [
     {
@@ -205,6 +235,13 @@ const ManageTasks = () => {
       label: 'ชื่องาน',
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'rooms',
+      mobileSecondary: true,
+      label: 'ห้อง',
+      render: (_, row) => <span className={row.rooms?.length ? 'text-gray-900' : 'text-gray-500'}>{roomLabel(row)}</span>,
+      exportValue: (row) => roomLabel(row)
     },
     {
       key: 'taskNumber',
@@ -244,7 +281,7 @@ const ManageTasks = () => {
     }
   ];
 
-  const activeFilterCount = ((filterSubject) ? 1 : 0) + ((filterAcademicYear) ? 1 : 0);
+  const activeFilterCount = ((filterSubject) ? 1 : 0) + ((filterAcademicYear) ? 1 : 0) + ((filterGrade) ? 1 : 0);
   const filterControls = (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
@@ -255,6 +292,7 @@ const ManageTasks = () => {
             value={filterAcademicYear}
             onChange={(val) => {
               setFilterAcademicYear(val);
+              setFilterGrade(null);
               setFilterSubject(null);
             }}
             labelKey="year"
@@ -264,10 +302,23 @@ const ManageTasks = () => {
             searchable
           />
         </div>
+        <div className="sm:w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+          <SmartComboBox
+            options={grades}
+            value={filterGrade}
+            onChange={(val) => { setFilterGrade(val); setFilterSubject(null); }}
+            labelKey="gradeName"
+            valueKey="id"
+            placeholder="ทุกชั้น"
+            clearable
+            searchable
+          />
+        </div>
         <div className="sm:w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
           <SmartComboBox
-            options={subjects}
+            options={filterGrade ? subjects.filter(sj => sj.gradeId === filterGrade) : subjects}
             value={filterSubject}
             onChange={setFilterSubject}
             labelKey="subjectName"
@@ -282,11 +333,8 @@ const ManageTasks = () => {
   );
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-0">
-      <AddFab onClick={() => openModal()} label="เพิ่มงาน" />
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">งาน</h1>
+    <div className="space-y-4 pb-24 sm:pb-0">
+      <PageHeader title="งาน">
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
@@ -296,7 +344,8 @@ const ManageTasks = () => {
           </svg>
           เพิ่มงาน
         </button>
-      </div>
+      </PageHeader>
+      <AddFab onClick={() => openModal()} label="เพิ่มงาน" />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -314,7 +363,7 @@ const ManageTasks = () => {
         searchable
         exportable
         pagination
-        onClearFilters={() => { setFilterSubject(null); setFilterAcademicYear(null); }}
+        onClearFilters={() => { setFilterSubject(null); setFilterAcademicYear(null); setFilterGrade(null); }}
         emptyAction={
           <>
             <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มงาน</button>
@@ -354,16 +403,37 @@ const ManageTasks = () => {
       >
         <div className="p-4">
           <form id="task-form" onSubmit={handleSubmit} noValidate className="space-y-4">
-              {/* Row 1: วิชา + ชื่องาน */}
+              {/* Row 1: ชั้น → วิชา (งานแยกตามชั้น) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+                  <SmartComboBox
+                    options={grades}
+                    value={formData.gradeId}
+                    onChange={(val) => setFormData(f => {
+                      const keep = subjects.find(sj => sj.id === f.subjectId && sj.gradeId === val);
+                      return { ...f, gradeId: toId(val), classIds: [], subjectId: keep ? f.subjectId : null };
+                    })}
+                    labelKey="gradeName"
+                    valueKey="id"
+                    placeholder="เลือกชั้น"
+                    searchable
+                    clearable
+                    ariaLabel="ชั้น"
+                  />
+                </div>
                 <div data-field="subjectId">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     วิชา <span className="text-red-500">*</span>
                   </label>
                   <SmartComboBox
-                    options={subjects}
+                    options={formSubjects}
                     value={formData.subjectId}
-                    onChange={(val) => setFormData({ ...formData, subjectId: val, taskNumber: editingTask ? formData.taskNumber : nextTaskNumber(val) })}
+                    onChange={(val) => setFormData(f => {
+                      const sj = subjects.find(x => x.id === toId(val));
+                      const gradeId = sj?.gradeId ?? f.gradeId;
+                      return { ...f, subjectId: val, gradeId, classIds: gradeId === f.gradeId ? f.classIds : [], taskNumber: editingTask ? f.taskNumber : nextTaskNumber(val) };
+                    })}
                     labelKey="subjectName"
                     valueKey="id"
                     placeholder="เลือกวิชา"
@@ -371,6 +441,43 @@ const ManageTasks = () => {
                     error={errorFor('subjectId', toId(formData.subjectId) === null)}
                   />
                 </div>
+              </div>
+
+              {/* ห้องที่ได้งานนี้: เลือกได้หลายห้องในชั้นเดียวกัน */}
+              {formClasses.length > 0 && (
+                <div role="group" aria-label="ห้องที่ได้งานนี้">
+                  <p className="block text-sm font-medium text-gray-700 mb-1">ห้องที่ได้งานนี้</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={formData.classIds.length === 0}
+                      onClick={() => setFormData(f => ({ ...f, classIds: [] }))}
+                      className={`min-h-[44px] rounded-full border px-4 text-sm font-medium ${formData.classIds.length === 0 ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      ทุกห้อง ({formClasses.length})
+                    </button>
+                    {formClasses.map(c => {
+                      const on = formData.classIds.length === 0 || formData.classIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          aria-pressed={formData.classIds.includes(c.id)}
+                          onClick={() => (formData.classIds.length === 0 ? setFormData(f => ({ ...f, classIds: [c.id] })) : toggleRoom(c.id))}
+                          className={`min-h-[44px] rounded-full border px-4 text-sm ${on ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          {on ? '✓ ' : ''}{c.className}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formData.classIds.length === 0 ? 'ทุกห้องของชั้นนี้ได้งาน รวมห้องที่เพิ่มทีหลัง · แตะชื่อห้องเพื่อเลือกเฉพาะห้อง' : `ลงงานให้ ${formData.classIds.length} ห้อง · แตะเพื่อเพิ่มหรือเอาออก`}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4">
                 <div data-field="taskName">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     ชื่องาน <span className="text-red-500">*</span>
@@ -473,14 +580,14 @@ const ManageTasks = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                    <select
+                    <SmartComboBox
+                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option value="ACTIVE">ใช้งาน</option>
-                      <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
+                      onChange={(v) => v && setFormData({ ...formData, status: v })}
+                      searchable={false}
+                      clearable={false}
+                      ariaLabel="สถานะ"
+                    />
                   </div>
                   <div className="sm:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
