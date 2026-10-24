@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { flushOutbox, listQueued, subscribe } from './outbox';
+import { currentTid, flushOutbox, listQueued, subscribe } from './outbox';
 
 const FLUSH_INTERVAL_MS = 30000;
 
@@ -8,13 +8,21 @@ const useOutbox = ({ onRejected } = {}) => {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine !== false));
   const [pending, setPending] = useState(0);
   const [flushingNow, setFlushingNow] = useState(false);
+  const [otherSchool, setOtherSchool] = useState(0);
 
   const refresh = useCallback(async () => {
-    try { setPending((await listQueued()).length); } catch { /* ignore */ }
+    try {
+      const items = await listQueued();
+      const tid = currentTid();
+      const mine = items.filter((i) => i.tid && i.tid === tid).length;
+      setPending(mine);
+      setOtherSchool(items.length - mine);
+    } catch { /* ignore */ }
   }, []);
 
   const flush = useCallback(async () => {
-    if ((await listQueued()).length === 0) return;
+    const tid = currentTid();
+    if (!(await listQueued()).some((i) => i.tid && i.tid === tid)) return;
     setFlushingNow(true);
     try {
       const res = await flushOutbox();
@@ -48,7 +56,7 @@ const useOutbox = ({ onRejected } = {}) => {
     };
   }, [flush, refresh]);
 
-  return { online, pending, flushing: flushingNow, flush };
+  return { online, pending, otherSchool, flushing: flushingNow, flush };
 };
 
 export default useOutbox;

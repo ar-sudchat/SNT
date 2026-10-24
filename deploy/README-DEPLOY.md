@@ -31,6 +31,24 @@
    - AI: `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` (หรือ OPENAI/GEMINI) — เว้นว่าง = ปิด AI
    - ลิงก์ผู้ปกครองเดิม: ถ้าอยากให้ลิงก์ที่ส่งไปแล้วใช้ต่อได้ ให้ใส่ `PARENT_LINK_SECRET` ค่าเดิมแทน (แก้บรรทัดใน compose) · ถ้าใช้ค่าใหม่ ลิงก์เก่าจะใช้ไม่ได้ ต้องส่งใหม่
 
+## 2.1 ตัวแปรของระบบกลุ่ม (multi-tenant) + ล็อกอินด้วย Google
+
+รุ่นกลุ่ม (tenant = กลุ่ม) เพิ่มตัวแปรต่อไปนี้ใน Coolify (ตัวอย่างอยู่ใน `.env.coolify.example`)
+
+| ตัวแปร | จำเป็น | ใช้ทำอะไร |
+|---|---|---|
+| `PUBLIC_URL` | ใช่ (ถ้าเปิด Google) | URL สาธารณะของเว็บ เช่น `https://kruscan.duckdns.org` · ใช้สร้าง redirect URI และลิงก์กลับหลังล็อกอิน Google (ไม่ใส่ = `http://localhost:3000`) |
+| `FRONTEND_URL` | อัตโนมัติ | compose ตั้งเป็น `SERVICE_FQDN_FRONTEND` ให้แล้ว · ใช้ทำ CORS และลิงก์เชิญ |
+| `GOOGLE_CLIENT_ID` | ไม่ | OAuth client จาก Google Cloud Console · เว้นว่าง = ปุ่ม Google แสดง "เปิดใช้เร็วๆ นี้" และ `/api/auth/google` ตอบ 503 |
+| `GOOGLE_CLIENT_SECRET` | ไม่ | คู่กับ client id (เก็บเป็น secret ใน Coolify ห้ามใส่ใน git) |
+| `GOOGLE_REDIRECT_URI` | ไม่ | ปกติไม่ต้องตั้ง (ใช้ `${PUBLIC_URL}/api/auth/google/callback`) · ตั้งเมื่อ API อยู่คนละโฮสต์กับ `PUBLIC_URL` เช่น dev ในเครื่อง · ค่านี้ต้องตรงกับ Authorized redirect URI ใน Google Cloud Console ทุกตัวอักษร |
+| `PLATFORM_ADMIN_EMAILS` | ไม่ | อีเมลผู้ดูแลแพลตฟอร์ม คั่นด้วย `,` ที่เข้าหน้า `/ops` (ระงับ/คืนกลุ่ม) ได้ · ต้องเข้าสู่ระบบด้วย Google (อีเมลที่ Google ยืนยันแล้ว) · เว้นว่าง = ไม่มีใครเข้าได้ |
+| `RLS_ENABLED` | ไม่ | `1` = เปิดการแยกข้อมูลระดับฐานข้อมูล (Row Level Security) · ค่าเริ่มต้นปิด · ต้องทำตามขั้นตอนใน `docs/SAAS-MIGRATION.md` Step 4 ก่อน (apply policies + role ที่ไม่ใช่ superuser) ไม่งั้นยังไม่ถูกบังคับจริง |
+
+หลังตั้ง Google: เปิด `https://…/login` ต้องเห็นปุ่ม "เข้าสู่ระบบด้วย Google" กดได้ (ไม่ใช่สีจาง) · ผู้ดูแลเดิมยังเข้าได้ที่ปุ่ม "เข้าสู่ระบบผู้ดูแลระบบ" (ใช้ username เดิม)
+
+**ฐานข้อมูลเดิมที่มีข้อมูลอยู่แล้ว** ห้าม deploy รุ่นนี้ตรงๆ — คอลัมน์ `tenantId` บังคับกรอก ต้องทำ expand → backfill → contract ตามคู่มือ **`docs/SAAS-MIGRATION.md`** ก่อน (ข้อมูลเดิมทั้งหมดจะกลายเป็นกลุ่มแรก) · ออกแบบรวมอยู่ใน `docs/SAAS-DESIGN.md`
+
 ## 3. ลำดับ deploy + ย้ายข้อมูล (สำคัญ)
 1. Deploy ครั้งแรก แล้ว **Stop service `backend` ทันที** (หรือ deploy เฉพาะ postgres) — ให้ฐานใหม่ว่าง
 2. SSH เข้า VPS แล้วรันสคริปต์ (แบบ docker exec เพราะ DB ไม่เปิดออกนอก):

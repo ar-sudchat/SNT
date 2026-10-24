@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { SETTINGS_ITEMS, Icon } from '../../components/navConfig';
+import InvitePanel from '../signup/InvitePanel';
 
 const SettingsHub = () => (
   <div className="space-y-4">
     <div>
       <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ตั้งค่าระบบ</h1>
-      <p className="text-sm text-gray-500">ข้อมูลหลักของโรงเรียน ทำครั้งเดียวตอนต้นปี แล้วแก้เมื่อมีการเปลี่ยนแปลง</p>
+      <p className="text-sm text-gray-500">ข้อมูลหลักของกลุ่ม ทำครั้งเดียวตอนต้นปี แล้วแก้เมื่อมีการเปลี่ยนแปลง</p>
     </div>
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {SETTINGS_ITEMS.map(item => (
@@ -25,6 +26,11 @@ const SettingsHub = () => (
         </Link>
       ))}
     </div>
+    <Link to="/group" className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 ring-1 ring-brand-100 hover:ring-brand-300">
+      <span><span className="block font-semibold text-brand-800">รหัสเชิญและสมาชิกกลุ่ม</span><span className="block text-sm text-gray-600">แชร์รหัสเข้ากลุ่ม ดูสมาชิก เปลี่ยนชื่อกลุ่ม</span></span>
+      <span aria-hidden="true">›</span>
+    </Link>
+    <InvitePanel />
   </div>
 );
 

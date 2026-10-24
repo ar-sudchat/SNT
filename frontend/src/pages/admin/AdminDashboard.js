@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { reportAPI, academicYearAPI, subjectAPI, teacherAPI, classAPI } from '../../services/api';
 
-// หน้าแรกแอดมิน: ภาพรวมโรงเรียน · ตัวเลขหลัก · วิชาที่ต้องติดตาม · ความพร้อมของระบบ
+// หน้าแรกแอดมิน: ภาพรวมกลุ่ม · ตัวเลขหลัก · วิชาที่ต้องติดตาม · ความพร้อมของระบบ
 const fmt = (n) => (Number(n) || 0).toLocaleString('th-TH');
 const pct = (a, b) => {
   if (!b) return 0;
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมโรงเรียน</h1>
+        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมกลุ่ม</h1>
         <p className="text-sm text-gray-500">{year ? year.name : 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน'}</p>
       </header>
 

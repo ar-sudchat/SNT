@@ -1,0 +1,197 @@
+/* หน้าแรกสาธารณะ (Landing) — ลวดลายสมุด + ฉากสาธิตการสแกน (CSS ล้วน)
+   ค่าเริ่มต้นเป็นภาพนิ่ง (เฟรม "สแกนเล่มแรกแล้ว") แอนิเมชันเปิดเฉพาะเมื่อผู้ใช้ไม่ได้ขอลดการเคลื่อนไหว */
+
+.ks-landing ::selection { background: rgb(var(--accent) / 0.35); color: inherit; }
+.ks-landing a { text-underline-offset: 3px; }
+
+/* พื้นเส้นบรรทัดสมุด บนพื้นสีหลัก */
+.ks-ruled {
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 39px, rgb(255 255 255 / 0.055) 39px 40px);
+}
+.ks-margin::before {
+  content: '';
+  position: absolute; top: 0; bottom: 0;
+  left: 20px; width: 6px;
+  border-left: 1px solid rgb(var(--accent) / 0.35);
+  border-right: 1px solid rgb(var(--accent) / 0.35);
+  pointer-events: none;
+}
+@media (min-width: 1024px) { .ks-margin::before { left: 40px; } }
+
+/* กระดาษสมุดเส้น (ฝั่ง "แบบเดิม") — เป็นวัตถุจริง ใช้สีกระดาษคงที่ */
+.ks-paper {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(to right, transparent 0 46px, #efb4b4 46px 47px, transparent 47px 50px, #efb4b4 50px 51px, transparent 51px),
+    repeating-linear-gradient(to bottom, transparent 0 35px, #cfdaf0 35px 36px);
+  color: #2a3550;
+}
+
+/* รอยปรุตั๋วรหัสเข้ากลุ่ม */
+.ks-ticket { position: relative; }
+.ks-ticket::before, .ks-ticket::after {
+  content: ''; position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 9999px;
+  transform: translateY(-50%); background: rgb(var(--brand-50));
+}
+.ks-ticket::before { left: -11px; }
+.ks-ticket::after { right: -11px; }
+
+/* FAQ */
+.ks-faq summary { list-style: none; }
+.ks-faq summary::-webkit-details-marker { display: none; }
+.ks-faq .ks-chev { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ks-faq details[open] .ks-chev { transform: rotate(45deg); }
+
+/* ---------- ฉากสาธิตการสแกน ---------- */
+/* สถานะนิ่ง: เล่มแรกอยู่กลางกรอบ ขึ้นว่าส่งแล้ว ตัวนับ 29/32 */
+.ks-nb-1, .ks-nb-2 { opacity: 0; }
+.ks-toast-1, .ks-toast-2 { opacity: 0; }
+.ks-cnt-0, .ks-cnt-2, .ks-cnt-3 { opacity: 0; }
+.ks-beam { opacity: 0; }
+.ks-bar { transform: scaleX(0.906); transform-origin: left center; }
+.ks-reticle { color: rgb(var(--accent)); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ks-scan-live .ks-nb-0 { animation: ks-nb0 9s infinite; }
+  .ks-scan-live .ks-nb-1 { animation: ks-nb1 9s infinite; }
+  .ks-scan-live .ks-nb-2 { animation: ks-nb2 9s infinite; }
+  .ks-scan-live .ks-toast-0 { animation: ks-t0 9s infinite; }
+  .ks-scan-live .ks-toast-1 { animation: ks-t1 9s infinite; }
+  .ks-scan-live .ks-toast-2 { animation: ks-t2 9s infinite; }
+  .ks-scan-live .ks-cnt-0 { animation: ks-c0 9s infinite steps(1, end); }
+  .ks-scan-live .ks-cnt-1 { animation: ks-c1 9s infinite steps(1, end); }
+  .ks-scan-live .ks-cnt-2 { animation: ks-c2 9s infinite steps(1, end); }
+  .ks-scan-live .ks-cnt-3 { animation: ks-c3 9s infinite steps(1, end); }
+  .ks-scan-live .ks-bar { animation: ks-bar 9s infinite cubic-bezier(0.22, 1, 0.36, 1); }
+  .ks-scan-live .ks-beam { animation: ks-beam 3s infinite linear; }
+  .ks-scan-live .ks-reticle { animation: ks-lock 3s infinite; }
+  .ks-scan-live .ks-flash { animation: ks-flash 3s infinite; }
+  .ks-float { animation: ks-float 7s ease-in-out infinite; }
+}
+
+/* สมุดเลื่อนเข้า ค้าง แล้วเลื่อนออก — เล่มละ 3 วินาที */
+@keyframes ks-nb0 {
+  0% { transform: translateX(140%) rotate(6deg); opacity: 0; }
+  5% { transform: translateX(0) rotate(-3deg); opacity: 1; }
+  27% { transform: translateX(0) rotate(-3deg); opacity: 1; }
+  32%, 100% { transform: translateX(-140%) rotate(-8deg); opacity: 0; }
+}
+@keyframes ks-nb1 {
+  0%, 33% { transform: translateX(140%) rotate(6deg); opacity: 0; }
+  38% { transform: translateX(0) rotate(2deg); opacity: 1; }
+  60% { transform: translateX(0) rotate(2deg); opacity: 1; }
+  65%, 100% { transform: translateX(-140%) rotate(-8deg); opacity: 0; }
+}
+@keyframes ks-nb2 {
+  0%, 66% { transform: translateX(140%) rotate(6deg); opacity: 0; }
+  71% { transform: translateX(0) rotate(-1deg); opacity: 1; }
+  93% { transform: translateX(0) rotate(-1deg); opacity: 1; }
+  98%, 100% { transform: translateX(-140%) rotate(-8deg); opacity: 0; }
+}
+@keyframes ks-t0 {
+  0%, 19% { opacity: 0; transform: translateY(10px); }
+  21%, 31% { opacity: 1; transform: translateY(0); }
+  34%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes ks-t1 {
+  0%, 52% { opacity: 0; transform: translateY(10px); }
+  54%, 64% { opacity: 1; transform: translateY(0); }
+  67%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes ks-t2 {
+  0%, 85% { opacity: 0; transform: translateY(10px); }
+  87%, 97% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes ks-c0 { 0% { opacity: 1; } 20%, 100% { opacity: 0; } }
+@keyframes ks-c1 { 0% { opacity: 0; } 20% { opacity: 1; } 53.3%, 100% { opacity: 0; } }
+@keyframes ks-c2 { 0% { opacity: 0; } 53.3% { opacity: 1; } 86.7%, 100% { opacity: 0; } }
+@keyframes ks-c3 { 0% { opacity: 0; } 86.7%, 100% { opacity: 1; } }
+@keyframes ks-bar {
+  0%, 19% { transform: scaleX(0.875); }
+  22%, 52% { transform: scaleX(0.906); }
+  55%, 85% { transform: scaleX(0.938); }
+  88%, 100% { transform: scaleX(0.969); }
+}
+@keyframes ks-beam {
+  0%, 15% { opacity: 0; transform: translateY(0); }
+  19% { opacity: 1; transform: translateY(0); }
+  57% { opacity: 1; transform: translateY(86%); }
+  61%, 100% { opacity: 0; transform: translateY(86%); }
+}
+@keyframes ks-lock {
+  0%, 58% { color: rgb(var(--accent)); }
+  60%, 84% { color: #22c55e; }
+  88%, 100% { color: rgb(var(--accent)); }
+}
+@keyframes ks-flash {
+  0%, 58% { opacity: 0; }
+  60% { opacity: 0.55; }
+  70%, 100% { opacity: 0; }
+}
+@keyframes ks-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ---------- หัวข้อเน้น / ลวดลาย ---------- */
+.ks-hl { color: rgb(var(--accent)); }
+[data-color-theme="sky"] .ks-hl, [data-color-theme="lavender"] .ks-hl, [data-color-theme="mint"] .ks-hl,
+[data-color-theme="sakura"] .ks-hl, [data-color-theme="pastel"] .ks-hl { color: rgb(var(--title-fg)); }
+.ks-dots {
+  background-image: radial-gradient(rgb(var(--brand-link) / 0.16) 1.2px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+.ks-ruled-light {
+  background-image: repeating-linear-gradient(to bottom, transparent 0 35px, rgb(var(--brand-link) / 0.08) 35px 36px);
+}
+
+/* แถบความคืบหน้าการเลื่อนหน้า (เบราว์เซอร์ที่รองรับ scroll-timeline) */
+.ks-progress { transform: scaleX(0); transform-origin: left center; }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ks-progress { animation: ks-prog linear both; animation-timeline: scroll(root); }
+  }
+}
+@keyframes ks-prog { to { transform: scaleX(1); } }
+
+/* ---------- เผยเนื้อหาเมื่อเลื่อนถึง (IntersectionObserver ใส่ .is-in) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .ks-reveal-on [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+    transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1), transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--d, 0ms);
+  }
+  .ks-reveal-on [data-reveal="left"] { transform: translate3d(-40px, 0, 0); }
+  .ks-reveal-on [data-reveal="right"] { transform: translate3d(40px, 0, 0); }
+  .ks-reveal-on [data-reveal="rise"] { transform: translate3d(0, 60px, 0) rotate(-2deg); }
+  .ks-reveal-on [data-reveal="zoom"] { transform: scale(0.94); }
+  .ks-reveal-on [data-reveal].is-in { opacity: 1; transform: none; }
+
+  /* เส้นมือวาดตัวเองเมื่อเห็น */
+  .ks-reveal-on .ks-draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1100ms cubic-bezier(0.65, 0, 0.35, 1) 250ms; }
+  .ks-reveal-on .is-in .ks-draw, .ks-reveal-on .ks-draw-now .ks-draw { stroke-dashoffset: 0; }
+
+  .ks-pop { animation: ks-pop 420ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .ks-stamp { animation: ks-stamp 380ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .ks-chip { animation: ks-fade 300ms ease-out; }
+}
+@keyframes ks-pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes ks-stamp { from { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(1.8); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) scale(1); } }
+@keyframes ks-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* คำใบ้บนสมุดเล่มแรกของเดโม (หายไปหลังแตะครั้งแรก) */
+@media (prefers-reduced-motion: no-preference) {
+  .ks-hint { animation: ks-hint 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+  .ks-hint-tag { animation: ks-bob 1.6s ease-in-out infinite; }
+}
+@keyframes ks-hint {
+  0% { box-shadow: 0 0 0 0 rgb(var(--accent) / 0.55); }
+  70%, 100% { box-shadow: 0 0 0 12px rgb(var(--accent) / 0); }
+}
+@keyframes ks-bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -3px); }
+}

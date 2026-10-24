@@ -25,7 +25,9 @@ export const SETTINGS_ITEMS = [
   { path: '/admin/subjects', label: 'วิชา', desc: 'วิชาที่สอน และครูผู้สอน', icon: ICON.book },
   { path: '/admin/qrcode', label: 'พิมพ์ QR Code', desc: 'บัตร QR ของนักเรียนสำหรับสแกน', icon: ICON.qr },
   { path: '/admin/transfer', label: 'ย้ายชั้นเรียน', desc: 'เลื่อนชั้นนักเรียนขึ้นปีใหม่', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-  { path: '/admin/import', label: 'นำเข้าข้อมูล', desc: 'นำเข้ารายชื่อจากไฟล์ Excel', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' }
+  { path: '/admin/import', label: 'นำเข้าข้อมูล', desc: 'นำเข้ารายชื่อจากไฟล์ Excel', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' },
+  { path: '/admin/privacy', label: 'ข้อมูลและ PDPA', desc: 'ส่งออก/ลบข้อมูลกลุ่ม และประวัติการใช้งาน (เจ้าของ)', icon: 'M9 12l2 2 4-4m5.6-4A12 12 0 0112 2.9 12 12 0 013.4 6 12 12 0 003 9c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1-.1-2-.4-3z' },
+  { path: '/admin/plan', label: 'แพ็กเกจและการใช้งาน', desc: 'แพ็กเกจ โควตา AI และจำนวนนักเรียน', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' }
 ];
 
 export const Icon = ({ d, className = 'w-5 h-5' }) => (

@@ -1,6 +1,14 @@
 const QRCode = require('qrcode');
 const prisma = require('../config/database');
-const crypto = require('crypto');
+const { withoutTenant, getTenantId } = require('../services/tenantContext');
+const { OTHER_SCHOOL_MSG, formatPayload, parsePayload, isForeign } = require('../services/qrPayload');
+
+const currentSlug = async () => {
+  const id = getTenantId();
+  if (!id) return null;
+  const t = await withoutTenant(() => prisma.tenant.findUnique({ where: { id }, select: { slug: true } }));
+  return t && t.slug;
+};
 
 const qrcodeController = {
   // Generate single QR code
@@ -17,8 +25,9 @@ const qrcodeController = {
         return res.status(400).json({ error: 'มี QR code ของนักเรียนและวิชานี้แล้ว' });
       }
 
-      // Generate unique QR code data
-      const qrcodeData = `SNT-${studentId}-${subjectId}-${crypto.randomBytes(8).toString('hex')}`;
+      const slug = await currentSlug();
+      if (!slug) return res.status(403).json({ error: 'ไม่พบกลุ่มของบัญชีนี้' });
+      const qrcodeData = formatPayload(slug);
 
       // Generate QR code image as base64
       const qrcodeImage = await QRCode.toDataURL(qrcodeData, {
@@ -57,6 +66,8 @@ const qrcodeController = {
     try {
       const { studentIds, subjectId } = req.body;
 
+      const slug = await currentSlug();
+      if (!slug) return res.status(403).json({ error: 'ไม่พบกลุ่มของบัญชีนี้' });
       const results = {
         success: [],
         failed: []
@@ -77,8 +88,7 @@ const qrcodeController = {
             continue;
           }
 
-          // Generate unique QR code data
-          const qrcodeData = `SNT-${studentId}-${subjectId}-${crypto.randomBytes(8).toString('hex')}`;
+          const qrcodeData = formatPayload(slug);
 
           // Generate QR code image as base64
           const qrcodeImage = await QRCode.toDataURL(qrcodeData, {
@@ -118,6 +128,12 @@ const qrcodeController = {
   async scan(req, res) {
     try {
       const { qrcodeData } = req.body;
+
+      const parsed = parsePayload(qrcodeData);
+      if (!parsed) return res.status(404).json({ error: 'QR code ไม่ถูกต้อง' });
+      if (parsed.kind === 'ks1' && isForeign(parsed, await currentSlug())) {
+        return res.status(403).json({ error: OTHER_SCHOOL_MSG });
+      }
 
       const qrcode = await prisma.qRCode.findUnique({
         where: { qrcodeData },

@@ -1,7 +1,7 @@
 import React from 'react';
 
 // ป้ายสถานะ: ออนไลน์ / ออฟไลน์ — รอส่ง N รายการ + ปุ่ม "ส่งตอนนี้"
-const OutboxStatusPill = ({ online, pending, flushing, onFlush }) => {
+const OutboxStatusPill = ({ online, pending, otherSchool = 0, flushing, onFlush }) => {
   const waiting = pending > 0;
   const tone = !online
     ? 'bg-amber-50 border-amber-300 text-amber-800'
@@ -16,7 +16,7 @@ const OutboxStatusPill = ({ online, pending, flushing, onFlush }) => {
       : 'ออนไลน์';
 
   return (
-    <div className="flex items-center gap-2 mb-3 flex-shrink-0" role="status" aria-live="polite" data-testid="outbox-pill">
+    <div className="flex flex-wrap items-center gap-2 mb-3 flex-shrink-0" role="status" aria-live="polite" data-testid="outbox-pill">
       <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium ${tone}`}>
         <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
         {label}
@@ -30,6 +30,11 @@ const OutboxStatusPill = ({ online, pending, flushing, onFlush }) => {
         >
           {flushing ? 'กำลังส่ง…' : 'ส่งตอนนี้'}
         </button>
+      )}
+      {otherSchool > 0 && (
+        <span className="text-xs text-amber-800" data-testid="outbox-other-school">
+          มี {otherSchool} รายการที่บันทึกไว้ของกลุ่มอื่น — ยังไม่ส่ง จะส่งเมื่อสลับกลับไปกลุ่มนั้น
+        </span>
       )}
     </div>
   );

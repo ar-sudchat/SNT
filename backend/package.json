@@ -11,7 +11,8 @@
     "migrate:prod": "npx prisma migrate deploy",
     "seed": "node prisma/seed.js",
     "generate": "npx prisma generate",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "pretest": "node scripts/assertLocalDb.js"
   },
   "keywords": [
     "student",

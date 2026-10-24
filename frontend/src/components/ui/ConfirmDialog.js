@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
+import { createPortal } from 'react-dom';
 
 const ConfirmDialog = ({
   isOpen,
@@ -9,8 +10,62 @@ const ConfirmDialog = ({
   confirmText = 'ตกลง',
   cancelText = 'ยกเลิก',
   type = 'info', // danger, warning, info, success
-  mode = 'confirm' // confirm (2 buttons) or alert (1 button)
+  mode = 'confirm', // confirm (2 buttons) | alert (1 button) | prompt (input) | copy (read-only text + คัดลอก)
+  // โหมด prompt
+  label = '',
+  defaultValue = '',
+  placeholder = '',
+  validate, // (value) => ข้อความ error | '' | null
+  // โหมด copy
+  text = ''
 }) => {
+  const uid = useId();
+  const titleId = `dlg-title-${uid}`;
+  const descId = `dlg-desc-${uid}`;
+  const panelRef = useRef(null);
+  const inputRef = useRef(null);
+  const primaryRef = useRef(null);
+  const cancelRef = useRef(null);
+  const [value, setValue] = useState(defaultValue);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const isInput = mode === 'prompt' || mode === 'copy';
+
+  // เปิด: รีเซ็ตค่า, โฟกัสช่องกรอก/ปุ่มหลัก, ปิด: คืนโฟกัสให้ปุ่มที่เรียก
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const trigger = document.activeElement;
+    setValue(defaultValue); setError(''); setCopied(false);
+    const t = setTimeout(() => {
+      const el = inputRef.current || (type === 'danger' && mode === 'confirm' ? cancelRef.current : primaryRef.current);
+      if (el) { el.focus(); if (el.select && mode === 'prompt') el.select(); }
+    }, 30);
+    return () => {
+      clearTimeout(t);
+      if (trigger && trigger.isConnected && trigger.focus) trigger.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Esc = ยกเลิก, Tab วนอยู่ในกล่อง
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCloseRef.current(); return; }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const f = panelRef.current.querySelectorAll('button:not([disabled]), textarea, input, [href], [tabindex]:not([tabindex="-1"])');
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!panelRef.current.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const typeStyles = {
@@ -55,75 +110,154 @@ const ConfirmDialog = ({
   const style = typeStyles[type] || typeStyles.info;
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    e.stopPropagation(); // portal: กันคลิกทะลุไปยัง element แม่ใน React tree
+    if (e.target === e.currentTarget && !isInput) {
       onClose();
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e) => {
+    if (e && e.preventDefault) { e.preventDefault(); e.stopPropagation(); }
+    if (mode === 'prompt') {
+      const v = value;
+      const msg = validate ? validate(v) : '';
+      if (msg) { setError(msg); if (inputRef.current) inputRef.current.focus(); return; }
+      if (onConfirm) onConfirm(v);
+      onClose();
+      return;
+    }
     if (onConfirm) onConfirm();
     onClose();
   };
 
-  return (
+  const handleCopy = async () => {
+    const el = inputRef.current;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (err) {
+      try { if (el) { el.focus(); el.select(); } ok = document.execCommand('copy'); } catch (err2) { ok = false; }
+    }
+    if (ok) setCopied(true); else if (el) { el.focus(); el.select(); setError('คัดลอกอัตโนมัติไม่ได้ — ข้อความถูกเลือกไว้แล้ว กดคัดลอก (Ctrl/Cmd + C) เอง'); }
+  };
+
+  const fieldCls = 'w-full rounded-xl border-2 border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
+  const btnBase = 'w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-y-auto"
+      className="fixed inset-0 z-[100] overflow-y-auto"
       onClick={handleOverlayClick}
     >
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
 
-      {/* Dialog */}
-      <div className="flex min-h-full items-center justify-center py-4 sm:px-4">
-        <div className="relative transform max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl transition-all w-full mx-4 sm:mx-0 max-w-md animate-fade-in">
-          {/* Content */}
-          <div className="p-6 text-center">
+      {/* Dialog: มือถือเป็น bottom-sheet, จอใหญ่อยู่กลาง */}
+      <div className="flex min-h-full items-end justify-center sm:items-center sm:px-4 sm:py-4">
+        <form
+          ref={panelRef}
+          role={mode === 'alert' ? 'alertdialog' : 'dialog'}
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={message ? descId : undefined}
+          onSubmit={handleConfirm}
+          className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white shadow-2xl animate-fade-in sm:rounded-2xl"
+        >
+          <div className="p-5 text-center sm:p-6">
             {/* Icon */}
-            <div className={`mx-auto w-20 h-20 rounded-full ${style.iconBg} flex items-center justify-center mb-4`}>
+            <div className={`mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full sm:mb-4 sm:h-20 sm:w-20 ${style.iconBg}`}>
               {style.icon}
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 id={titleId} className="mb-2 break-words text-xl font-semibold text-gray-900">
               {title}
             </h3>
 
             {/* Message */}
-            <p className="text-gray-500 mb-6 whitespace-pre-line">
-              {message}
-            </p>
+            {message ? (
+              <p id={descId} className={`break-words text-gray-500 whitespace-pre-line ${isInput ? 'mb-4' : 'mb-6'}`}>
+                {message}
+              </p>
+            ) : null}
+
+            {mode === 'prompt' && (
+              <div className="mb-5 text-left">
+                {label ? <label htmlFor={`${titleId}-in`} className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label> : null}
+                <input
+                  id={`${titleId}-in`}
+                  ref={inputRef}
+                  type="text"
+                  value={value}
+                  onChange={(e) => { setValue(e.target.value); if (error) setError(''); }}
+                  placeholder={placeholder}
+                  autoComplete="off"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? `${titleId}-err` : undefined}
+                  className={fieldCls}
+                />
+                {error ? <p id={`${titleId}-err`} role="alert" className="mt-1.5 text-sm text-fail">{error}</p> : null}
+              </div>
+            )}
+
+            {mode === 'copy' && (
+              <div className="mb-5 text-left">
+                <textarea
+                  ref={inputRef}
+                  readOnly
+                  value={text}
+                  rows={Math.min(8, Math.max(3, String(text).split('\n').length + 1))}
+                  onFocus={(e) => e.target.select()}
+                  aria-label={title}
+                  className={`${fieldCls} resize-none break-all`}
+                />
+                {copied ? <p role="status" className="mt-1.5 text-sm text-pass">คัดลอกแล้ว</p> : null}
+                {error ? <p role="alert" className="mt-1.5 text-sm text-fail">{error}</p> : null}
+              </div>
+            )}
 
             {/* Buttons */}
-            <div className="flex flex-col-reverse sm:flex-row gap-3 justify-center">
-              {mode === 'confirm' && (
-                <button
-                  onClick={onClose}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
-                >
-                  {cancelText}
-                </button>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+              {mode === 'copy' ? (
+                <>
+                  <button type="button" ref={cancelRef} onClick={onClose}
+                    className={`${btnBase} border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300`}>
+                    {cancelText === 'ยกเลิก' ? 'ปิด' : cancelText}
+                  </button>
+                  <button type="button" ref={primaryRef} onClick={handleCopy}
+                    className={`${btnBase} text-white ${style.confirmBtn}`}>
+                    {confirmText === 'ตกลง' ? 'คัดลอก' : confirmText}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {(mode === 'confirm' || mode === 'prompt') && (
+                    <button type="button" ref={cancelRef} onClick={onClose}
+                      className={`${btnBase} border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300`}>
+                      {cancelText}
+                    </button>
+                  )}
+                  <button type="submit" ref={primaryRef}
+                    className={`${btnBase} text-white ${style.confirmBtn}`}>
+                    {confirmText}
+                  </button>
+                </>
               )}
-              <button
-                onClick={handleConfirm}
-                className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-white font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${style.confirmBtn}`}
-              >
-                {confirmText}
-              </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
 
       <style>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: translateY(8px) scale(0.98); }
+          to { opacity: 1; transform: none; }
         }
         .animate-fade-in {
           animation: fade-in 0.2s ease-out;
         }
+        @media (prefers-reduced-motion: reduce) { .animate-fade-in { animation: none; } }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 };
 

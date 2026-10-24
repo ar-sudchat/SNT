@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { classAPI, studentAPI, academicYearAPI, transferAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
+import { useDialog } from '../../components/ui/DialogProvider';
 
 const ClassTransfer = () => {
+  const dialog = useDialog();
   const [activeTab, setActiveTab] = useState('individual'); // individual, bulk, promote
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -144,7 +146,13 @@ const ClassTransfer = () => {
       return;
     }
 
-    if (!window.confirm(`ต้องการเลื่อนชั้นนักเรียนทั้ง ${promotions.length} ห้องเรียนหรือไม่?`)) {
+    const okPromote = await dialog.confirm({
+      title: 'เลื่อนชั้นนักเรียน',
+      message: `ต้องการเลื่อนชั้นนักเรียนทั้ง ${promotions.length} ห้องเรียนหรือไม่?`,
+      confirmText: 'เลื่อนชั้น',
+      type: 'warning',
+    });
+    if (!okPromote) {
       return;
     }
 

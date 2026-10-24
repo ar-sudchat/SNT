@@ -1,4 +1,4 @@
-// Small in-memory login limiter: MAX_FAILS failed attempts per (IP + username)
+// Small in-memory login limiter: MAX_FAILS failed attempts per (IP + username|email)
 // within WINDOW_MS -> 429. Per-process only (fine for a single instance).
 const MAX_FAILS = parseInt(process.env.LOGIN_MAX_FAILS || '5', 10);
 const WINDOW_MS = parseInt(process.env.LOGIN_WINDOW_MS || String(15 * 60 * 1000), 10);
@@ -6,7 +6,7 @@ const MSG = 'เข้าสู่ระบบผิดหลายครั้�
 
 const attempts = new Map(); // key -> { count, first }
 
-const keyOf = (req) => `${req.ip}|${String((req.body && req.body.username) || '').toLowerCase().trim()}`;
+const keyOf = (req) => `${req.ip}|${String((req.body && (req.body.username || req.body.email)) || '').toLowerCase().trim()}`;
 
 function prune(now) {
   if (attempts.size < 10000) return;

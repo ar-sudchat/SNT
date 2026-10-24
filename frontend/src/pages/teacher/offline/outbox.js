@@ -7,7 +7,16 @@ const DB_NAME = 'snt-offline';
 const STORE = 'outbox';
 const LS_KEY = 'snt_outbox_v1';
 
-const pairKey = (p) => `${p.studentId}:${p.taskId}`;
+// กลุ่ม (tenant) ของ token ปัจจุบัน — อ่านจาก JWT ใน localStorage (ไม่ตรวจลายเซ็น ใช้แยกคิวเท่านั้น)
+export const currentTid = () => {
+  try {
+    const t = localStorage.getItem('token');
+    if (!t) return null;
+    const b = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(escape(atob(b)))).tid || null;
+  } catch { return null; }
+};
+const pairKey = (p, tid = currentTid()) => `${tid || '-'}:${p.studentId}:${p.taskId}`;
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 let dbPromise = null;
@@ -88,7 +97,8 @@ export const isNetworkError = (err) =>
   !err?.response || (typeof navigator !== 'undefined' && navigator.onLine === false);
 
 const enqueue = async (payload) => {
-  const item = { key: pairKey(payload), clientId: newId(), queuedAt: Date.now(), payload };
+  const tid = currentTid();
+  const item = { key: pairKey(payload, tid), tid, clientId: newId(), queuedAt: Date.now(), payload };
   await putItem(item);
   notify();
   return item;
@@ -123,10 +133,13 @@ let flushing = null;
 export const flushOutbox = () => {
   if (flushing) return flushing;
   flushing = (async () => {
-    const result = { sent: 0, rejected: [], stillOffline: false };
+    const result = { sent: 0, rejected: [], stillOffline: false, otherSchool: 0 };
     try {
       const items = await listQueued();
+      const tid = currentTid();
       for (const item of items) {
+        // คิวของกลุ่มอื่น (หรือคิวเก่าที่ไม่มี tid) ห้ามส่งเข้ากลุ่มปัจจุบัน — เก็บไว้จนกลับไปกลุ่มนั้น
+        if (!item.tid || item.tid !== tid) { result.otherSchool += 1; continue; }
         try {
           await submissionAPI.createOrUpdate(item.payload);
           await removeItem(item.key, item.clientId);

@@ -1,0 +1,12 @@
+// Plan definitions as data. null = unlimited. Values follow docs/SAAS-DESIGN.md section 5 (draft, owner to confirm).
+const PLANS = {
+  free:   { id: 'free',   name: 'Free',        priceTHB: 0,    limits: { students: 60,   teachers: 1,    aiPerMonth: 50 } },
+  pro:    { id: 'pro',    name: 'Teacher Pro', priceTHB: 59,   limits: { students: null, teachers: 1,    aiPerMonth: 1500 } },
+  school: { id: 'school', name: 'Group Plus', priceTHB: null, limits: { students: null, teachers: null, aiPerMonth: 10000 } }
+};
+const DEFAULT_PLAN = 'free';
+
+// Unknown plan names fall back to free.
+const getPlan = (id) => PLANS[String(id || '').toLowerCase()] || PLANS[DEFAULT_PLAN];
+
+module.exports = { PLANS, DEFAULT_PLAN, getPlan };

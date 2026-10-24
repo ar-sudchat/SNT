@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { qrcodeAPI } from '../../services/api';
+import { isQrPayload } from './qrPayload';
 import { saveSubmission, isNetworkError } from './offline/outbox';
 import useOutbox from './offline/useOutbox';
 import OutboxStatusPill from './offline/OutboxStatusPill';
@@ -168,14 +169,19 @@ const QRScanner = () => {
 
     try {
       // If it looks like a QR code (starts with SNT-), try scanning first
-      if (code.startsWith('SNT-')) {
+      if (isQrPayload(code)) {
         try {
           const scanResponse = await qrcodeAPI.scan({ qrcodeData: code });
           setScanResult(scanResponse.data);
           setStudentSearchResult(null);
           setAvailableSubjects([]);
           return;
-        } catch {
+        } catch (scanErr) {
+          // Other school's QR: show the server message, do not fall through to student search
+          if (scanErr && scanErr.response && scanErr.response.status === 403 && scanErr.response.data && scanErr.response.data.error) {
+            setError(scanErr.response.data.error);
+            return;
+          }
           // If QR scan fails, continue to student search
         }
       }
@@ -185,7 +191,7 @@ const QRScanner = () => {
       try {
         response = await qrcodeAPI.searchByStudent({ studentCode: code });
       } catch (searchErr) {
-        if (code.startsWith('SNT-') && !isNetworkError(searchErr)) {
+        if (isQrPayload(code) && !isNetworkError(searchErr)) {
           setError('QR นี้ไม่พบในระบบ ลองพิมพ์รหัสนักเรียนแทน');
           return;
         }
@@ -700,7 +706,7 @@ const QRScanner = () => {
         </div>
       </div>
 
-      <OutboxStatusPill online={outbox.online} pending={outbox.pending} flushing={outbox.flushing} onFlush={outbox.flush} />
+      <OutboxStatusPill online={outbox.online} pending={outbox.pending} otherSchool={outbox.otherSchool} flushing={outbox.flushing} onFlush={outbox.flush} />
 
       {offlineNotice && (
         <div role="status" aria-live="polite" data-testid="offline-notice" className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 flex-shrink-0 font-medium">

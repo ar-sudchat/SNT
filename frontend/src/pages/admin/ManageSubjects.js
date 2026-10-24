@@ -3,10 +3,14 @@ import { subjectAPI, teacherAPI, academicYearAPI, gradeAPI } from '../../service
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 const ManageSubjects = () => {
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
@@ -147,7 +151,8 @@ const ManageSubjects = () => {
       setFormData({
         subjectCode: '',
         subjectName: '',
-        teacherId: null,
+        // ครูที่สร้างวิชาเอง (เจ้าของกลุ่ม) เป็นครูผู้สอนโดยอัตโนมัติ ถ้ามีครูคนเดียวก็เลือกให้เลย
+        teacherId: toId(user?.teacher?.id) ?? (teachers.length === 1 ? toId(teachers[0].id) : null),
         gradeId: filterGrade || null,
         academicYearId: filterAcademicYear || currentAcademicYear?.id || null,
         description: '',
@@ -156,6 +161,16 @@ const ManageSubjects = () => {
     }
     setShowModal(true);
   };
+
+  // /admin/subjects?new=1 (จากหน้าแรกครู "สร้างวิชาแรก") เปิดฟอร์มเพิ่มวิชาทันทีเมื่อข้อมูลพร้อม
+  useEffect(() => {
+    if (searchParams.get('new') !== '1' || !initialLoadDone.current || loading) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+    openModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loading]);
 
   const closeModal = () => {
     resetErrors();

@@ -14,7 +14,7 @@ test.describe('เข้าสู่ระบบ', () => {
 
   test('รหัสผ่านผิด แสดงข้อความผิดพลาดภาษาไทย', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/รหัส/).first().fill('E2E-no-such-user');
+    await page.locator('#username').fill('e2e-no-such-user@example.com');
     await page.locator('input[type="password"]').fill('wrong-pass-E2E');
     await page.locator('form button[type="submit"]').click();
     await expect(page.getByText('เข้าสู่ระบบไม่สำเร็จ')).toBeVisible();

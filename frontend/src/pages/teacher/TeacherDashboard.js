@@ -90,7 +90,10 @@ const TeacherDashboard = () => {
       setStatistics(rows);
       setSubjects(subs);
     } catch (err) {
-      setError('โหลดข้อมูลไม่สำเร็จ');
+      // ไม่มี response = ต่อเซิร์ฟเวอร์ไม่ได้ (เน็ต) · มี response = เซิร์ฟเวอร์ตอบข้อผิดพลาดกลับมา
+      setError(err?.response
+        ? `โหลดข้อมูลไม่สำเร็จ${err.response.data?.error ? ` (${err.response.data.error})` : ''} ลองใหม่อีกครั้ง`
+        : 'โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -146,7 +149,7 @@ const TeacherDashboard = () => {
       <div className="space-y-6">
         {header}
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-red-700">{error} ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง</p>
+          <p className="text-red-700">{error}</p>
           <button
             onClick={fetchData}
             className="mt-3 min-h-[44px] rounded-lg border border-red-300 bg-white px-5 text-red-700 hover:bg-red-50"
@@ -154,6 +157,61 @@ const TeacherDashboard = () => {
             ลองอีกครั้ง
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // กลุ่มใหม่ / ครูที่ยังไม่มีวิชา: บอกขั้นต่อไปแทนตัวเลขศูนย์
+  if (subjects.length === 0) {
+    const canManage = !!user?.canManage;
+    const steps = [
+      { n: 1, title: 'สร้างวิชาที่สอน', desc: 'ตั้งชื่อวิชาและรหัสวิชา ครูผู้สอนคือคุณ', to: '/admin/subjects?new=1' },
+      { n: 2, title: 'เพิ่มห้องและนักเรียน', desc: 'พิมพ์เองหรือนำเข้ารายชื่อจาก Excel', to: '/admin/import' },
+      { n: 3, title: 'สร้างงานแล้วสแกนสมุด', desc: 'รู้ทันทีว่าใครส่งแล้ว ใครยังค้าง', to: '/admin/tasks' },
+    ];
+    return (
+      <div className="space-y-6">
+        {header}
+        <section className="rounded-xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-gray-100" aria-labelledby="td-empty">
+          <div className="max-w-xl">
+            <h2 id="td-empty" className="text-xl font-bold text-gray-900">ยังไม่มีวิชา — เริ่มต้นสร้างวิชาแรก</h2>
+            {canManage ? (
+              <>
+                <p className="mt-1 text-gray-600">ตั้งค่าครั้งเดียว 3 ขั้น แล้วเริ่มสแกนส่งงานได้เลย</p>
+                <ol className="mt-5 space-y-2">
+                  {steps.map(s => (
+                    <li key={s.n}>
+                      <Link to={s.to} className="flex min-h-[56px] items-center gap-3 rounded-lg px-3 py-2 ring-1 ring-gray-100 hover:bg-gray-50 hover:ring-brand-200 transition">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700">{s.n}</span>
+                        <span className="min-w-0">
+                          <span className="block font-medium text-gray-800">{s.title}</span>
+                          <span className="block text-sm text-gray-500">{s.desc}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                  <Link to="/admin/subjects?new=1" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">
+                    สร้างวิชาแรก
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-gray-600">เจ้าของหรือผู้ดูแลกลุ่มเป็นคนเพิ่มวิชา แล้วเลือกให้คุณเป็นครูผู้สอน เมื่อเพิ่มแล้ววิชาจะขึ้นที่หน้านี้</p>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                  <Link to="/group" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">
+                    ดูสมาชิกกลุ่ม
+                  </Link>
+                  <button onClick={fetchData} className="min-h-[48px] rounded-xl border border-gray-300 bg-white px-6 text-gray-700 hover:bg-gray-50">
+                    โหลดใหม่
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       </div>
     );
   }

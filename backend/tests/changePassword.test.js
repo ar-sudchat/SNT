@@ -13,11 +13,13 @@ stub('config/database', {
   user: {
     findUnique: async ({ where }) => db.users[where.id] || null,
     update: async ({ where, data }) => Object.assign(db.users[where.id], data),
-    findFirst: async ({ where }) => Object.values(db.users).find(u => u.studentId === where.studentId) || null,
+    findFirst: async ({ where }) => Object.values(db.users).find(u => where.role ? u.role === where.role : u.studentId === where.studentId) || null,
     create: async ({ data }) => { const u = { id: 'new', ...data }; db.users[u.id] = u; return u; },
   },
-  teacher: { findUnique: async () => null },
-  student: { findUnique: async ({ where }) => db.students[where.studentCode] || null },
+  teacher: { findFirst: async () => null, findMany: async () => [] },
+  student: { findFirst: async ({ where }) => db.students[where.studentCode] || null },
+  membership: { findFirst: async () => ({ tenantId: 't1' }) },
+  tenant: { findFirst: async () => ({ id: 't1' }) },
 });
 const ctrl = require('../controllers/authController');
 
@@ -32,9 +34,30 @@ test('changePassword', async (t) => {
   const hash = await bcrypt.hash('T001', 4);
   const teacherUser = () => (db.users.u1 = { id: 'u1', role: 'TEACHER', password: hash, teacher: { teacherCode: 'TEACHER01' } });
 
-  await t.test('admin is refused with server-hash message', async () => {
-    const r = await call(ctrl.changePassword, { id: 'a', role: 'ADMIN' }, { currentPassword: 'x', newPassword: 'abcdefgh1' });
-    assert.strictEqual(r.status, 400); assert.match(r.body.error, /ADMIN_PASSWORD_HASH/);
+  await t.test('admin: change in-app, old env password stops working, reset flag restores env', async () => {
+    process.env.ADMIN_PASSWORD_HASH = await bcrypt.hash('envpass123', 4);
+    db.users.a = { id: 'a', role: 'ADMIN', email: 'admin@system.local', password: 'x', passwordSetAt: null };
+    const login = (pw) => call(ctrl.login, null, { username: 'admin', password: pw }).then(r => r.status);
+    assert.strictEqual(await login('envpass123'), 200);
+    let r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'wrong', newPassword: 'adminNew99' });
+    assert.strictEqual(r.status, 400); assert.match(r.body.error, /ปัจจุบันไม่ถูกต้อง/);
+    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'short' });
+    assert.strictEqual(r.status, 400);
+    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'adminNew99' });
+    assert.strictEqual(r.status, 200);
+    assert.ok(db.users.a.passwordSetAt instanceof Date);
+    assert.strictEqual(await login('envpass123'), 401);
+    assert.strictEqual(await login('adminNew99'), 200);
+    // second change verifies against DB hash
+    r = await call(ctrl.changePassword, db.users.a, { currentPassword: 'envpass123', newPassword: 'adminNew77' });
+    assert.strictEqual(r.status, 400);
+    process.env.ADMIN_PASSWORD_RESET = 'true';
+    try {
+      assert.strictEqual(await login('envpass123'), 200);
+      assert.strictEqual(await login('adminNew99'), 401);
+    } finally { delete process.env.ADMIN_PASSWORD_RESET; }
+    assert.strictEqual(await login('adminNew99'), 200);
+    delete db.users.a; delete process.env.ADMIN_PASSWORD_HASH;
   });
   await t.test('wrong current password -> 400 not 401', async () => {
     const u = teacherUser();
@@ -57,11 +80,10 @@ test('changePassword', async (t) => {
     assert.strictEqual(r.status, 200);
     assert.ok(await bcrypt.compare('newpass123', db.users.u1.password));
   });
-  await t.test('student login uses stored hash once a User row exists', async () => {
-    const su = { id: 's1', role: 'STUDENT', studentId: 9, password: await bcrypt.hash('changed99', 4), student: {} };
-    db.users.s1 = su;
-    db.students.S100 = { id: 9, studentCode: 'S100', name: 'ส', user: su };
-    assert.strictEqual((await call(ctrl.login, null, { username: 'S100', password: 'S100' })).status, 401);
-    assert.strictEqual((await call(ctrl.login, null, { username: 'S100', password: 'changed99' })).status, 200);
+  await t.test('student login is gone: 410 with Thai message', async () => {
+    db.students.S100 = { id: 9 };
+    const r = await call(ctrl.login, null, { username: 'S100', password: 'S100' });
+    assert.strictEqual(r.status, 410);
+    assert.match(r.body.error, /นักเรียนไม่ต้องเข้าสู่ระบบ/);
   });
 });

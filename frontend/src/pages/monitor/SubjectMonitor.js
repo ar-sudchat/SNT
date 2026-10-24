@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, subjectAPI, academicYearAPI, gradeAPI, classAPI, submissionAPI } from '../../services/api';
 import { SmartComboBox, WindowModal } from '../../components/ui';
+import { useDialog } from '../../components/ui/DialogProvider';
 import { ReminderButton, shortThaiDate } from './reminderText';
 
 const LAST_SUBJECT_KEY = 'monitor.lastSubjectId';
@@ -13,6 +14,7 @@ const writeSaved = (key, val) => {
 };
 
 const SubjectMonitor = ({ embedded = false }) => {
+  const dialog = useDialog();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -303,7 +305,14 @@ const SubjectMonitor = ({ embedded = false }) => {
 
   // Batch Mark All for a specific task
   const handleBatchMarkAll = async (taskId, task) => {
-    if (!data || !window.confirm(`ต้องการให้ทุกคนผ่านงาน "${task.taskName}" หรือไม่?`)) return;
+    if (!data) return;
+    const okAll = await dialog.confirm({
+      title: 'ให้ทุกคนผ่านงานนี้?',
+      message: `ต้องการให้ทุกคนผ่านงาน "${task.taskName}" หรือไม่?`,
+      confirmText: 'ให้ผ่านทั้งหมด',
+      type: 'warning',
+    });
+    if (!okAll) return;
 
     const studentsToUpdate = data.students.filter(student => {
       const sub = student.submissions.find(s => s.taskId === taskId);
@@ -311,7 +320,7 @@ const SubjectMonitor = ({ embedded = false }) => {
     });
 
     if (studentsToUpdate.length === 0) {
-      alert('ทุกคนส่งงานครบแล้ว');
+      await dialog.alert({ title: 'ส่งครบแล้ว', message: 'ทุกคนส่งงานครบแล้ว', type: 'success' });
       return;
     }
 

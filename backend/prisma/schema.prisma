@@ -14,7 +14,8 @@ datasource db {
 // User table for authentication
 model User {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
+  email     String?  @unique
+  googleSub String?  @unique
   password  String
   role      Role     @default(TEACHER)
   teacherId Int?     @unique
@@ -22,10 +23,20 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  teacher Teacher? @relation(fields: [teacherId], references: [id])
+  // Profile (all optional, additive)
+  avatar        String?   @db.Text // data:image/(png|jpeg|webp);base64 ≤150KB
+  avatarPreset  String?
+  displayName   String?
+  bio           String?
+  accent        String?
+  passwordSetAt DateTime? // set when the admin changes password in-app (then DB hash wins over env)
+
+  teacher Teacher? @relation("LegacyTeacherLogin", fields: [teacherId], references: [id])
   student Student? @relation(fields: [studentId], references: [id])
 
   aiConversations AiConversation[]
+  memberships     Membership[]
+  teacherProfiles Teacher[]        @relation("TeacherAccount") // one per group (tenant) the user teaches in
 }
 
 enum Role {
@@ -36,24 +47,31 @@ enum Role {
 
 // AcademicYear table (ปีการศึกษา)
 model AcademicYear {
-  id          Int      @id @default(autoincrement())
-  year        String   @unique // เช่น "2567", "2568"
-  name        String?  // ชื่อเต็ม เช่น "ปีการศึกษา 2567"
-  startDate   DateTime?
-  endDate     DateTime?
-  isCurrent   Boolean  @default(false)
-  status      Status   @default(ACTIVE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  id        Int       @id @default(autoincrement())
+  year      String // เช่น "2567", "2568"
+  name      String? // ชื่อเต็ม เช่น "ปีการศึกษา 2567"
+  startDate DateTime?
+  endDate   DateTime?
+  isCurrent Boolean   @default(false)
+  status    Status    @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   classes  Class[]
   subjects Subject[]
+
+  @@unique([tenantId, year])
+  @@index([tenantId])
 }
 
 // Grade table (ชั้นปี)
 model Grade {
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   id          Int      @id @default(autoincrement())
-  gradeName   String   @unique
+  gradeName   String
   description String?
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
@@ -61,14 +79,19 @@ model Grade {
 
   classes  Class[]
   subjects Subject[]
+
+  @@unique([tenantId, gradeName])
+  @@index([tenantId])
 }
 
 // Class table (ห้องเรียน)
 model Class {
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
   id             Int      @id @default(autoincrement())
-  className      String   @unique
+  className      String
   gradeId        Int
-  teacherId      Int?     // ครูประจำชั้น
+  teacherId      Int? // ครูประจำชั้น
   academicYearId Int?
   capacity       Int      @default(40)
   description    String?
@@ -80,13 +103,18 @@ model Class {
   homeTeacher  Teacher?      @relation("HomeClass", fields: [teacherId], references: [id])
   academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
   students     Student[]
+
+  @@unique([tenantId, className])
+  @@index([tenantId])
 }
 
 // Student table (นักเรียน)
 model Student {
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
   id            Int      @id @default(autoincrement())
-  studentCode   String   @unique
-  studentNumber Int?     // เลขที่ในห้อง
+  studentCode   String
+  studentNumber Int? // เลขที่ในห้อง
   name          String
   classId       Int
   email         String?
@@ -98,29 +126,44 @@ model Student {
   qrcodes     QRCode[]
   submissions Submission[]
   user        User?
+
+  @@unique([tenantId, studentCode])
+  @@index([tenantId])
 }
 
 // Teacher table (ครู)
 model Teacher {
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   id          Int      @id @default(autoincrement())
-  teacherCode String   @unique
+  teacherCode String
   name        String
   email       String?
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Account that acts as this teacher in this group (set for group members; legacy teachers use User.teacherId)
+  userId  Int?
+  account User? @relation("TeacherAccount", fields: [userId], references: [id], onDelete: SetNull)
+
   homeClass   Class[]      @relation("HomeClass")
   subjects    Subject[]
   tasks       Task[]       @relation("CreatedBy")
   submissions Submission[] @relation("ReviewedBy")
-  user        User?
+  user        User?        @relation("LegacyTeacherLogin")
+
+  @@unique([tenantId, teacherCode])
+  @@index([tenantId, userId]) // not @@unique: `db push` on deploy refuses new unique constraints; ensureTeacherFor keeps it 1:1
+  @@index([tenantId])
 }
 
 // Subject table (วิชา)
 model Subject {
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
   id             Int      @id @default(autoincrement())
-  subjectCode    String   @unique
+  subjectCode    String
   subjectName    String
   teacherId      Int
   gradeId        Int?
@@ -135,10 +178,15 @@ model Subject {
   academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
   tasks        Task[]
   qrcodes      QRCode[]
+
+  @@unique([tenantId, subjectCode])
+  @@index([tenantId])
 }
 
 // Task table (งาน)
 model Task {
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
   id          Int         @id @default(autoincrement())
   subjectId   Int
   taskName    String
@@ -146,7 +194,7 @@ model Task {
   description String?
   deadline    DateTime?
   scoringType ScoringType @default(SUBMISSION_ONLY) // ประเภทการให้คะแนน
-  maxScore    Float?      // คะแนนเต็ม (ใช้เมื่อ scoringType = SCORED)
+  maxScore    Float? // คะแนนเต็ม (ใช้เมื่อ scoringType = SCORED)
   status      Status      @default(ACTIVE)
   createdById Int
   createdAt   DateTime    @default(now())
@@ -157,22 +205,25 @@ model Task {
   submissions Submission[]
 
   @@unique([subjectId, taskNumber])
+  @@index([tenantId])
 }
 
 // ประเภทการให้คะแนน
 enum ScoringType {
   SUBMISSION_ONLY // ส่ง/ไม่ส่ง
-  PASS_FAIL       // ผ่าน/ไม่ผ่าน
-  SCORED          // คิดคะแนน
+  PASS_FAIL // ผ่าน/ไม่ผ่าน
+  SCORED // คิดคะแนน
 }
 
 // QRCode table
 model QRCode {
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
   id          Int       @id @default(autoincrement())
   studentId   Int
   subjectId   Int
-  qrcodeData  String    @unique
-  qrcodeImage String?   // Base64 or URL
+  qrcodeData  String
+  qrcodeImage String? // Base64 or URL
   status      Status    @default(ACTIVE)
   printedAt   DateTime?
   createdAt   DateTime  @default(now())
@@ -182,15 +233,19 @@ model QRCode {
   subject Subject @relation(fields: [subjectId], references: [id])
 
   @@unique([studentId, subjectId])
+  @@unique([tenantId, qrcodeData])
+  @@index([tenantId])
 }
 
 // Submission table (การส่งงาน)
 model Submission {
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
   id           Int              @id @default(autoincrement())
   studentId    Int
   taskId       Int
   status       SubmissionStatus @default(NOT_SUBMITTED)
-  score        Float?           // คะแนนที่ได้ (ใช้เมื่อ task.scoringType = SCORED)
+  score        Float? // คะแนนที่ได้ (ใช้เมื่อ task.scoringType = SCORED)
   submitDate   DateTime?
   reviewDate   DateTime?
   reviewedById Int?
@@ -203,6 +258,7 @@ model Submission {
   reviewedBy Teacher? @relation("ReviewedBy", fields: [reviewedById], references: [id])
 
   @@unique([studentId, taskId])
+  @@index([tenantId])
 }
 
 enum Status {
@@ -219,6 +275,8 @@ enum SubmissionStatus {
 
 // ประวัติแชทผู้ช่วย AI (ต่อผู้ใช้)
 model AiConversation {
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
   id        Int         @id @default(autoincrement())
   userId    Int
   title     String
@@ -230,9 +288,12 @@ model AiConversation {
   messages  AiMessage[]
 
   @@index([userId, updatedAt])
+  @@index([tenantId])
 }
 
 model AiMessage {
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
   id             Int            @id @default(autoincrement())
   conversationId Int
   role           String // 'user' | 'assistant'
@@ -241,4 +302,83 @@ model AiMessage {
   conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+  @@index([tenantId])
+}
+
+// ---------- Multi-tenant (SaaS) ----------
+model Tenant {
+  id        String   @id @default(uuid())
+  slug      String   @unique // internal only (auto-generated for groups)
+  name      String
+  joinCode  String?  @unique // XXX-XXX, teachers join with it
+  kind      String   @default("group")
+  plan      String   @default("free")
+  status    String   @default("ACTIVE") // ACTIVE | SUSPENDED | PENDING_DELETE
+  aiEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  memberships     Membership[]
+  invites         Invite[]
+  auditLogs       AuditLog[]
+  academicYears   AcademicYear[]
+  grades          Grade[]
+  classes         Class[]
+  students        Student[]
+  teachers        Teacher[]
+  subjects        Subject[]
+  tasks           Task[]
+  qrcodes         QRCode[]
+  submissions     Submission[]
+  aiConversations AiConversation[]
+  aiMessages      AiMessage[]
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model Membership {
+  id        Int        @id @default(autoincrement())
+  userId    Int
+  tenantId  String
+  role      TenantRole
+  createdAt DateTime   @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+model Invite {
+  id         Int        @id @default(autoincrement())
+  tenantId   String
+  email      String?
+  role       TenantRole
+  token      String     @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  tenantId  String
+  userId    Int?
+  action    String
+  target    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
 }

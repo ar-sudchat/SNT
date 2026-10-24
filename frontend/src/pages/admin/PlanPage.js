@@ -1,0 +1,65 @@
+import React, { useEffect, useState } from 'react';
+import { planAPI } from '../../services/api';
+
+const Bar = ({ label, used, limit }) => {
+  const unlimited = limit == null;
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / limit) * 100));
+  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-brand-600';
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-sm">
+        <span className="text-gray-700">{label}</span>
+        <span className="text-gray-500">{used.toLocaleString()} / {unlimited ? 'ไม่จำกัด' : limit.toLocaleString()}</span>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={limit || undefined}>
+        <div className={`h-full rounded-full ${color}`} style={{ width: unlimited ? '4%' : `${pct}%` }} />
+      </div>
+    </div>
+  );
+};
+
+const PlanPage = () => {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    planAPI.get().then(r => setData(r.data)).catch(e => setError(e.response?.data?.error || 'โหลดข้อมูลแพ็กเกจไม่สำเร็จ'));
+  }, []);
+
+  const upgrade = async () => {
+    try { await planAPI.upgrade(); }
+    catch (e) { setNote(e.response?.data?.error || 'เร็วๆ นี้'); }
+  };
+
+  if (error) return <div className="rounded-xl bg-red-50 p-4 text-red-700">{error}</div>;
+  if (!data) return <div className="p-4 text-gray-500">กำลังโหลด...</div>;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">แพ็กเกจและการใช้งาน</h1>
+        <p className="text-sm text-gray-500">ดูแพ็กเกจปัจจุบันและโควตาที่ใช้ไปในเดือนนี้</p>
+      </div>
+      <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-sm text-gray-500">แพ็กเกจปัจจุบัน</div>
+            <div className="text-lg font-semibold text-gray-800">{data.plan.name}</div>
+          </div>
+          <button type="button" onClick={upgrade} className="min-h-[44px] rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-500 hover:bg-gray-200">
+            อัปเกรด (เร็วๆ นี้)
+          </button>
+        </div>
+        {note && <p className="mb-3 text-sm text-gray-500">{note}</p>}
+        <div className="space-y-4">
+          <Bar label="ผู้ช่วย AI เดือนนี้ (ครั้ง)" used={data.usage.aiCalls} limit={data.limits.aiPerMonth} />
+          <Bar label="นักเรียน (คน)" used={data.usage.students} limit={data.limits.students} />
+        </div>
+        {!data.aiEnabled && <p className="mt-4 text-sm text-amber-700">ผู้ช่วย AI ถูกปิดสำหรับกลุ่มนี้</p>}
+      </div>
+    </div>
+  );
+};
+
+export default PlanPage;

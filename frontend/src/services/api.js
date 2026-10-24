@@ -63,7 +63,9 @@ export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
-  changePassword: (data) => api.put('/auth/change-password', data)
+  changePassword: (data) => api.put('/auth/change-password', data),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  profileStats: () => api.get('/auth/profile/stats')
 };
 
 export const academicYearAPI = {
@@ -250,4 +252,33 @@ export const aiAPI = {
   report: (data) => api.post('/ai/report', data, { timeout: AI_TIMEOUT }),
   importHelp: (data) => api.post('/ai/import-help', data, { timeout: AI_TIMEOUT }),
   draftTask: (data) => api.post('/ai/draft-task', data, { timeout: AI_TIMEOUT })
+};
+
+export const tenantAPI = {
+  memberships: () => api.get('/auth/memberships'),
+  switchTenant: (tenantId) => api.post('/auth/switch-tenant', { tenantId })
+};
+
+// PDPA: ข้อมูลและการลบของโรงเรียน (เจ้าของเท่านั้น)
+export const tenantDataAPI = {
+  status: () => api.get('/tenant/status'),
+  exportData: () => api.get('/tenant/export', { responseType: 'blob' }),
+  deleteRequest: (confirm) => api.post('/tenant/delete-request', { confirm }),
+  deleteCancel: () => api.post('/tenant/delete-cancel'),
+  audit: (page = 1, limit = 20) => api.get('/tenant/audit', { params: { page, limit } })
+};
+
+export const planAPI = {
+  get: () => api.get('/plan'),
+  upgrade: () => api.post('/plan/upgrade')
+};
+
+// Groups (กลุ่ม) management for signed-in users. Public signup/login/join helpers live in pages/signup/client.js.
+export const groupAPI = {
+  get: (id) => api.get(`/groups/${id}`),
+  create: (name) => api.post('/groups', { name }),
+  members: (id) => api.get(`/groups/${id}/members`),
+  rotateCode: (id) => api.post(`/groups/${id}/join-code/rotate`),
+  removeMember: (id, userId) => api.delete(`/groups/${id}/members/${userId}`),
+  rename: (id, name) => api.patch(`/groups/${id}`, { name })
 };

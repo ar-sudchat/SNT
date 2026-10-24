@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { restoreTenant } = require('../middleware/tenant');
 const importController = require('../controllers/importController');
 const { authenticate, isAdmin } = require('../middleware/auth');
 
@@ -33,27 +34,27 @@ const upload = multer({
 router.get('/templates/:type', authenticate, isAdmin, importController.downloadTemplate);
 
 // Import academic years
-router.post('/academic-years', authenticate, isAdmin, upload.single('file'), importController.importAcademicYears);
+router.post('/academic-years', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importAcademicYears);
 
 // Import grades
-router.post('/grades', authenticate, isAdmin, upload.single('file'), importController.importGrades);
+router.post('/grades', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importGrades);
 
 // Import classes
-router.post('/classes', authenticate, isAdmin, upload.single('file'), importController.importClasses);
+router.post('/classes', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importClasses);
 
 // Import students
-router.post('/students', authenticate, isAdmin, upload.single('file'), importController.importStudents);
+router.post('/students', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importStudents);
 
 // Import teachers
-router.post('/teachers', authenticate, isAdmin, upload.single('file'), importController.importTeachers);
+router.post('/teachers', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importTeachers);
 
 // Import subjects
-router.post('/subjects', authenticate, isAdmin, upload.single('file'), importController.importSubjects);
+router.post('/subjects', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importSubjects);
 
 // Import tasks
-router.post('/tasks', authenticate, isAdmin, upload.single('file'), importController.importTasks);
+router.post('/tasks', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.importTasks);
 
 // Validate file before import
-router.post('/validate', authenticate, isAdmin, upload.single('file'), importController.validateFile);
+router.post('/validate', authenticate, isAdmin, upload.single('file'), restoreTenant, importController.validateFile);
 
 module.exports = router;

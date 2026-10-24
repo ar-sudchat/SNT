@@ -31,8 +31,12 @@ app.use(cors({
 }));
 app.disable('x-powered-by');
 app.use(require('./middleware/securityHeaders'));
+// Avatar uploads need a larger body; must run before the default 100kb parser
+app.use('/api/auth/profile', express.json({ limit: '300kb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Tenant context per request (filled by authenticate() from JWT `tid`)
+app.use(require('./middleware/tenant').tenantScope);
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -54,6 +58,8 @@ const parentRoutes = require('./routes/parent');
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', require('./routes/onboarding'));
+app.use('/api/ops', require('./routes/ops'));
 app.use('/api/academic-years', academicYearRoutes);
 app.use('/api/grades', gradeRoutes);
 app.use('/api/classes', classRoutes);
@@ -68,8 +74,11 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/transfer', transferRoutes);
 app.use('/api/monitor', monitorRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/tenant', require('./routes/tenantData'));
+app.use('/api/plan', require('./routes/plan'));
 app.use('/api/parent-links', parentRoutes.linksRouter);
 app.use('/api/public/parent', parentRoutes.publicRouter);
+app.use('/api/public/tenant', require('./routes/publicTenant'));
 
 // Health check
 app.get('/api/health', (req, res) => {

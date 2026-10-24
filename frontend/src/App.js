@@ -1,9 +1,11 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DialogProvider } from './components/ui/DialogProvider';
 
 // Pages
 import Login from './pages/Login';
+import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import QRScanner from './pages/teacher/QRScanner';
@@ -25,8 +27,16 @@ import ParentView from './pages/parent/ParentView';
 import PrivacyNotice from './pages/legal/PrivacyNotice';
 import { StudentMonitor, MonitorPage, MonitorRedirect } from './pages/monitor';
 import SettingsHub from './pages/admin/SettingsHub';
+import SignupPage from './pages/signup/SignupPage';
+import InviteAccept from './pages/signup/InviteAccept';
+import JoinGroup from './pages/groups/JoinGroup';
+import PlanPage from './pages/admin/PlanPage';
+import DataPrivacy from './pages/admin/DataPrivacy';
 import Layout from './components/Layout';
 import Profile from './pages/Profile';
+import Landing from './pages/landing/Landing';
+import { OpsTenants } from './pages/ops';
+import GroupSettings from './pages/groups/GroupSettings';
 
 // เส้นทางเก่า → หน้าติดตามใหม่
 const LegacySubjectRedirect = () => {
@@ -54,7 +64,8 @@ const ProtectedRoute = ({ children, roles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (roles && !roles.includes(user.role)) {
+  // เจ้าของ/ผู้ดูแลกลุ่ม (canManage) เข้าหน้าตั้งค่าของกลุ่มได้เหมือนผู้ดูแลระบบ
+  if (roles && !roles.includes(user.role) && !(user.canManage && roles.includes('ADMIN'))) {
     const home = user.role === 'ADMIN' ? '/admin' : user.role === 'TEACHER' ? '/teacher' : '/dashboard';
     return <Navigate to={home} replace />;
   }
@@ -62,29 +73,44 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
+// "/" : ผู้เยี่ยมชมที่ยังไม่ล็อกอินเห็นหน้า Landing, ผู้ล็อกอินเข้า Layout ตามเดิม
+const RootGate = () => {
+  const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  if (!loading && !user && pathname === '/') return <Landing />;
+  return <ProtectedRoute><Layout /></ProtectedRoute>;
+};
+
 function App() {
   return (
     <AuthProvider>
+      <DialogProvider>
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           {/* ลิงก์ผู้ปกครอง: สาธารณะ ไม่ต้องล็อกอิน */}
           <Route path="/p/:token" element={<ParentView />} />
           <Route path="/privacy" element={<PrivacyNotice />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/invite/:token" element={<InviteAccept />} />
+          <Route path="/join" element={<JoinGroup />} />
+          <Route path="/join/:code" element={<JoinGroup />} />
 
           {/* Protected Routes */}
           <Route
             path="/"
             element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
+              <RootGate />
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="group" element={<GroupSettings />} />
+            {/* ผู้ดูแลแพลตฟอร์ม: API ตรวจสิทธิ์ด้วย PLATFORM_ADMIN_EMAILS */}
+            <Route path="ops" element={<OpsTenants />} />
 
             {/* Teacher Routes */}
             <Route
@@ -245,6 +271,24 @@ function App() {
               }
             />
 
+            <Route
+              path="admin/privacy"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <DataPrivacy />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="admin/plan"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <PlanPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Monitor Routes */}
             <Route
               path="monitor"
@@ -284,6 +328,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
+      </DialogProvider>
     </AuthProvider>
   );
 }

@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import ErrorBoundary from './ErrorBoundary';
 import Logo from './brand/Logo';
 import ThemePicker from './ThemePicker';
+import TenantSwitcher from './TenantSwitcher';
+import Avatar, { displayNameOf } from './Avatar';
 import { ICON, SETTINGS_ITEMS, Icon } from './navConfig';
 
 const SCAN_PATH = '/teacher/scan';
@@ -18,6 +20,8 @@ const Layout = () => {
   const role = user?.role;
   const isStaff = role === 'ADMIN' || role === 'TEACHER';
   const isAdmin = role === 'ADMIN';
+  // เจ้าของ/ผู้ดูแลกลุ่มตั้งค่ากลุ่มได้ แม้บัญชีจะเป็นครู
+  const canManage = isAdmin || !!user?.canManage;
   const homePath = isAdmin ? '/admin' : role === 'TEACHER' ? '/teacher' : '/student';
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
@@ -34,7 +38,7 @@ const Layout = () => {
   };
 
   const path = location.pathname;
-  const settingsItem = isAdmin ? SETTINGS_ITEMS.find(i => path === i.path || path.startsWith(i.path + '/')) : null;
+  const settingsItem = canManage ? SETTINGS_ITEMS.find(i => path === i.path || path.startsWith(i.path + '/')) : null;
   const isActive = (p) => {
     if (p === homePath) return path === p;
     if (p === '/admin/settings') return path === p || !!settingsItem;
@@ -49,11 +53,11 @@ const Layout = () => {
         { path: '/admin/tasks', label: 'งาน', icon: ICON.task },
         { path: '/ai', label: 'ผู้ช่วย AI', icon: ICON.ai },
         { path: '/tools', label: 'เครื่องมือห้องเรียน', icon: ICON.tools },
-        ...(isAdmin ? [{ path: '/admin/settings', label: 'ตั้งค่าระบบ', icon: ICON.gear }] : [])
+        ...(canManage ? [{ path: '/admin/settings', label: 'ตั้งค่าระบบ', icon: ICON.gear }] : [])
       ]
     : [{ path: '/student', label: 'งานของฉัน', icon: ICON.task }];
 
-  const userName = user?.teacher?.name || user?.student?.name || user?.email;
+  const userName = displayNameOf(user && user.role === 'ADMIN' && !user.displayName ? { ...user, name: 'ผู้ดูแลระบบ' } : user);
   const roleLabel = isAdmin ? 'ผู้ดูแลระบบ' : role === 'TEACHER' ? 'ครู' : 'นักเรียน';
 
   const tabCls = (active) =>
@@ -91,6 +95,10 @@ const Layout = () => {
           ))}
         </nav>
         <div className="shrink-0 border-t border-side-fg/15 px-2 pt-2">
+          <Link to="/group" aria-current={isActive('/group') ? 'page' : undefined}
+            className={`flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-sm text-side-fg hover:bg-side-on/80 hover:text-side-on-fg ${isActive('/group') ? 'bg-side-on text-side-on-fg' : ''}`}>
+            <Icon d={ICON.students} className="h-4 w-4" /> กลุ่มและรหัสเชิญ
+          </Link>
           <Link to="/profile" aria-current={isActive('/profile') ? 'page' : undefined}
             className={`flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-sm text-side-fg hover:bg-side-on/80 hover:text-side-on-fg ${isActive('/profile') ? 'bg-side-on text-side-on-fg' : ''}`}>
             <Icon d={ICON.user} className="h-4 w-4" /> โปรไฟล์ของฉัน
@@ -109,7 +117,9 @@ const Layout = () => {
           <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:py-3">
             <Link to={homePath} className="shrink-0 lg:hidden" aria-label="หน้าแรก"><Logo size={30} tone="theme" tagline={false} /></Link>
             <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
-              <Link to="/profile" title="โปรไฟล์ของฉัน" className="flex min-h-[44px] min-w-0 max-w-[10rem] items-center truncate text-sm text-gray-700 underline-offset-4 hover:text-brand-700 hover:underline sm:max-w-[16rem] sm:text-base">
+              <TenantSwitcher />
+              <Link to="/profile" title="โปรไฟล์ของฉัน" className="flex min-h-[44px] min-w-0 max-w-[11rem] items-center gap-2 text-sm text-gray-700 underline-offset-4 hover:text-brand-700 hover:underline sm:max-w-[18rem] sm:text-base">
+                <Avatar user={user} size={32} ring="ring-2 ring-brand-100" />
                 <span className="truncate">{userName}</span>
               </Link>
               {!isStaff && (
@@ -174,7 +184,7 @@ const Layout = () => {
               type="button"
               onClick={() => setMoreOpen(true)}
               aria-expanded={moreOpen}
-              className={tabCls(moreOpen || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile'))}
+              className={tabCls(moreOpen || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile') || isActive('/group'))}
             >
               <Icon d={ICON.more} className="h-6 w-6" />เพิ่มเติม
             </button>
@@ -194,10 +204,14 @@ const Layout = () => {
             <div className="divide-y divide-gray-100">
               <Link to="/ai" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.ai} /> ผู้ช่วย AI</Link>
               <Link to="/tools" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.tools} /> เครื่องมือห้องเรียน</Link>
-              {isAdmin && (
+              {canManage && (
                 <Link to="/admin/settings" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.gear} /> ตั้งค่าระบบ</Link>
               )}
-              <Link to="/profile" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.user} /> โปรไฟล์ของฉัน</Link>
+              <Link to="/group" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.students} /> ตั้งค่ากลุ่ม / รหัสเชิญ</Link>
+              <Link to="/profile" className="flex min-h-[60px] items-center gap-3 text-gray-800">
+                <Avatar user={user} size={36} ring="ring-2 ring-brand-100" />
+                <span className="min-w-0"><span className="block truncate font-medium">{userName}</span><span className="block text-xs text-gray-500">โปรไฟล์ของฉัน</span></span>
+              </Link>
               <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.help} /> คู่มือการใช้งาน<span className="sr-only"> (เปิดแท็บใหม่)</span></a>
               <div className="flex min-h-[52px] items-center justify-between gap-3 text-gray-800">
                 <span>ธีมสี</span>

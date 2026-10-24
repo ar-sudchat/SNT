@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../config/database');
+const { withoutTenant, setTenantId, getTenantId } = require('../services/tenantContext');
 
 const INVALID_MSG = 'ลิงก์หมดอายุหรือไม่ถูกต้อง';
 const FORBIDDEN_MSG = 'คุณไม่มีสิทธิ์สร้างลิงก์ให้นักเรียนคนนี้ (ไม่ได้สอนห้อง/ระดับชั้นนี้)';
@@ -16,10 +17,10 @@ function getSecret() {
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 const hmac = (data) => crypto.createHmac('sha256', getSecret()).update(data).digest('base64url');
 
-function signToken(studentId, days) {
+function signToken(studentId, days, tenantId) {
   const d = Number(days || process.env.PARENT_LINK_DAYS) || 120;
   const exp = Math.floor(Date.now() / 1000) + Math.round(d * 86400);
-  const payload = b64u(JSON.stringify({ sid: Number(studentId), exp }));
+  const payload = b64u(JSON.stringify(tenantId ? { sid: Number(studentId), tid: String(tenantId), exp } : { sid: Number(studentId), exp }));
   return { token: `${payload}.${hmac(payload)}`, exp };
 }
 
@@ -33,6 +34,7 @@ function verifyToken(token) {
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!Number.isInteger(data.sid) || typeof data.exp !== 'number') return null;
+    if (data.tid !== undefined && (typeof data.tid !== 'string' || !data.tid)) return null;
     if (data.exp * 1000 < Date.now()) return null;
     return data;
   } catch { return null; }
@@ -41,7 +43,7 @@ function verifyToken(token) {
 // Teacher may create links for students in a class they home-teach, or whose grade
 // (and academic year) has a subject they teach. ADMIN bypasses.
 async function teacherCanAccessStudent(user, student) {
-  if (user.role === 'ADMIN') return true;
+  if (user.role === 'ADMIN' || user.canManage) return true;
   const teacherId = user.teacherId || (user.teacher && user.teacher.id);
   if (!teacherId) return false;
   if (student.class.teacherId === teacherId) return true;
@@ -67,7 +69,7 @@ exports.createLink = async (req, res) => {
     });
     if (!student) return res.status(404).json({ error: 'ไม่พบข้อมูลนักเรียน' });
     if (!(await teacherCanAccessStudent(req.user, student))) return res.status(403).json({ error: FORBIDDEN_MSG });
-    const { token, exp } = signToken(studentId);
+    const { token, exp } = signToken(studentId, undefined, req.tenantId || getTenantId());
     res.json({ url: buildUrl(req, token), token, expiresAt: new Date(exp * 1000).toISOString() });
   } catch (e) {
     console.error('createLink', e);
@@ -86,6 +88,14 @@ exports.getPublic = async (req, res) => {
   const data = verifyToken(req.params.token);
   if (!data) return res.status(401).json({ error: INVALID_MSG });
   try {
+    // Public link: the tenant comes from the signed student id, then everything below is scoped.
+    const owner = await withoutTenant(() => prisma.student.findUnique({ where: { id: data.sid }, select: { tenantId: true, tenant: { select: { status: true } } } }));
+    if (!owner) return res.status(401).json({ error: INVALID_MSG });
+    // Suspended / pending-delete groups stop serving data, like the logged-in API (authenticate).
+    if (owner.tenant && owner.tenant.status !== 'ACTIVE') return res.status(401).json({ error: INVALID_MSG });
+    // New tokens bind tid in the signed payload; it must match the student's tenant. Legacy tokens: no tid.
+    if (data.tid && data.tid !== owner.tenantId) return res.status(401).json({ error: INVALID_MSG });
+    setTenantId(owner.tenantId);
     const student = await prisma.student.findUnique({
       where: { id: data.sid },
       select: {

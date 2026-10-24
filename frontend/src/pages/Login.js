@@ -1,132 +1,77 @@
-import React, { useState } from 'react';
-import Logo from '../components/brand/Logo';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { ConfirmDialog } from '../components/ui';
-import { SchoolLogin, DotPattern } from '../components/illustrations';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth, homePathFor } from '../context/AuthContext';
+import { groupsAPI, googleHref } from './signup/client';
+import GoogleButton from './signup/GoogleButton';
+import AuthLayout, { Field, PasswordField, OrDivider, FormError, Spinner, primaryBtn, linkClass, footerLinkClass } from './signup/AuthLayout';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState({ show: false, type: 'info', title: '', message: '' });
-  const { login } = useAuth();
+  const [admin, setAdmin] = useState(false); // username login for the system admin
+  const [googleOn, setGoogleOn] = useState(false);
+  const [error, setError] = useState(null);
+  const { login, loginWithEmail } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const showAlert = (type, title, message) => {
-    setAlert({ show: true, type, title, message });
-  };
+  useEffect(() => {
+    groupsAPI.config().then(r => setGoogleOn(!!r.data.google)).catch(() => setGoogleOn(false));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+    setError(null);
     try {
-      const user = await login(username, password);
-
-      // Show success message briefly then redirect
-      showAlert('success', 'เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับ ${user.teacher?.name || user.student?.name || 'Admin'}`);
-
-      // Redirect after showing success message
-      setTimeout(() => {
-        if (user.role === 'ADMIN') {
-          navigate('/admin');
-        } else if (user.role === 'TEACHER') {
-          navigate('/teacher');
-        } else {
-          navigate('/student');
-        }
-      }, 1000);
+      const user = admin ? await login(username.trim(), password) : await loginWithEmail(username.trim(), password);
+      const from = location.state?.from;
+      navigate(from && from.startsWith('/') ? from : homePathFor(user), { replace: true });
     } catch (err) {
-      showAlert('danger', 'เข้าสู่ระบบไม่สำเร็จ', err.response?.data?.error || 'กรุณาตรวจสอบรหัสผู้ใช้และรหัสผ่าน');
-    } finally {
+      setError({ title: 'เข้าสู่ระบบไม่สำเร็จ', message: err.response?.data?.error || 'กรุณาตรวจสอบอีเมลและรหัสผ่าน' });
       setLoading(false);
     }
   };
 
+  const toggleAdmin = () => { setAdmin(a => !a); setUsername(''); setPassword(''); setError(null); };
+
   return (
-    <div style={{ backgroundImage: 'linear-gradient(to bottom right, rgb(var(--login-from)), rgb(var(--login-to)))' }} className="relative min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-16 py-8 sm:py-12 px-0 sm:px-6 lg:px-8 overflow-hidden">
-      <DotPattern />
-      <div className="relative mb-4 lg:mb-0 flex flex-col items-center text-white">
-        <SchoolLogin className="h-28 sm:h-36 lg:h-60 w-auto text-white" />
-        <p className="hidden lg:block mt-4 text-white/85 text-lg">สแกนสมุด รู้ทันทีว่าใครส่งงานแล้ว</p>
-      </div>
-      <div className="relative max-w-md w-full space-y-8 bg-white p-6 sm:p-8 mx-4 sm:mx-0 rounded-xl shadow-2xl">
-        <div>
-          <h1 className="flex justify-center"><Logo size={56} tone="theme" /><span className="sr-only">KruScan ครูสแกน — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</span></h1>
+    <AuthLayout
+      title={admin ? 'เข้าสู่ระบบด้วยชื่อผู้ใช้' : 'เข้าสู่ระบบ'}
+      subtitle={admin ? 'สำหรับผู้ดูแลระบบ หรือบัญชีที่ผู้ดูแลสร้างให้' : 'ยินดีต้อนรับกลับ ดูได้เลยว่าวันนี้ใครส่งงานแล้ว'}
+      footer={(
+        <button type="button" onClick={toggleAdmin} className={footerLinkClass}>
+          {admin ? 'กลับไปเข้าสู่ระบบด้วยอีเมล' : 'เข้าสู่ระบบผู้ดูแลระบบ'}
+        </button>
+      )}
+    >
+      {!admin && (
+        <>
+          <GoogleButton href={googleHref} label="เข้าสู่ระบบด้วย Google" enabled={googleOn} />
+          <OrDivider />
+        </>
+      )}
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <Field id="username" name="username" label={admin ? 'ชื่อผู้ใช้' : 'อีเมล'}
+          type={admin ? 'text' : 'email'} autoComplete={admin ? 'username' : 'email'} autoCapitalize="none" spellCheck={false} required
+          inputMode={admin ? 'text' : 'email'} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={admin ? 'admin' : 'you@example.com'} />
+        <PasswordField id="password" name="password" autoComplete="current-password" required
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        <FormError title={error?.title} message={error?.message} />
+        <button type="submit" disabled={loading} className={primaryBtn}>
+          {loading && <Spinner />}{loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+        </button>
+      </form>
+
+      {!admin && (
+        <div className="mt-7 space-y-2 border-t border-gray-100 pt-6 text-center text-[15px] text-gray-600">
+          <p>ยังไม่มีบัญชี? <Link to="/signup" className={linkClass}>สมัครใช้ฟรี</Link></p>
+          <p>มีรหัสจากเพื่อนครู? <Link to="/join" className={linkClass}>เข้าร่วมกลุ่มด้วยรหัส</Link></p>
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                รหัสผู้ใช้
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                placeholder="รหัสครู, รหัสนักเรียน หรือ admin"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                รหัสผ่าน
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                placeholder="กรอกรหัสผ่าน"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? (
-              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              'เข้าสู่ระบบ'
-            )}
-          </button>
-        </form>
-
-        {/* Login hints */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600">ลืมรหัสผ่าน แจ้งผู้ดูแลระบบ · <a href="/privacy" className="underline">ความเป็นส่วนตัว</a> · <a href="/guide/" target="_blank" rel="noopener noreferrer" className="underline">คู่มือการใช้งาน</a></p>
-        </div>
-      </div>
-
-      {/* Alert Dialog */}
-      <ConfirmDialog
-        isOpen={alert.show}
-        onClose={() => setAlert({ ...alert, show: false })}
-        title={alert.title}
-        message={alert.message}
-        confirmText="ตกลง"
-        type={alert.type}
-        mode="alert"
-      />
-    </div>
+      )}
+    </AuthLayout>
   );
 };
 
