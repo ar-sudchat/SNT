@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
 import useLessonContext from './useLessonContext';
+import LessonContextBar from './LessonContextBar';
+import ThaiDatePicker, { toIso } from '../../components/ui/ThaiDatePicker';
 import { thaiShortDate, RESPONSE_TYPES, SCOPE_LABEL, scopeOf, responseOf } from './lessonLogCore';
 
 // /lesson-log/new — เลือกประเภทการประเมิน แล้วตั้งชื่อเอง
@@ -9,6 +11,7 @@ const errText = (e, fallback) => e?.response?.data?.error || fallback;
 
 const inputCls = 'mt-1 block w-full min-h-[44px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500';
 const labelCls = 'block text-sm font-medium text-gray-700';
+const dayValue = (d) => ({ text: thaiShortDate(d), dates: [toIso(d)] });
 const chipCls = (on) => `min-h-[44px] max-w-full rounded-full border px-4 py-2 text-left text-sm break-words ${on
   ? 'border-brand-600 bg-brand-50 font-medium text-brand-800'
   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`;
@@ -31,11 +34,17 @@ function templateSub(t) {
   return scope === 'BOTH' ? `${SCOPE_LABEL.BOTH} · ${nQ} คำถาม · ${students}` : `${SCOPE_LABEL.STUDENT} · ${students}`;
 }
 
-const CreateRecord = () => {
+// embedded = เปิดใน popup จากหน้าบันทึกหลังแผน (ใช้ ctx เดียวกับหน้านั้น)
+// onDone(ids) = เรียกเมื่อสร้างหลายห้องเสร็จ (popup ปิดเอง) · ห้องเดียวไปหน้าบันทึกเหมือนเดิม
+const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const ctx = useLessonContext();
-  const { cls, subject, classId, subjectId } = ctx;
+  const ownCtx = useLessonContext();
+  const ctx = outerCtx || ownCtx;
+  const { cls, classId, subjectId } = ctx;
+  // ห้องที่จะสร้างบันทึกให้ (หลายห้องได้ ห้องละ 1 บันทึก)
+  const [roomIds, setRoomIds] = useState(() => (classId ? [classId] : []));
+  useEffect(() => { if (classId && roomIds.length === 0) setRoomIds([classId]); }, [classId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
@@ -50,8 +59,9 @@ const CreateRecord = () => {
   const [lastNoteHeader, setLastNoteHeader] = useState(null);
 
   const [name, setName] = useState('');
-  const [rubricDate, setRubricDate] = useState(() => thaiShortDate());
-  const [noteDate, setNoteDate] = useState('');
+  // วันที่ = { text: ข้อความแสดง, dates: ['YYYY-MM-DD'] วันจริงที่ส่งไป server }
+  const [rubricDate, setRubricDate] = useState(() => dayValue(new Date()));
+  const [noteDate, setNoteDate] = useState({ text: '', dates: [] });
   const [head, setHead] = useState({ planNo: '', unitNo: '', unitName: '' });
   const headTouched = useRef(false);
 
@@ -133,8 +143,11 @@ const CreateRecord = () => {
   }, [history, isClass]);
   const studentCount = cls?._count?.students ?? cls?.studentCount ?? null;
 
-  const today = thaiShortDate();
-  const yesterday = thaiShortDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const now = new Date();
+  const todayV = dayValue(now);
+  const yesterdayV = dayValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const today = todayV.text;
+  const yesterday = yesterdayV.text;
 
   const setHeadField = (k, v) => {
     headTouched.current = true;
@@ -156,15 +169,18 @@ const CreateRecord = () => {
       if (nameRef.current) nameRef.current.focus();
       return;
     }
+    if (!roomIds.length) { setServerError('เลือกห้องเรียนอย่างน้อย 1 ห้อง'); return; }
     setBusy(true);
     setServerError('');
+    const created = [];
     try {
       const body = {
         templateId: template.id,
         classId,
         subjectId: subjectId || undefined,
         name: trimmed,
-        dateText: (isNote ? noteDate : rubricDate).trim()
+        dateText: (isNote ? noteDate : rubricDate).text.trim(),
+        dates: (isNote ? noteDate : rubricDate).dates
       };
       if (isNote) {
         body.header = {
@@ -173,15 +189,21 @@ const CreateRecord = () => {
           unitName: head.unitName.trim()
         };
       }
-      const res = await assessmentAPI.createRecord(body);
-      navigate(`/lesson-log/${res.data.id}`, { replace: true });
+      for (const id of roomIds) {
+        const res = await assessmentAPI.createRecord({ ...body, classId: id });
+        created.push(res.data.id);
+      }
+      if (created.length === 1) navigate(`/lesson-log/${created[0]}`, { replace: !embedded });
+      else if (onDone) onDone(created);
+      else navigate('/lesson-log', { replace: true });
     } catch (err) {
-      setServerError(errText(err, 'สร้างบันทึกไม่สำเร็จ ลองอีกครั้ง'));
+      const done = created.length ? `สร้างแล้ว ${created.length} ห้อง ` : '';
+      setServerError(done + errText(err, 'สร้างบันทึกไม่สำเร็จ ลองอีกครั้ง'));
       setBusy(false);
     }
   };
 
-  const box = 'mx-auto w-full max-w-5xl';
+  const box = embedded ? 'w-full p-4' : 'mx-auto w-full max-w-5xl';
 
   if (ctx.loading || templatesLoading) {
     return <div className={`${box} py-10 text-center text-gray-500`} role="status">กำลังโหลด…</div>;
@@ -209,25 +231,19 @@ const CreateRecord = () => {
     );
   }
 
-  const ctxLabel = `${cls.className} · ${subject?.subjectName || 'ไม่ระบุวิชา'}`;
   const primaryLabel = isNote
     ? 'เริ่มบันทึกผลหลังการสอน'
     : isClass ? 'เริ่มบันทึก'
-    : `เริ่มประเมิน${studentCount !== null ? ` · ${studentCount} คน` : ''}`;
+    : `เริ่มประเมิน${studentCount !== null && roomIds.length <= 1 ? ` · ${studentCount} คน` : ''}`;
+  const submitLabel = roomIds.length > 1 ? `${primaryLabel} · ${roomIds.length} ห้อง` : primaryLabel;
   const dateValue = isNote ? noteDate : rubricDate;
   const setDateValue = isNote ? setNoteDate : setRubricDate;
 
   return (
     <form onSubmit={submit} noValidate className={box}>
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2">
-          <div className="min-w-0">
-            <p className="text-xs text-gray-500">กำลังสร้างให้</p>
-            <p className="truncate font-medium text-gray-900">{ctxLabel}</p>
-          </div>
-          <Link to="/lesson-log" className="inline-flex min-h-[44px] shrink-0 items-center px-2 text-sm font-medium text-brand-700 hover:underline">เปลี่ยน</Link>
-        </div>
-        <h1 className="mt-4 font-display text-xl font-semibold text-gray-900">สร้างบันทึก / แบบประเมิน</h1>
+        {!embedded && <h1 className="mb-3 font-display text-xl font-semibold text-gray-900">สร้างบันทึก / แบบประเมิน</h1>}
+        <LessonContextBar ctx={ctx} allSubjectsLabel="ไม่ระบุวิชา" roomIds={roomIds} onRoomIdsChange={setRoomIds} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
@@ -318,15 +334,10 @@ const CreateRecord = () => {
                     placeholder="เช่น ความหลากหลายของสิ่งมีชีวิต"
                   />
                 </label>
-                <label className={`${labelCls} col-span-2`}>
-                  วัน/เดือน/ปีที่สอน
-                  <input
-                    className={inputCls}
-                    value={noteDate}
-                    onChange={(e) => setNoteDate(e.target.value)}
-                    placeholder="เช่น 3, 9, 10 มิ.ย. 69"
-                  />
-                </label>
+                <div className="col-span-2">
+                  <label htmlFor="ll-note-date" className={labelCls}>วัน/เดือน/ปีที่สอน</label>
+                  <ThaiDatePicker id="ll-note-date" value={noteDate.text} dates={noteDate.dates} onChange={(text, dates) => setNoteDate({ text, dates })} />
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -366,22 +377,17 @@ const CreateRecord = () => {
                 <div>
                   <p className={labelCls}>{isClass ? 'วันที่บันทึก' : 'วันที่ประเมิน'}</p>
                   <div className="mt-1 flex flex-wrap gap-2">
-                    <button type="button" aria-pressed={dateValue === today} onClick={() => setDateValue(today)} className={chipCls(dateValue === today)}>
+                    <button type="button" aria-pressed={dateValue.text === today} onClick={() => setDateValue(todayV)} className={chipCls(dateValue.text === today)}>
                       วันนี้ {today}
                     </button>
-                    <button type="button" aria-pressed={dateValue === yesterday} onClick={() => setDateValue(yesterday)} className={chipCls(dateValue === yesterday)}>
+                    <button type="button" aria-pressed={dateValue.text === yesterday} onClick={() => setDateValue(yesterdayV)} className={chipCls(dateValue.text === yesterday)}>
                       เมื่อวาน {yesterday}
                     </button>
                   </div>
-                  <label className="mt-3 block text-sm text-gray-600">
-                    วันอื่น
-                    <input
-                      className={inputCls}
-                      value={dateValue}
-                      onChange={(e) => setDateValue(e.target.value)}
-                      placeholder="เช่น 3 มิ.ย. 69"
-                    />
-                  </label>
+                  <div className="mt-3">
+                    <label htmlFor="ll-other-date" className="block text-sm text-gray-600">วันอื่น (เลือกได้หลายวันหรือเป็นช่วง)</label>
+                    <ThaiDatePicker id="ll-other-date" value={dateValue.text} dates={dateValue.dates} onChange={(text, dates) => setDateValue({ text, dates })} />
+                  </div>
                 </div>
               </div>
             )}
@@ -393,15 +399,17 @@ const CreateRecord = () => {
 
           {/* ปุ่มหลัก: ลอยเหนือแถบล่างบนมือถือ, อยู่ใต้ฟอร์มบน lg */}
           <div
-            className="sticky z-20 -mx-3 mt-4 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:-mx-4 sm:px-4 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none"
-            style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+            className={embedded
+              ? 'sticky bottom-0 z-20 -mx-4 mt-4 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0'
+              : 'sticky z-20 -mx-3 mt-4 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:-mx-4 sm:px-4 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none'}
+            style={embedded ? undefined : { bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
           >
             <button
               type="submit"
-              disabled={busy || !template}
+              disabled={busy || !template || !roomIds.length}
               className="min-h-[48px] w-full rounded-lg bg-brand-600 px-4 font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
             >
-              {busy ? 'กำลังสร้าง…' : primaryLabel}
+              {busy ? 'กำลังสร้าง…' : submitLabel}
             </button>
           </div>
         </section>

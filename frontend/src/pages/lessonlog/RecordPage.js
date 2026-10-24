@@ -6,6 +6,8 @@ import { Icon } from '../../components/navConfig';
 import NoteEditor from '../../components/lessonlog/NoteEditor';
 import RubricEditor from '../../components/lessonlog/RubricEditor';
 import ClassAnswersEditor from '../../components/lessonlog/ClassAnswersEditor';
+import WindowModal from '../../components/ui/WindowModal';
+import ThaiDatePicker from '../../components/ui/ThaiDatePicker';
 import { STATUS_LABEL, SCOPE_LABEL, scopeOf } from './lessonLogCore';
 
 const BACK = 'M15 19l-7-7 7-7';
@@ -27,6 +29,8 @@ const RecordPage = () => {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // แก้ชื่อ/วันที่: { name, text, dates, error } ตอนเปิด popup
+  const [edit, setEdit] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,28 +57,22 @@ const RecordPage = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const rename = async () => {
-    const name = await dialog.prompt({
-      title: 'แก้ชื่อบันทึก',
-      label: 'ชื่อบันทึก',
-      defaultValue: detail.name,
-      confirmText: 'ต่อไป',
-      validate: (v) => (v && v.trim() ? '' : 'ใส่ชื่อบันทึก')
-    });
-    if (name === null) return;
-    const dateText = await dialog.prompt({
-      title: 'แก้วันที่',
-      label: 'วันที่ (เช่น 24 มิ.ย. 69)',
-      defaultValue: detail.dateText || '',
-      confirmText: 'บันทึก'
-    });
-    if (dateText === null) return;
+  const rename = () => setEdit({ name: detail.name, text: detail.dateText || '', dates: detail.dates || [], error: '' });
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    const name = edit.name.trim();
+    if (!name) { setEdit(v => ({ ...v, error: 'ใส่ชื่อบันทึก' })); return; }
     setBusy(true);
     try {
-      const res = await assessmentAPI.updateRecord(detail.id, { name: name.trim(), dateText: dateText.trim() });
+      // ไม่ได้เลือกวันใหม่ (บันทึกเก่าที่ยังไม่มีวันจริง) ให้ server แปลงจากข้อความเดิม
+      const body = { name, dateText: edit.text.trim() };
+      if (edit.dates.length || !edit.text.trim()) body.dates = edit.dates;
+      const res = await assessmentAPI.updateRecord(detail.id, body);
       setDetail(res.data);
-    } catch (e) {
-      await dialog.alert({ title: 'แก้ไขไม่สำเร็จ', message: e.response?.data?.error || 'ลองใหม่อีกครั้ง', type: 'danger' });
+      setEdit(null);
+    } catch (err) {
+      setEdit(v => ({ ...v, error: err.response?.data?.error || 'แก้ไขไม่สำเร็จ ลองใหม่อีกครั้ง' }));
     } finally {
       setBusy(false);
     }
@@ -126,43 +124,58 @@ const RecordPage = () => {
 
   return (
     <div className="mx-auto max-w-5xl space-y-3">
-      <header>
-        <BackLink />
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {(detail.templateName || scopeOf(detail)) && (
-              <p className="text-xs text-gray-500">
-                {[detail.templateName, SCOPE_LABEL[scopeOf(detail)]].filter(Boolean).join(' · ')}
-              </p>
-            )}
-            <h1 className="break-words text-xl font-bold text-gray-800 sm:text-2xl">{detail.name}</h1>
-            <p className="mt-0.5 text-sm text-gray-600">{meta}</p>
-          </div>
-          <span className={`mt-1 shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${done ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+      {/* หัวกะทัดรัด: ย้อนกลับ + ชื่อ + ข้อมูล + ปุ่ม อยู่แถวเดียวบนคอม */}
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Link to="/lesson-log" aria-label="กลับไปบันทึกหลังแผน" className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-brand-700 hover:bg-brand-50">
+          <Icon d={BACK} className="h-5 w-5" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words text-lg font-bold leading-tight text-gray-800 sm:text-xl">{detail.name}</h1>
+          <p className="truncate text-sm text-gray-500">
+            {[meta, detail.templateName, SCOPE_LABEL[scopeOf(detail)]].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${done ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
             {STATUS_LABEL[detail.status] || ''}
           </span>
+          {detail.canEdit && (
+            <>
+              <button type="button" onClick={rename} disabled={busy} className="min-h-[44px] rounded-lg px-3 text-sm text-brand-700 hover:bg-brand-50 disabled:opacity-50">
+                แก้ชื่อ/วันที่
+              </button>
+              <button type="button" onClick={remove} disabled={busy} className="min-h-[44px] rounded-lg px-3 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50">
+                ลบ
+              </button>
+            </>
+          )}
         </div>
-        {detail.canEdit && (
-          <div className="mt-1 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={rename}
-              disabled={busy}
-              className="min-h-[44px] rounded-lg px-3 text-sm text-brand-700 hover:bg-brand-50 disabled:opacity-50"
-            >
-              แก้ชื่อ/วันที่
-            </button>
-            <button
-              type="button"
-              onClick={remove}
-              disabled={busy}
-              className="min-h-[44px] rounded-lg px-3 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
-            >
-              ลบ
-            </button>
-          </div>
-        )}
       </header>
+
+      <WindowModal open={!!edit} id="record-edit" title="แก้ชื่อ/วันที่" onClose={() => setEdit(null)} initialWidth="max-w-md">
+        {edit && (
+          <form onSubmit={saveEdit} noValidate className="space-y-4 p-4">
+            <label className="block text-sm font-medium text-gray-700">
+              ชื่อบันทึก
+              <input
+                autoFocus
+                value={edit.name}
+                onChange={(e) => setEdit(v => ({ ...v, name: e.target.value, error: '' }))}
+                className="mt-1 block min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </label>
+            <div>
+              <label htmlFor="record-edit-date" className="block text-sm font-medium text-gray-700">วันที่ (เลือกได้หลายวันหรือเป็นช่วง)</label>
+              <ThaiDatePicker id="record-edit-date" value={edit.text} dates={edit.dates} onChange={(text, dates) => setEdit(v => ({ ...v, text, dates }))} />
+            </div>
+            {edit.error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{edit.error}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setEdit(null)} className="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm text-gray-700 hover:bg-gray-50">ยกเลิก</button>
+              <button type="submit" disabled={busy} className="min-h-[44px] rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">{busy ? 'กำลังบันทึก…' : 'บันทึก'}</button>
+            </div>
+          </form>
+        )}
+      </WindowModal>
 
       {detail.kind === 'NOTE' ? (
         <NoteEditor record={detail} canEdit={detail.canEdit} settings={settings} onSaved={setDetail} />

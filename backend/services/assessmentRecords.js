@@ -16,7 +16,8 @@ const RECORD_INCLUDE = {
 
 function listItem(r, user) {
   return {
-    id: r.id, name: r.name, dateText: r.dateText, assessedOn: r.assessedOn, kind: r.kind, responseType: responseOf(r),
+    id: r.id, name: r.name, dateText: r.dateText, assessedOn: r.assessedOn,
+    dates: (r.teachDates || []).map(d => d.toISOString().slice(0, 10)), kind: r.kind, responseType: responseOf(r),
     templateId: r.templateId, templateKey: r.template ? r.template.key : null, templateName: r.templateName,
     status: r.status, classId: r.classId, subjectId: r.subjectId, teacherId: r.teacherId,
     teacherName: r.teacher ? r.teacher.name : null, updatedAt: r.updatedAt, canEdit: canEditRecord(r, user),

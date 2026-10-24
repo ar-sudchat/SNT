@@ -2,6 +2,20 @@
 const prisma = require('../config/database');
 const { validValues, clip, responseOf, cleanClassAnswers } = require('../services/assessmentCore');
 const { canEditRecord, listItem, recordDetail, RECORD_INCLUDE } = require('../services/assessmentRecords');
+const { cleanDates, formatThaiDates, dateFields } = require('../services/thaiDates');
+
+// วันที่ของบันทึก: dates (วันจริง) เป็นหลัก · ไม่ส่ง dates = แปลงจากข้อความ · ข้อความว่าง = สร้างจากวันจริง
+function datePart(body) {
+  let dates;
+  if (body.dates !== undefined) {
+    dates = cleanDates(body.dates);
+    if (!dates) return { error: 'วันที่ไม่ถูกต้อง' };
+  }
+  let dateText = clip(body.dateText, 100);
+  if (!dateText && dates && dates.length) dateText = formatThaiDates(dates);
+  return { data: { dateText, ...dateFields(dates, dateText) } };
+}
+const isoDate = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? new Date(`${v}T00:00:00Z`) : null);
 
 const MAX_SCORE_ITEMS = 500;
 const MAX_LIST_ITEMS = 20;
@@ -68,6 +82,10 @@ const list = async (req, res) => {
     const templateId = toId(req.query.templateId);
     if (templateId) where.templateId = templateId;
     if (req.query.status === 'DRAFT' || req.query.status === 'DONE') where.status = req.query.status;
+    // ช่วงวันที่ ?from=YYYY-MM-DD&to=YYYY-MM-DD : บันทึกที่มีวันสอนคาบเกี่ยวช่วงนี้
+    const from = isoDate(req.query.from), to = isoDate(req.query.to);
+    if (from) where.dateTo = { gte: from };
+    if (to) where.dateFrom = { lte: to };
     const rows = await prisma.assessmentRecord.findMany({
       where, include: RECORD_INCLUDE, orderBy: [{ assessedOn: 'desc' }, { id: 'desc' }],
     });
@@ -96,12 +114,15 @@ const create = async (req, res) => {
       if (!subj) return res.status(404).json({ error: 'ไม่พบวิชานี้' });
     }
 
+    const dp = datePart(body);
+    if (dp.error) return res.status(400).json({ error: dp.error });
+
     const isNote = template.kind === 'NOTE';
     const record = await prisma.assessmentRecord.create({
       data: {
         templateId: template.id, classId: cls.id, subjectId,
         teacherId: req.user.teacherId || null,
-        name, dateText: clip(body.dateText, 100),
+        name, ...dp.data,
         kind: template.kind, templateName: template.name,
         criteria: template.criteria, maxScore: template.maxScore, useAverage: template.useAverage, levels: template.levels,
         responseType: template.responseType, classFields: template.classFields,
@@ -134,7 +155,11 @@ const update = async (req, res) => {
       data.name = clip(body.name, 200);
       if (!data.name) return res.status(400).json({ error: 'ตั้งชื่อบันทึกก่อน' });
     }
-    if (body.dateText !== undefined) data.dateText = clip(body.dateText, 100);
+    if (body.dateText !== undefined || body.dates !== undefined) {
+      const dp = datePart({ dateText: body.dateText !== undefined ? body.dateText : r.dateText, dates: body.dates });
+      if (dp.error) return res.status(400).json({ error: dp.error });
+      Object.assign(data, dp.data);
+    }
     if (body.status !== undefined) {
       if (body.status !== 'DRAFT' && body.status !== 'DONE') return res.status(400).json({ error: 'สถานะไม่ถูกต้อง' });
       data.status = body.status;

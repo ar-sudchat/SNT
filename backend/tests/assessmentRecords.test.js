@@ -157,6 +157,12 @@ test('assessment records + scores', async (t) => {
   // ---- update: common fields ----
   r = await upd(rub.id, { dateText: ' 3 มิ.ย. 69 ', status: 'DONE' }, userA);
   assert.strictEqual(r.body.dateText, '3 มิ.ย. 69'); assert.strictEqual(r.body.status, 'DONE');
+  assert.deepStrictEqual(r.body.dates, ['2026-06-03'], 'ข้อความไทยแปลงเป็นวันจริง');
+  // วันจริงจากปฏิทิน: เก็บตามที่ส่ง · ข้อความว่าง = สร้างจากวันจริง
+  r = await upd(rub.id, { dates: ['2026-06-10', '2026-06-03'], dateText: '' }, userA);
+  assert.deepStrictEqual(r.body.dates, ['2026-06-03', '2026-06-10']); assert.strictEqual(r.body.dateText, '3, 10 มิ.ย. 69');
+  assert.strictEqual((await upd(rub.id, { dates: ['2026-02-30'] }, userA)).status, 400);
+  assert.strictEqual((await upd(rub.id, { dates: 'x' }, userA)).status, 400);
   assert.strictEqual((await upd(rub.id, { status: 'WHATEVER' }, userA)).status, 400);
   assert.strictEqual((await upd(rub.id, { name: '   ' }, userA)).status, 400);
   // note/header are ignored on a RUBRIC record
@@ -194,6 +200,12 @@ test('assessment records + scores', async (t) => {
   assert.strictEqual((await listQ({ classId: String(cls1.id), templateId: String(noteT.id) })).body.length, 2);
   assert.strictEqual((await listQ({ classId: String(cls1.id), status: 'DONE' })).body.map(x => x.id).join(), String(rub.id));
   assert.strictEqual((await listQ({ classId: String(cls2.id) })).body.length, 0);
+  // ช่วงวันที่: บันทึกที่วันสอนคาบเกี่ยวช่วง (rub = 3, 10 มิ.ย. 69)
+  const inRange = async (from, to) => (await listQ({ classId: String(cls1.id), from, to })).body.some(x => x.id === rub.id);
+  assert.strictEqual(await inRange('2026-06-05', '2026-06-07'), true, 'ช่วงอยู่ระหว่างวันแรกกับวันสุดท้าย');
+  assert.strictEqual(await inRange('2026-06-10', '2026-06-30'), true);
+  assert.strictEqual(await inRange('2026-06-11', '2026-06-30'), false);
+  assert.strictEqual(await inRange('2026-05-01', '2026-06-02'), false);
 
   // ---- cross-group isolation ----
   const idParams = { id: String(rub.id) };
