@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const { restoreTenant } = require('../middleware/tenant');
 const importController = require('../controllers/importController');
-const { authenticate, isAdmin } = require('../middleware/auth');
+const { authenticate, isAdmin, authorize } = require('../middleware/auth');
+const staff = authorize('ADMIN', 'TEACHER'); // smart roster import: any teacher of the group
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -31,8 +32,8 @@ const upload = multer({
 });
 
 const smartImport = require('../controllers/smartImportController');
-router.post('/smart/preview', authenticate, isAdmin, upload.single('file'), restoreTenant, smartImport.preview);
-router.post('/smart/commit', authenticate, isAdmin, express.json({ limit: '2mb' }), smartImport.commit);
+router.post('/smart/preview', authenticate, staff, upload.single('file'), restoreTenant, smartImport.preview);
+router.post('/smart/commit', authenticate, staff, express.json({ limit: '2mb' }), smartImport.commit);
 
 // Download templates
 router.get('/templates/:type', authenticate, isAdmin, importController.downloadTemplate);

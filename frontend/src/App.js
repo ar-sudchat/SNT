@@ -182,7 +182,7 @@ function App() {
             <Route
               path="admin/grades"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ManageGrades />
                 </ProtectedRoute>
               }
@@ -190,7 +190,7 @@ function App() {
             <Route
               path="admin/classes"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ManageClasses />
                 </ProtectedRoute>
               }
@@ -198,7 +198,7 @@ function App() {
             <Route
               path="admin/students"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <ManageStudents />
                 </ProtectedRoute>
               }
@@ -254,7 +254,7 @@ function App() {
             <Route
               path="admin/import"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <DataImport />
                 </ProtectedRoute>
               }
@@ -271,7 +271,7 @@ function App() {
             <Route
               path="admin/settings"
               element={
-                <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
                   <SettingsHub />
                 </ProtectedRoute>
               }

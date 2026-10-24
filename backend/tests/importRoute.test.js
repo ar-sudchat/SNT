@@ -10,7 +10,7 @@ const stub = (rel, exports) => {
   require.cache[p] = { id: p, filename: p, loaded: true, exports };
 };
 const pass = (req, res, next) => next();
-stub('middleware/auth.js', { authenticate: pass, isAdmin: pass });
+stub('middleware/auth.js', { authenticate: pass, isAdmin: pass, authorize: () => pass });
 const handler = (req, res) => res.json({ ok: true, name: req.file && req.file.originalname });
 const ctrl = new Proxy({}, { get: () => handler });
 stub('controllers/importController.js', ctrl);

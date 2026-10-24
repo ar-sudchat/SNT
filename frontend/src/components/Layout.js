@@ -6,7 +6,7 @@ import Logo from './brand/Logo';
 import ThemePicker from './ThemePicker';
 import TenantSwitcher from './TenantSwitcher';
 import Avatar, { displayNameOf } from './Avatar';
-import { ICON, SETTINGS_ITEMS, Icon } from './navConfig';
+import { ICON, settingsFor, Icon } from './navConfig';
 
 const SCAN_PATH = '/teacher/scan';
 const GUIDE_URL = '/guide/';
@@ -38,7 +38,7 @@ const Layout = () => {
   };
 
   const path = location.pathname;
-  const settingsItem = canManage ? SETTINGS_ITEMS.find(i => path === i.path || path.startsWith(i.path + '/')) : null;
+  const settingsItem = isStaff ? settingsFor(canManage).find(i => path === i.path || path.startsWith(i.path + '/')) : null;
   const isActive = (p) => {
     if (p === homePath) return path === p;
     if (p === '/admin/settings') return path === p || !!settingsItem;
@@ -54,7 +54,7 @@ const Layout = () => {
         { path: '/lesson-log', label: 'บันทึกหลังแผน', icon: ICON.lessonlog },
         { path: '/ai', label: 'ผู้ช่วย AI', icon: ICON.ai },
         { path: '/tools', label: 'เครื่องมือห้องเรียน', icon: ICON.tools },
-        ...(canManage ? [{ path: '/admin/settings', label: 'ตั้งค่าระบบ', icon: ICON.gear }] : [])
+        { path: '/admin/settings', label: canManage ? 'ตั้งค่าระบบ' : 'ห้องและนักเรียน', icon: ICON.gear }
       ]
     : [{ path: '/student', label: 'งานของฉัน', icon: ICON.task }];
 
@@ -206,9 +206,7 @@ const Layout = () => {
               <Link to="/lesson-log" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.lessonlog} /> บันทึกหลังแผน</Link>
               <Link to="/ai" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.ai} /> ผู้ช่วย AI</Link>
               <Link to="/tools" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.tools} /> เครื่องมือห้องเรียน</Link>
-              {canManage && (
-                <Link to="/admin/settings" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.gear} /> ตั้งค่าระบบ</Link>
-              )}
+              <Link to="/admin/settings" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.gear} /> {canManage ? 'ตั้งค่าระบบ' : 'ห้องและนักเรียน'}</Link>
               <Link to="/group" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.students} /> ตั้งค่ากลุ่ม / รหัสเชิญ</Link>
               <Link to="/profile" className="flex min-h-[60px] items-center gap-3 text-gray-800">
                 <Avatar user={user} size={36} ring="ring-2 ring-brand-100" />

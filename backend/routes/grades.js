@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const gradeController = require('../controllers/gradeController');
-const { authenticate, isAdmin } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
+
+// Every teacher in the group may manage grades, classes and students (owner request 2026-10-24).
+const staff = authorize('ADMIN', 'TEACHER');
 
 // Get all grades
 router.get('/', authenticate, gradeController.getAll);
@@ -11,12 +14,12 @@ router.get('/', authenticate, gradeController.getAll);
 router.get('/:id', authenticate, gradeController.getById);
 
 // Create grade (Admin only)
-router.post('/', authenticate, isAdmin, validate(schemas.grade), gradeController.create);
+router.post('/', authenticate, staff, validate(schemas.grade), gradeController.create);
 
 // Update grade (Admin only)
-router.put('/:id', authenticate, isAdmin, validate(schemas.grade), gradeController.update);
+router.put('/:id', authenticate, staff, validate(schemas.grade), gradeController.update);
 
 // Delete grade (Admin only)
-router.delete('/:id', authenticate, isAdmin, gradeController.delete);
+router.delete('/:id', authenticate, staff, gradeController.delete);
 
 module.exports = router;

@@ -4,7 +4,7 @@ const express = require('express');
 const xlsx = require('xlsx');
 const stub = (name, exports) => { const p = require.resolve(name); require.cache[p] = { id: p, filename: p, loaded: true, exports }; };
 const pass = (req, res, next) => next();
-stub('../middleware/auth', { authenticate: pass, isAdmin: pass });
+stub('../middleware/auth', { authenticate: pass, isAdmin: pass, authorize: () => pass });
 stub('../middleware/tenant', { restoreTenant: pass });
 let year = { id: 1, year: '2569' }, writes = [], quotaAdding;
 const db = { student: { findMany: async () => [], upsert: async args => { writes.push(args); } }, class: { findMany: async () => [], findUnique: async () => null, upsert: async () => ({ id: 3 }) }, grade: { findMany: async () => [], findUnique: async () => null, upsert: async () => ({ id: 2 }) }, academicYear: { findFirst: async () => year } };

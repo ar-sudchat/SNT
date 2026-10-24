@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { importAPI, aiAPI } from '../../services/api';
 import { ConfirmDialog } from '../../components/ui';
 import SmartImport from '../ai/SmartImport';
+import { useAuth } from '../../context/AuthContext';
 import { ImportFile } from '../../components/illustrations';
 
 // อ่านหัวคอลัมน์และตัวอย่างแถวจากไฟล์ในเครื่อง (ไม่ส่งไฟล์ทั้งไฟล์ให้ AI)
@@ -42,6 +43,9 @@ const parseFileSample = async (file, maxRows = 5) => {
 };
 
 const DataImport = () => {
+  const { user } = useAuth();
+  // Teachers get the smart roster import; template imports (years, teachers, subjects, tasks) stay with managers.
+  const canManage = user?.role === 'ADMIN' || !!user?.canManage;
   const [selectedType, setSelectedType] = useState('');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -187,6 +191,7 @@ const DataImport = () => {
         <SmartImport />
       </section>
 
+      {canManage && (<div className="space-y-6">
       <h2 className="text-lg font-semibold pt-2">นำเข้าแบบแม่แบบ (ขั้นสูง)</h2>
       {/* ขั้น 1: เลือกประเภท */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
@@ -319,6 +324,7 @@ const DataImport = () => {
       )}
 
       {/* Alert Dialog */}
+      </div>)}
       <ConfirmDialog
         isOpen={alert.show}
         onClose={() => setAlert({ ...alert, show: false })}
