@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, classAPI, subjectAPI } from '../../services/api';
 import { SmartComboBox, ConfirmDialog } from '../../components/ui';
+import SmartImport from './SmartImport';
 import ConversationList from './ConversationList';
 import { useAuth } from '../../context/AuthContext';
 import { ChatSpark } from '../../components/illustrations';
@@ -11,7 +12,8 @@ const DISCLAIMER = 'AI อาจผิดพลาด ควรตรวจส�
 const TABS = [
   { id: 'ask', label: 'ถาม-ตอบ' },
   { id: 'report', label: 'สรุปรายงาน' },
-  { id: 'draft', label: 'ร่างงาน' }
+  { id: 'draft', label: 'ร่างงาน' },
+  { id: 'import', label: 'นำเข้ารายชื่อ' }
 ];
 
 const EXAMPLE_QUESTIONS = [
@@ -808,6 +810,7 @@ const DraftTab = ({ disabled, subjects }) => {
 const AIAssistant = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
+  const canManage = isAdmin || user?.canManage;
   const [activeTab, setActiveTab] = useState('ask');
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState('');
@@ -844,6 +847,10 @@ const AIAssistant = () => {
 
   const enabled = !!status?.enabled;
   const disabled = statusLoading || !enabled;
+  // Without AI only the import tab works (it falls back to rules), so open it.
+  useEffect(() => {
+    if (!statusLoading && !enabled && canManage) setActiveTab('import');
+  }, [statusLoading, enabled, canManage]);
 
   return (
     <div className="space-y-4">
@@ -878,10 +885,10 @@ const AIAssistant = () => {
         </div>
       )}
 
-      {(statusLoading || enabled) && (
+      {(statusLoading || enabled || canManage) && (
       <div className="bg-white rounded-lg shadow">
         <div role="tablist" aria-label="ฟังก์ชันผู้ช่วย AI" className="flex overflow-x-auto border-b border-gray-200">
-          {TABS.map(tab => (
+          {TABS.filter(tab => tab.id !== 'import' || canManage).map(tab => (
             <button
               key={tab.id}
               type="button"
@@ -889,6 +896,7 @@ const AIAssistant = () => {
               id={`ai-tab-${tab.id}`}
               aria-selected={activeTab === tab.id}
               aria-controls={`ai-panel-${tab.id}`}
+              disabled={tab.id !== 'import' && disabled}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 sm:flex-none whitespace-nowrap min-h-[44px] px-5 py-3 text-sm font-medium border-b-2 -mb-px ${
                 activeTab === tab.id ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -899,6 +907,7 @@ const AIAssistant = () => {
           ))}
         </div>
         <div role="tabpanel" id={`ai-panel-${activeTab}`} aria-labelledby={`ai-tab-${activeTab}`} className="p-4 sm:p-6">
+          {activeTab === 'import' && canManage && <SmartImport />}
           {activeTab === 'ask' && <AskTab disabled={disabled} classes={classes} subjects={subjects} userId={user?.id} />}
           {activeTab === 'report' && <ReportTab disabled={disabled} classes={classes} subjects={subjects} />}
           {activeTab === 'draft' && <DraftTab disabled={disabled} subjects={subjects} />}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { importAPI, aiAPI } from '../../services/api';
 import { ConfirmDialog } from '../../components/ui';
+import SmartImport from '../ai/SmartImport';
 import { ImportFile } from '../../components/illustrations';
 
 // อ่านหัวคอลัมน์และตัวอย่างแถวจากไฟล์ในเครื่อง (ไม่ส่งไฟล์ทั้งไฟล์ให้ AI)
@@ -181,6 +182,12 @@ const DataImport = () => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-800">นำเข้าข้อมูล</h1>
 
+      <section className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4">
+        <h2 className="text-lg font-semibold">นำเข้ารายชื่อนักเรียน (แนะนำ)</h2>
+        <SmartImport />
+      </section>
+
+      <h2 className="text-lg font-semibold pt-2">นำเข้าแบบแม่แบบ (ขั้นสูง)</h2>
       {/* ขั้น 1: เลือกประเภท */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-1">1. เลือกประเภทข้อมูล</h2>
@@ -243,7 +250,7 @@ const DataImport = () => {
         <button
           onClick={handleImport}
           disabled={loading || !selectedType || !file}
-          className="w-full sm:w-auto px-8 py-3 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-8 py-3 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <span className="flex items-center justify-center">

@@ -30,6 +30,10 @@ const upload = multer({
   }
 });
 
+const smartImport = require('../controllers/smartImportController');
+router.post('/smart/preview', authenticate, isAdmin, upload.single('file'), restoreTenant, smartImport.preview);
+router.post('/smart/commit', authenticate, isAdmin, express.json({ limit: '2mb' }), smartImport.commit);
+
 // Download templates
 router.get('/templates/:type', authenticate, isAdmin, importController.downloadTemplate);
 

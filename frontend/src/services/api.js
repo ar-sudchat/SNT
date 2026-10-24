@@ -149,6 +149,15 @@ export const submissionAPI = {
 };
 
 export const importAPI = {
+  smartPreview: (file, { mapping, defaultClass, headerRow } = {}) => {
+    const data = new FormData();
+    data.append('file', file);
+    if (mapping !== undefined) data.append('mapping', JSON.stringify(mapping));
+    if (defaultClass !== undefined) data.append('defaultClass', defaultClass);
+    if (headerRow !== undefined) data.append('headerRow', headerRow);
+    return api.post('/import/smart/preview', data, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 90000 });
+  },
+  smartCommit: students => api.post('/import/smart/commit', { students }, { timeout: 120000 }),
   downloadTemplate: (type) => api.get(`/import/templates/${type}`, { responseType: 'blob' }),
   importAcademicYears: (file) => {
     const formData = new FormData();

@@ -33,6 +33,8 @@ app.disable('x-powered-by');
 app.use(require('./middleware/securityHeaders'));
 // Avatar uploads need a larger body; must run before the default 100kb parser
 app.use('/api/auth/profile', express.json({ limit: '300kb' }));
+// Parse the larger roster payload before the default 100kb JSON parser.
+app.use('/api/import/smart/commit', express.json({ limit: '2mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Tenant context per request (filled by authenticate() from JWT `tid`)
