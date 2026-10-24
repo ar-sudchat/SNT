@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/api';
-import { SmartTable, SmartComboBox, ConfirmDialog } from '../../components/ui';
+import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
+import useFormErrors from '../../utils/useFormErrors';
+import { AddFab } from '../../components/ui/SmartTable';
+
+const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 const ManageClasses = () => {
   const [classes, setClasses] = useState([]);
@@ -14,6 +18,7 @@ const ManageClasses = () => {
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [filterGrade, setFilterGrade] = useState(null);
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
+  const { validate, reset: resetErrors, errorFor } = useFormErrors();
   const [formData, setFormData] = useState({
     className: '',
     gradeId: null,
@@ -23,6 +28,8 @@ const ManageClasses = () => {
     description: '',
     status: 'ACTIVE'
   });
+
+  const yearDefaulted = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -41,6 +48,12 @@ const ManageClasses = () => {
       setGrades(gradeRes.data);
       setTeachers(teacherRes.data);
       setAcademicYears(academicYearRes.data);
+      // ครั้งแรก: เลือกปีการศึกษาปัจจุบันให้อัตโนมัติ
+      if (!yearDefaulted.current) {
+        yearDefaulted.current = true;
+        const cur = academicYearRes.data.find(y => y.isCurrent);
+        if (cur && !filterAcademicYear) setFilterAcademicYear(cur.id);
+      }
     } catch (err) {
       setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
     } finally {
@@ -54,13 +67,23 @@ const ManageClasses = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate(e.currentTarget, [
+      { key: 'className', message: 'กรุณากรอกชื่อห้อง', missing: !String(formData.className ?? '').trim() },
+      { key: 'gradeId', message: 'กรุณาเลือกชั้นปี', missing: toId(formData.gradeId) === null },
+    ])) return;
+    const gradeId = toId(formData.gradeId);
+    if (gradeId === null) {
+      setErrorAlert({ show: true, message: 'กรุณาเลือกชั้นปี' });
+      return;
+    }
+    const capacity = parseInt(formData.capacity);
     try {
       const data = {
         ...formData,
-        gradeId: parseInt(formData.gradeId),
-        teacherId: formData.teacherId ? parseInt(formData.teacherId) : null,
-        academicYearId: formData.academicYearId ? parseInt(formData.academicYearId) : null,
-        capacity: parseInt(formData.capacity)
+        gradeId,
+        teacherId: toId(formData.teacherId),
+        academicYearId: toId(formData.academicYearId),
+        capacity: Number.isNaN(capacity) ? 40 : capacity
       };
       if (editingClass) {
         await classAPI.update(editingClass.id, data);
@@ -97,9 +120,9 @@ const ManageClasses = () => {
       setEditingClass(classData);
       setFormData({
         className: classData.className,
-        gradeId: classData.gradeId,
-        teacherId: classData.teacherId,
-        academicYearId: classData.academicYearId,
+        gradeId: toId(classData.gradeId ?? classData.grade?.id),
+        teacherId: toId(classData.teacherId ?? classData.homeTeacher?.id),
+        academicYearId: toId(classData.academicYearId ?? classData.academicYear?.id),
         capacity: classData.capacity,
         description: classData.description || '',
         status: classData.status
@@ -108,9 +131,9 @@ const ManageClasses = () => {
       setEditingClass(null);
       setFormData({
         className: '',
-        gradeId: null,
+        gradeId: filterGrade || null,
         teacherId: null,
-        academicYearId: currentAcademicYear?.id || null,
+        academicYearId: filterAcademicYear || currentAcademicYear?.id || null,
         capacity: 40,
         description: '',
         status: 'ACTIVE'
@@ -120,6 +143,7 @@ const ManageClasses = () => {
   };
 
   const closeModal = () => {
+    resetErrors();
     setShowModal(false);
     setEditingClass(null);
   };
@@ -128,69 +152,89 @@ const ManageClasses = () => {
   const columns = [
     {
       key: 'className',
+      mobilePrimary: true,
       label: 'ห้องเรียน',
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'grade.gradeName',
+      mobileSecondary: true,
       label: 'ชั้นปี',
       sortable: true
     },
     {
       key: 'homeTeacher.name',
+      mobileSecondary: true,
       label: 'ครูประจำชั้น',
       render: (value) => value || '-'
     },
     {
-      key: 'academicYear.year',
-      label: 'ปีการศึกษา',
-      sortable: true,
-      render: (value) => value || '-'
-    },
-    {
       key: '_count.students',
+      mobileSecondary: true,
       label: 'นักเรียน',
       render: (value, row) => (
-        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-          {value || 0}/{row.capacity}
-        </span>
+        <>
+          <span className="md:hidden">{value || 0} คน</span>
+          <span className="hidden md:inline px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">
+            {value || 0}/{row.capacity}
+          </span>
+        </>
       )
     },
     {
       key: 'status',
       label: 'สถานะ',
-      render: (value) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          value === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-        }`}>
-          {value === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-        </span>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'จัดการ',
-      exportable: false,
-      render: (_, row) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
-          className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
-        >
-          ลบ
-        </button>
-      )
+      mobileBadge: true,
+      render: (value) => value === 'INACTIVE' ? (
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+      ) : null
     }
   ];
 
+  const activeFilterCount = ((filterGrade) ? 1 : 0) + ((filterAcademicYear) ? 1 : 0);
+  const filterControls = (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="sm:w-64">
+          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามชั้นปี</label>
+          <SmartComboBox
+            options={grades}
+            value={filterGrade}
+            onChange={setFilterGrade}
+            labelKey="gradeName"
+            valueKey="id"
+            placeholder="ทุกชั้นปี"
+            clearable
+            searchable
+          />
+        </div>
+        <div className="sm:w-64">
+          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามปีการศึกษา</label>
+          <SmartComboBox
+            options={academicYears}
+            value={filterAcademicYear}
+            onChange={setFilterAcademicYear}
+            labelKey="year"
+            valueKey="id"
+            placeholder="ทุกปีการศึกษา"
+            clearable
+            searchable
+          />
+        </div>
+      </div>
+    </>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-0">
+      <AddFab onClick={() => openModal()} label="เพิ่มห้องเรียน" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">จัดการห้องเรียน</h1>
+        <h1 className="text-2xl font-bold text-gray-800">ห้องเรียน</h1>
         <button
           onClick={() => openModal()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -199,67 +243,63 @@ const ManageClasses = () => {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="sm:w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามชั้นปี</label>
-            <SmartComboBox
-              options={grades}
-              value={filterGrade}
-              onChange={setFilterGrade}
-              labelKey="gradeName"
-              valueKey="id"
-              placeholder="ทุกชั้นปี"
-              clearable
-              searchable
-            />
-          </div>
-          <div className="sm:w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามปีการศึกษา</label>
-            <SmartComboBox
-              options={academicYears}
-              value={filterAcademicYear}
-              onChange={setFilterAcademicYear}
-              labelKey="year"
-              valueKey="id"
-              placeholder="ทุกปีการศึกษา"
-              clearable
-              searchable
-            />
-          </div>
-        </div>
+      {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
+      <div className="hidden sm:block bg-white rounded-lg shadow p-4">
+        {filterControls}
       </div>
 
       {/* Table */}
       <SmartTable
+        filters={filterControls}
+        activeFilterCount={activeFilterCount}
         data={classes}
         columns={columns}
         loading={loading}
-        title="รายการห้องเรียน"
         exportFileName="classes"
         searchable
         exportable
         pagination
-        emptyMessage="ไม่พบข้อมูลห้องเรียน"
+        onClearFilters={() => { setFilterGrade(null); setFilterAcademicYear(null); }}
+        emptyAction={
+          <>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มห้องเรียน</button>
+            
+          </>
+        }
+        emptyMessage="ยังไม่มีห้องเรียน"
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">{editingClass ? 'แก้ไขห้องเรียน' : 'เพิ่มห้องเรียน'}</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+      <WindowModal
+        open={showModal}
+        title={editingClass ? 'แก้ไขห้องเรียน' : 'เพิ่มห้องเรียน'}
+        onClose={closeModal}
+        id="class-form"
+        initialWidth="max-w-md"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            {editingClass && (
+              <button
+                type="button"
+                onClick={() => { const target = editingClass; closeModal(); handleDeleteClick(target); }}
+                className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
+              >
+                ลบ…
               </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+            )}
+                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
+                  ยกเลิก
+                </button>
+                <button type="submit" form="class-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+                  บันทึก
+                </button>
+          </div>
+        }
+      >
+        <div className="p-4">
+          <form id="class-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+              <div data-field="className">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ชื่อห้องเรียน <span className="text-red-500">*</span>
                 </label>
@@ -267,12 +307,12 @@ const ManageClasses = () => {
                   type="text"
                   value={formData.className}
                   onChange={(e) => setFormData({ ...formData, className: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
                 />
+                  {errorFor('className', !String(formData.className ?? '').trim()) && <p className="mt-1 text-sm text-red-500">{errorFor('className', !String(formData.className ?? '').trim())}</p>}
               </div>
 
-              <div>
+              <div data-field="gradeId">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ชั้นปี <span className="text-red-500">*</span>
                 </label>
@@ -284,8 +324,8 @@ const ManageClasses = () => {
                   valueKey="id"
                   placeholder="เลือกชั้นปี"
                   searchable
-                  required
-                />
+                    error={errorFor('gradeId', toId(formData.gradeId) === null)}
+                  />
               </div>
 
               <div>
@@ -318,44 +358,38 @@ const ManageClasses = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ความจุ (คน) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+              <details className="border rounded-lg px-3 py-2">
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
+                <div className="space-y-4 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ความจุ (คน)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.capacity}
+                      onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="ACTIVE">ใช้งาน</option>
+                      <option value="INACTIVE">ไม่ใช้งาน</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ACTIVE">ใช้งาน</option>
-                  <option value="INACTIVE">ไม่ใช้งาน</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={closeModal} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                  ยกเลิก
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  บันทึก
-                </button>
-              </div>
-            </form>
-          </div>
+          </form>
         </div>
-      )}
+      </WindowModal>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

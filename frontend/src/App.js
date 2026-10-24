@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
@@ -7,8 +7,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import QRScanner from './pages/teacher/QRScanner';
-import SubjectSummary from './pages/teacher/SubjectSummary';
-import StudentSummary from './pages/teacher/StudentSummary';
 import StudentPortal from './pages/student/StudentPortal';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageAcademicYears from './pages/admin/ManageAcademicYears';
@@ -21,8 +19,23 @@ import ManageTasks from './pages/admin/ManageTasks';
 import QRCodeGenerator from './pages/admin/QRCodeGenerator';
 import DataImport from './pages/admin/DataImport';
 import ClassTransfer from './pages/admin/ClassTransfer';
-import { StudentMonitor, ClassMonitor, SubjectMonitor } from './pages/monitor';
+import AIAssistant from './pages/ai/AIAssistant';
+import ClassroomTools from './pages/tools/ClassroomTools';
+import ParentView from './pages/parent/ParentView';
+import PrivacyNotice from './pages/legal/PrivacyNotice';
+import { StudentMonitor, MonitorPage, MonitorRedirect } from './pages/monitor';
+import SettingsHub from './pages/admin/SettingsHub';
 import Layout from './components/Layout';
+
+// เส้นทางเก่า → หน้าติดตามใหม่
+const LegacySubjectRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/monitor?mode=subject&subject=${id}`} replace />;
+};
+const LegacyStudentRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/monitor/student/${id}`} replace />;
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles }) => {
@@ -31,7 +44,7 @@ const ProtectedRoute = ({ children, roles }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -41,7 +54,8 @@ const ProtectedRoute = ({ children, roles }) => {
   }
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    const home = user.role === 'ADMIN' ? '/admin' : user.role === 'TEACHER' ? '/teacher' : '/dashboard';
+    return <Navigate to={home} replace />;
   }
 
   return children;
@@ -54,6 +68,9 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          {/* ลิงก์ผู้ปกครอง: สาธารณะ ไม่ต้องล็อกอิน */}
+          <Route path="/p/:token" element={<ParentView />} />
+          <Route path="/privacy" element={<PrivacyNotice />} />
 
           {/* Protected Routes */}
           <Route
@@ -71,7 +88,7 @@ function App() {
             <Route
               path="teacher"
               element={
-                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                <ProtectedRoute roles={['TEACHER']}>
                   <TeacherDashboard />
                 </ProtectedRoute>
               }
@@ -88,7 +105,7 @@ function App() {
               path="teacher/subject/:id"
               element={
                 <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
-                  <SubjectSummary />
+                  <LegacySubjectRedirect />
                 </ProtectedRoute>
               }
             />
@@ -96,7 +113,7 @@ function App() {
               path="teacher/student/:id"
               element={
                 <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
-                  <StudentSummary />
+                  <LegacyStudentRedirect />
                 </ProtectedRoute>
               }
             />
@@ -111,7 +128,7 @@ function App() {
               }
             />
 
-            {/* Admin Routes - accessible by ADMIN and TEACHER */}
+            {/* Admin Routes - ADMIN only (except tasks / ai) */}
             <Route
               path="admin"
               element={
@@ -123,7 +140,7 @@ function App() {
             <Route
               path="admin/academic-years"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageAcademicYears />
                 </ProtectedRoute>
               }
@@ -131,7 +148,7 @@ function App() {
             <Route
               path="admin/grades"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageGrades />
                 </ProtectedRoute>
               }
@@ -139,7 +156,7 @@ function App() {
             <Route
               path="admin/classes"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageClasses />
                 </ProtectedRoute>
               }
@@ -147,7 +164,7 @@ function App() {
             <Route
               path="admin/students"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageStudents />
                 </ProtectedRoute>
               }
@@ -155,7 +172,7 @@ function App() {
             <Route
               path="admin/teachers"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageTeachers />
                 </ProtectedRoute>
               }
@@ -163,8 +180,24 @@ function App() {
             <Route
               path="admin/subjects"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ManageSubjects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="ai"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <AIAssistant />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="tools"
+              element={
+                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                  <ClassroomTools />
                 </ProtectedRoute>
               }
             />
@@ -179,7 +212,7 @@ function App() {
             <Route
               path="admin/qrcode"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <QRCodeGenerator />
                 </ProtectedRoute>
               }
@@ -187,7 +220,7 @@ function App() {
             <Route
               path="admin/import"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <DataImport />
                 </ProtectedRoute>
               }
@@ -195,13 +228,30 @@ function App() {
             <Route
               path="admin/transfer"
               element={
-                <ProtectedRoute roles={['ADMIN', 'TEACHER']}>
+                <ProtectedRoute roles={['ADMIN']}>
                   <ClassTransfer />
                 </ProtectedRoute>
               }
             />
 
+            <Route
+              path="admin/settings"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <SettingsHub />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Monitor Routes */}
+            <Route
+              path="monitor"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <MonitorPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="monitor/student/:id"
               element={
@@ -214,7 +264,7 @@ function App() {
               path="monitor/class/:id?"
               element={
                 <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
-                  <ClassMonitor />
+                  <MonitorRedirect mode="class" />
                 </ProtectedRoute>
               }
             />
@@ -222,7 +272,7 @@ function App() {
               path="monitor/subject"
               element={
                 <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
-                  <SubjectMonitor />
+                  <MonitorRedirect mode="subject" />
                 </ProtectedRoute>
               }
             />

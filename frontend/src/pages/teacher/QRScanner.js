@@ -1,13 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { qrcodeAPI, submissionAPI } from '../../services/api';
+import { qrcodeAPI } from '../../services/api';
+import { saveSubmission, isNetworkError } from './offline/outbox';
+import useOutbox from './offline/useOutbox';
+import OutboxStatusPill from './offline/OutboxStatusPill';
+
+import { NotebookQR } from '../../components/illustrations';
+
+const OFFLINE_LOOKUP_MSG = 'ต้องต่อเน็ตเพื่อค้นหานักเรียน';
+const lookupError = (err, fallback) =>
+  isNetworkError(err) ? OFFLINE_LOOKUP_MSG : (err.response?.data?.error || fallback);
 
 const QRScanner = () => {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [error, setError] = useState('');
+  const [offlineNotice, setOfflineNotice] = useState('');
+  const handleRejected = useCallback((rejected) => {
+    setError(`ส่งรายการที่รอไว้ไม่สำเร็จ ${rejected.length} รายการ: ${rejected[0].error}`);
+  }, []);
+  const outbox = useOutbox({ onRejected: handleRejected });
   const [loading, setLoading] = useState(false);
   const [savingTaskId, setSavingTaskId] = useState(null);
   const [successTaskId, setSuccessTaskId] = useState(null);
@@ -21,11 +35,20 @@ const QRScanner = () => {
   // Auto-restart toggle - saved to localStorage
   const [autoRestart, setAutoRestart] = useState(() => {
     const saved = localStorage.getItem('qrScanner_autoRestart');
-    return saved !== null ? saved === 'true' : false;
+    // Default ON for new users; respect an existing saved preference
+    return saved !== null ? saved === 'true' : true;
   });
   // Countdown for auto-restart
   const [countdown, setCountdown] = useState(0);
   const countdownRef = useRef(null);
+
+  // Bulk record state + green confirmation
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [flash, setFlash] = useState('');
+  const flashTimerRef = useRef(null);
+  const [bulkUndo, setBulkUndo] = useState(null); // { studentId, items:[{id,status,notes}] } เห็น ~5 วินาที
+  const undoTimerRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
   const scannerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
@@ -34,6 +57,8 @@ const QRScanner = () => {
     return () => {
       stopScanner();
       if (countdownRef.current) clearInterval(countdownRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      if (audioCtxRef.current) audioCtxRef.current.close().catch(() => {});
     };
   }, []);
 
@@ -42,7 +67,48 @@ const QRScanner = () => {
     localStorage.setItem('qrScanner_autoRestart', autoRestart.toString());
   }, [autoRestart]);
 
+  // Create/resume AudioContext — must be called inside a user tap (autoplay policy)
+  const primeAudio = () => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    } catch {
+      // audio not available — ignore
+    }
+  };
+
+  // Short beep + vibration + green banner
+  const successFeedback = (message) => {
+    try {
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 1046;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.13);
+      }
+    } catch {
+      // ignore
+    }
+    if (navigator.vibrate) {
+      try { navigator.vibrate(80); } catch { /* ignore */ }
+    }
+    if (message) {
+      setFlash(message);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => setFlash(''), 2000);
+    }
+  };
+
   const startScanner = async () => {
+    primeAudio();
     try {
       setError('');
       setScanning(true);
@@ -86,7 +152,7 @@ const QRScanner = () => {
       const response = await qrcodeAPI.scan({ qrcodeData });
       setScanResult(response.data);
     } catch (err) {
-      setError(err.response?.data?.error || 'QR Code ไม่ถูกต้อง');
+      setError(lookupError(err, 'QR Code ไม่ถูกต้อง'));
     } finally {
       setLoading(false);
     }
@@ -115,7 +181,16 @@ const QRScanner = () => {
       }
 
       // Search by student code
-      const response = await qrcodeAPI.searchByStudent({ studentCode: code });
+      let response;
+      try {
+        response = await qrcodeAPI.searchByStudent({ studentCode: code });
+      } catch (searchErr) {
+        if (code.startsWith('SNT-') && !isNetworkError(searchErr)) {
+          setError('QR นี้ไม่พบในระบบ ลองพิมพ์รหัสนักเรียนแทน');
+          return;
+        }
+        throw searchErr;
+      }
 
       if (response.data.tasks) {
         // If tasks are returned, set as scan result
@@ -123,12 +198,27 @@ const QRScanner = () => {
         setStudentSearchResult(null);
         setAvailableSubjects([]);
       } else if (response.data.subjects) {
+        if (response.data.subjects.length === 1 && response.data.student) {
+          // มีวิชาเดียว — เลือกให้อัตโนมัติ (ลดการแตะ)
+          const only = response.data.subjects[0];
+          const subjectId = only.id ?? only.subjectId ?? only.subject?.id;
+          if (subjectId !== undefined) {
+            const auto = await qrcodeAPI.searchByStudent({
+              studentCode: response.data.student.studentCode,
+              subjectId
+            });
+            setScanResult(auto.data);
+            setStudentSearchResult(null);
+            setAvailableSubjects([]);
+            return;
+          }
+        }
         // If subjects are returned, show subject selection
         setStudentSearchResult(response.data.student);
         setAvailableSubjects(response.data.subjects);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่พบข้อมูล');
+      setError(lookupError(err, 'ไม่พบข้อมูล'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +240,7 @@ const QRScanner = () => {
       setStudentSearchResult(null);
       setAvailableSubjects([]);
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถโหลดข้อมูลได้');
+      setError(lookupError(err, 'ไม่สามารถโหลดข้อมูลได้'));
     } finally {
       setLoading(false);
     }
@@ -177,6 +267,7 @@ const QRScanner = () => {
 
   // Skip countdown and scan immediately
   const scanNextNow = () => {
+    primeAudio();
     cancelAutoRestart();
     resetScanner();
     setTimeout(() => startScanner(), 100);
@@ -193,8 +284,10 @@ const QRScanner = () => {
   const handleSubmissionUpdate = async (taskId, status, score = null, notes = '') => {
     if (!scanResult) return;
 
+    primeAudio();
     setSavingTaskId(taskId);
     setError('');
+    setOfflineNotice('');
 
     try {
       const data = {
@@ -208,7 +301,7 @@ const QRScanner = () => {
         data.score = score;
       }
 
-      await submissionAPI.createOrUpdate(data);
+      const outcome = await saveSubmission(data);
 
       // Update local state
       setScanResult((prev) => ({
@@ -222,6 +315,11 @@ const QRScanner = () => {
 
       // Show success feedback
       setSuccessTaskId(taskId);
+      if (outcome === 'queued') {
+        setOfflineNotice('บันทึกในเครื่องแล้ว รอส่ง — ระบบจะส่งให้เองเมื่อเน็ตกลับมา');
+      } else {
+        successFeedback(status === 'NOT_SUBMITTED' ? '' : 'บันทึกแล้ว');
+      }
 
       // Check if all tasks are now submitted and auto-restart is enabled
       const updatedTasks = scanResult.tasks.map(t =>
@@ -246,10 +344,110 @@ const QRScanner = () => {
     }
   };
 
+  // Tasks eligible for one-tap bulk record (not yet recorded, not SCORED)
+  const getBulkInfo = () => {
+    const pending = (scanResult?.tasks || []).filter(t => !isTaskSubmitted(t));
+    const eligible = pending.filter(t => t.scoringType !== 'SCORED');
+    const scoredLeft = pending.length - eligible.length;
+    const allSubmissionOnly = eligible.length > 0 && eligible.every(t => t.scoringType === 'SUBMISSION_ONLY');
+    return {
+      eligible,
+      scoredLeft,
+      label: allSubmissionOnly ? 'ส่งแล้วทั้งหมด' : 'ผ่านทั้งหมด'
+    };
+  };
+
+  const handleBulkApprove = async () => {
+    if (!scanResult || bulkSaving) return;
+    primeAudio();
+    const { eligible, scoredLeft } = getBulkInfo();
+    if (eligible.length === 0) return;
+
+    cancelAutoRestart();
+    setBulkSaving(true);
+    setError('');
+    setOfflineNotice('');
+
+    const studentId = scanResult.student.id;
+    const prevItems = eligible.map(t => ({ id: t.id, status: t.submission?.status || 'NOT_SUBMITTED', notes: t.submission?.notes || '' }));
+    const results = await Promise.allSettled(
+      eligible.map(t => saveSubmission({ studentId, taskId: t.id, status: 'APPROVED', notes: '' }))
+    );
+    const okIds = new Set();
+    const failed = [];
+    let queuedCount = 0;
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        okIds.add(eligible[i].id);
+        if (r.value === 'queued') queuedCount += 1;
+      }
+      else failed.push(eligible[i]);
+    });
+
+    const nextTasks = scanResult.tasks.map(t =>
+      okIds.has(t.id) ? { ...t, submission: { ...t.submission, status: 'APPROVED', notes: '' } } : t
+    );
+    setScanResult(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t =>
+        okIds.has(t.id) ? { ...t, submission: { ...t.submission, status: 'APPROVED', notes: '' } } : t
+      )
+    }));
+    setBulkSaving(false);
+
+    if (failed.length > 0) {
+      const names = failed.map(t => `#${t.taskNumber}`).join(', ');
+      setError(`บันทึกสำเร็จ ${okIds.size} งาน แต่ไม่สำเร็จ ${failed.length} งาน (${names}) — กดปุ่มอีกครั้งเพื่อลองใหม่`);
+      if (okIds.size > 0) successFeedback('');
+      return;
+    }
+
+    if (okIds.size > 0) {
+      setBulkUndo({ studentId, items: prevItems.filter(i => okIds.has(i.id)) });
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = setTimeout(() => setBulkUndo(null), 5000);
+    }
+
+    if (queuedCount > 0) {
+      setOfflineNotice(`บันทึกในเครื่องแล้ว รอส่ง ${queuedCount} งาน — ระบบจะส่งให้เองเมื่อเน็ตกลับมา`);
+    } else successFeedback(
+      scoredLeft > 0
+        ? `บันทึกแล้ว ${okIds.size} งาน • เหลืองานคิดคะแนน ${scoredLeft} งาน`
+        : `บันทึกแล้ว ${okIds.size} งาน`
+    );
+
+    const allDone = nextTasks.every(isTaskSubmitted);
+    if (autoRestart && allDone) {
+      setTimeout(() => startAutoRestartCountdown(), 500);
+    }
+  };
+
+  const handleUndoBulk = async () => {
+    const u = bulkUndo;
+    if (!u) return;
+    clearTimeout(undoTimerRef.current);
+    setBulkUndo(null);
+    cancelAutoRestart();
+    const results = await Promise.allSettled(
+      u.items.map(i => saveSubmission({ studentId: u.studentId, taskId: i.id, status: i.status, notes: i.notes }))
+    );
+    const okIds = new Set(u.items.filter((_, k) => results[k].status === 'fulfilled').map(i => i.id));
+    const prev = Object.fromEntries(u.items.map(i => [i.id, i]));
+    setScanResult(r => (r && r.student.id === u.studentId ? {
+      ...r,
+      tasks: r.tasks.map(t => okIds.has(t.id) ? { ...t, submission: { ...t.submission, status: prev[t.id].status, notes: prev[t.id].notes } } : t)
+    } : r));
+    if (okIds.size < u.items.length) setError(`เลิกทำไม่สำเร็จ ${u.items.length - okIds.size} งาน`);
+    else successFeedback(`เลิกทำแล้ว ${okIds.size} งาน`);
+  };
+
   const resetScanner = () => {
+    clearTimeout(undoTimerRef.current);
+    setBulkUndo(null);
     cancelAutoRestart();
     setScanResult(null);
     setError('');
+    setOfflineNotice('');
     setManualCode('');
     setStudentSearchResult(null);
     setAvailableSubjects([]);
@@ -261,7 +459,7 @@ const QRScanner = () => {
     const info = {
       APPROVED: { label: 'ผ่าน', color: 'bg-green-500 text-white', bgLight: 'bg-green-50 border-green-200' },
       REJECTED: { label: 'ไม่ผ่าน', color: 'bg-red-500 text-white', bgLight: 'bg-red-50 border-red-200' },
-      PENDING: { label: 'ส่งแล้ว', color: 'bg-blue-500 text-white', bgLight: 'bg-blue-50 border-blue-200' },
+      PENDING: { label: 'ส่งแล้ว', color: 'bg-brand-500 text-white', bgLight: 'bg-brand-50 border-brand-200' },
       NOT_SUBMITTED: { label: 'ยังไม่ส่ง', color: 'bg-gray-400 text-white', bgLight: 'bg-gray-50 border-gray-200' }
     };
     return info[status] || info.NOT_SUBMITTED;
@@ -294,7 +492,7 @@ const QRScanner = () => {
     const isSaving = savingTaskId === task.id;
 
     // Compact button styles for mobile
-    const btnBase = "flex-1 py-2 rounded-lg font-medium transition-all active:scale-95 disabled:opacity-50 text-sm";
+    const btnBase = "flex-1 min-h-[44px] py-2 rounded-lg font-medium transition-all active:scale-95 disabled:opacity-50 text-sm";
 
     switch (task.scoringType) {
       case 'SUBMISSION_ONLY':
@@ -358,7 +556,7 @@ const QRScanner = () => {
       case 'SCORED':
         // คิดคะแนน - compact layout
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
               min="0"
@@ -376,7 +574,7 @@ const QRScanner = () => {
                   )
                 }));
               }}
-              className="w-20 px-2 py-2 text-base font-medium border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+              className="w-20 min-h-[44px] px-2 py-2 text-base font-medium border-2 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-center"
               placeholder="0"
             />
             <span className="text-gray-500 text-sm whitespace-nowrap">/{task.maxScore || 100}</span>
@@ -399,7 +597,7 @@ const QRScanner = () => {
             <button
               onClick={() => handleSubmissionUpdate(task.id, 'NOT_SUBMITTED', null)}
               disabled={isSaving}
-              className={`px-3 py-2 rounded-lg font-medium text-sm transition-all active:scale-95 ${
+              className={`px-3 py-2 min-h-[44px] rounded-lg font-medium text-sm transition-all active:scale-95 ${
                 currentStatus === 'NOT_SUBMITTED'
                   ? 'bg-gray-600 text-white'
                   : 'bg-gray-100 text-gray-600'
@@ -441,16 +639,6 @@ const QRScanner = () => {
     }
   };
 
-  // Get scoring type label
-  const getScoringTypeLabel = (type) => {
-    const labels = {
-      SUBMISSION_ONLY: 'ส่ง/ไม่ส่ง',
-      PASS_FAIL: 'ผ่าน/ไม่ผ่าน',
-      SCORED: 'คิดคะแนน'
-    };
-    return labels[type] || 'ผ่าน/ไม่ผ่าน';
-  };
-
   // Calculate stats
   const getTaskStats = () => {
     if (!scanResult?.tasks) return { submitted: 0, notSubmitted: 0, total: 0 };
@@ -464,33 +652,44 @@ const QRScanner = () => {
 
   const filteredTasks = getFilteredTasks();
   const stats = getTaskStats();
+  const bulk = getBulkInfo();
 
   return (
     <div className="h-full flex flex-col max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">สแกน QR Code</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">สแกนส่งงาน</h1>
         <div className="flex items-center gap-2">
-          {/* Auto-restart Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-xs text-gray-600 hidden sm:inline">ต่อเนื่อง</span>
-            <div
-              onClick={() => setAutoRestart(!autoRestart)}
-              className={`relative w-10 h-6 rounded-full transition-colors ${
-                autoRestart ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <div
-                className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  autoRestart ? 'translate-x-4' : ''
-                }`}
-              />
+          {/* ตั้งค่าที่ใช้ไม่บ่อย ซ่อนไว้ในปุ่มเล็ก */}
+          <details className="relative">
+            <summary className="list-none cursor-pointer flex items-center gap-1 min-h-[44px] px-3 rounded-lg text-sm text-gray-600 hover:bg-gray-100">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              ตั้งค่า
+            </summary>
+            <div className="absolute right-0 z-20 mt-1 w-60 rounded-xl border bg-white p-3 shadow-lg">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoRestart}
+                onClick={() => setAutoRestart(!autoRestart)}
+                className="flex w-full items-center justify-between gap-3 min-h-[44px] text-left"
+              >
+                <span className="text-sm text-gray-700">
+                  สแกนคนต่อไปอัตโนมัติ
+                  <span className="block text-xs text-gray-500">เมื่อตรวจครบทุกงาน</span>
+                </span>
+                <div className={`relative w-10 h-6 shrink-0 rounded-full transition-colors ${autoRestart ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoRestart ? 'translate-x-4' : ''}`} />
+                </div>
+              </button>
             </div>
-          </label>
+          </details>
           {scanResult && (
             <button
               onClick={resetScanner}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -500,6 +699,17 @@ const QRScanner = () => {
           )}
         </div>
       </div>
+
+      <OutboxStatusPill online={outbox.online} pending={outbox.pending} flushing={outbox.flushing} onFlush={outbox.flush} />
+
+      {offlineNotice && (
+        <div role="status" aria-live="polite" data-testid="offline-notice" className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 flex-shrink-0 font-medium">
+          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.5 2.5a1 1 0 001.414-1.414L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          {offlineNotice}
+        </div>
+      )}
 
       {/* Error Alert */}
       {error && (
@@ -511,10 +721,27 @@ const QRScanner = () => {
         </div>
       )}
 
+      {/* Green success confirmation */}
+      {flash && (
+        <div role="status" aria-live="polite" className="bg-green-600 text-white px-4 py-3 rounded-lg mb-2 flex items-center gap-2 font-medium shadow flex-shrink-0">
+          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          {flash}
+        </div>
+      )}
+
+      {bulkUndo && (
+        <div className="bg-green-600 text-white px-4 py-2 rounded-lg mb-2 flex items-center justify-between gap-2 font-medium shadow flex-shrink-0">
+          <span>บันทึกแล้ว {bulkUndo.items.length} งาน</span>
+          <button type="button" onClick={handleUndoBulk} className="min-h-[44px] px-4 rounded-lg bg-white/20 hover:bg-white/30 font-semibold underline">เลิกทำ</button>
+        </div>
+      )}
+
       {/* Auto-restart Countdown Overlay */}
       {countdown > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={scanNextNow}>
-          <div className="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={scanNextNow}>
+          <div className="modal-panel sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-6 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="w-16 h-16 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -525,13 +752,13 @@ const QRScanner = () => {
             <div className="flex gap-2">
               <button
                 onClick={cancelAutoRestart}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm"
+                className="flex-1 px-4 py-3 min-h-[48px] bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm"
               >
                 อยู่หน้านี้
               </button>
               <button
                 onClick={scanNextNow}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
+                className="flex-1 px-4 py-3 min-h-[48px] bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors font-medium text-sm"
               >
                 สแกนเลย →
               </button>
@@ -542,43 +769,31 @@ const QRScanner = () => {
 
       {!scanResult ? (
         /* Scanner View */
-        <div className="bg-white rounded-2xl shadow-lg p-6 flex-1 flex flex-col overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg p-3 sm:p-6 flex-1 flex flex-col overflow-hidden">
           <div
             id="qr-reader"
             ref={scannerRef}
-            className="w-full max-w-sm mx-auto mb-4 rounded-xl overflow-hidden"
+            className="w-full max-w-md mx-auto mb-4 rounded-xl overflow-hidden"
             style={{ display: scanning ? 'block' : 'none' }}
           />
 
           {!scanning && !showManualInput ? (
             <div className="text-center py-8 flex-1 flex flex-col justify-center">
-              <div className="w-24 h-24 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                </svg>
-              </div>
+              <NotebookQR className="mx-auto mb-4 h-32 sm:h-40 w-auto text-brand-600" />
               <button
                 onClick={startScanner}
-                className="px-8 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all text-lg font-medium shadow-lg shadow-blue-200 active:scale-95"
+                className="w-full sm:w-auto px-8 py-4 min-h-[56px] bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-all text-lg font-medium shadow-lg shadow-brand-200 active:scale-95"
               >
                 เปิดกล้องสแกน
               </button>
-              <p className="mt-6 text-gray-500">
-                กดปุ่มเพื่อสแกน QR Code บนสมุดนักเรียน
+              <p className="mt-4 text-gray-500">
+                QR อยู่บนปกสมุดนักเรียน ส่องให้อยู่ในกรอบ
               </p>
-              {autoRestart && (
-                <p className="mt-2 text-green-600 text-sm flex items-center justify-center gap-1">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  โหมดสแกนต่อเนื่องเปิดอยู่
-                </p>
-              )}
               <button
                 onClick={() => setShowManualInput(true)}
-                className="mt-4 text-blue-600 hover:text-blue-800 text-sm underline"
+                className="mt-4 min-h-[44px] px-3 text-brand-600 hover:text-brand-800 text-sm underline"
               >
-                หรือพิมพ์รหัส QR แทน
+                สแกนไม่ติด? พิมพ์รหัสแทน
               </button>
             </div>
           ) : scanning ? (
@@ -587,7 +802,7 @@ const QRScanner = () => {
               <div className="flex gap-2 justify-center">
                 <button
                   onClick={stopScanner}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors"
+                  className="flex-1 sm:flex-none px-6 py-3 min-h-[48px] bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors"
                 >
                   หยุดสแกน
                 </button>
@@ -596,7 +811,7 @@ const QRScanner = () => {
                     stopScanner();
                     setShowManualInput(true);
                   }}
-                  className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors"
+                  className="flex-1 sm:flex-none px-6 py-3 min-h-[48px] bg-brand-100 text-brand-700 rounded-xl hover:bg-brand-200 transition-colors"
                 >
                   พิมพ์รหัสแทน
                 </button>
@@ -612,7 +827,7 @@ const QRScanner = () => {
                   </svg>
                   พบนักเรียน
                 </div>
-                <h3 className="text-xl font-bold text-gray-800">{studentSearchResult.name}</h3>
+                <h3 className="text-xl font-bold text-gray-800 break-words">{studentSearchResult.name}</h3>
                 <p className="text-gray-500">{studentSearchResult.studentCode} • {studentSearchResult.class?.className}</p>
               </div>
 
@@ -625,7 +840,7 @@ const QRScanner = () => {
                         key={subject.id}
                         onClick={() => handleSelectSubject(subject.id)}
                         disabled={loading}
-                        className="w-full p-4 text-left border-2 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                        className="w-full p-4 min-h-[56px] text-left border-2 rounded-xl hover:border-brand-500 hover:bg-brand-50 transition-colors disabled:opacity-50"
                       >
                         <p className="font-medium text-gray-900">{subject.subjectName}</p>
                         <p className="text-sm text-gray-500">{subject.subjectCode}</p>
@@ -644,7 +859,7 @@ const QRScanner = () => {
                     setAvailableSubjects([]);
                     setManualCode('');
                   }}
-                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-6 py-2 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   ค้นหานักเรียนอื่น
                 </button>
@@ -660,14 +875,14 @@ const QRScanner = () => {
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   placeholder="รหัสนักเรียน หรือ รหัส QR"
-                  className="w-full px-4 py-3 text-center text-xl border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 min-h-[52px] text-center text-xl border-2 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   autoFocus
                 />
                 <div className="flex gap-2 justify-center">
                   <button
                     type="submit"
                     disabled={!manualCode.trim() || loading}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none px-6 py-3 min-h-[48px] bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors disabled:opacity-50"
                   >
                     {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
                   </button>
@@ -677,7 +892,7 @@ const QRScanner = () => {
                       setShowManualInput(false);
                       setManualCode('');
                     }}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+                    className="flex-1 sm:flex-none px-6 py-3 min-h-[48px] bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
                   >
                     กลับ
                   </button>
@@ -691,7 +906,7 @@ const QRScanner = () => {
 
           {loading && !showManualInput && (
             <div className="flex items-center justify-center mt-4">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
             </div>
           )}
         </div>
@@ -699,17 +914,17 @@ const QRScanner = () => {
         /* Result View */
         <div className="flex-1 flex flex-col overflow-hidden space-y-2">
           {/* Compact Student & Subject Info Card with Stats */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-3 text-white shadow-lg flex-shrink-0">
+          <div className="bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl p-3 text-white shadow-lg flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg font-bold truncate">{scanResult.student.name}</h2>
-                <p className="text-blue-100 text-xs">
+                <p className="text-brand-100 text-xs break-words">
                   {scanResult.student.studentCode} • {scanResult.student.class?.className} • {scanResult.subject.subjectName}
                 </p>
               </div>
               <button
                 onClick={() => navigate(`/monitor/student/${scanResult.student.id}?subjectId=${scanResult.subject.id}`)}
-                className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors ml-2 flex-shrink-0"
+                className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white/20 rounded-lg hover:bg-white/30 transition-colors ml-2 flex-shrink-0"
                 title="ดูข้อมูลทั้งหมด"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -721,15 +936,15 @@ const QRScanner = () => {
             <div className="flex gap-4 mt-2 pt-2 border-t border-white/20 text-center">
               <div className="flex-1">
                 <span className="text-xl font-bold">{stats.total}</span>
-                <span className="text-blue-200 text-xs ml-1">งาน</span>
+                <span className="text-brand-200 text-xs ml-1">งาน</span>
               </div>
               <div className="flex-1">
                 <span className="text-xl font-bold text-green-300">{stats.submitted}</span>
-                <span className="text-blue-200 text-xs ml-1">ส่ง</span>
+                <span className="text-brand-200 text-xs ml-1">ส่ง</span>
               </div>
               <div className="flex-1">
                 <span className="text-xl font-bold text-orange-300">{stats.notSubmitted}</span>
-                <span className="text-blue-200 text-xs ml-1">ค้าง</span>
+                <span className="text-brand-200 text-xs ml-1">ค้าง</span>
               </div>
             </div>
           </div>
@@ -741,7 +956,7 @@ const QRScanner = () => {
               <div className="flex gap-1">
                 <button
                   onClick={() => setTaskFilter('not_submitted')}
-                  className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`flex-1 px-2 py-2.5 min-h-[44px] text-xs font-medium rounded-lg transition-colors ${
                     taskFilter === 'not_submitted'
                       ? 'bg-orange-600 text-white'
                       : 'bg-orange-100 text-orange-700'
@@ -751,7 +966,7 @@ const QRScanner = () => {
                 </button>
                 <button
                   onClick={() => setTaskFilter('submitted')}
-                  className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`flex-1 px-2 py-2.5 min-h-[44px] text-xs font-medium rounded-lg transition-colors ${
                     taskFilter === 'submitted'
                       ? 'bg-green-600 text-white'
                       : 'bg-green-100 text-green-700'
@@ -761,10 +976,10 @@ const QRScanner = () => {
                 </button>
                 <button
                   onClick={() => setTaskFilter('all')}
-                  className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`flex-1 px-2 py-2.5 min-h-[44px] text-xs font-medium rounded-lg transition-colors ${
                     taskFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-100 text-blue-700'
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-brand-100 text-brand-700'
                   }`}
                 >
                   ทั้งหมด ({stats.total})
@@ -789,7 +1004,7 @@ const QRScanner = () => {
                       {/* Compact Task Header */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded font-bold text-xs flex-shrink-0">
+                          <span className="inline-flex items-center justify-center w-6 h-6 bg-brand-100 text-brand-700 rounded font-bold text-xs flex-shrink-0">
                             {task.taskNumber}
                           </span>
                           <span className="font-medium text-gray-900 text-sm truncate">{task.taskName}</span>
@@ -834,10 +1049,29 @@ const QRScanner = () => {
             </div>
           </div>
 
+          {/* One-tap bulk record (thumb zone) */}
+          {bulk.eligible.length > 0 && (
+            <button
+              onClick={handleBulkApprove}
+              disabled={bulkSaving || savingTaskId !== null}
+              className="w-full py-4 min-h-[64px] bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all font-bold text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-60"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+              {bulkSaving ? 'กำลังบันทึก...' : `${bulk.label} (${bulk.eligible.length})`}
+            </button>
+          )}
+          {bulk.scoredLeft > 0 && (
+            <p className="text-xs text-gray-500 text-center flex-shrink-0">
+              งานคิดคะแนน {bulk.scoredLeft} งาน ต้องกรอกคะแนนทีละงาน (ไม่รวมในปุ่มบันทึกทั้งหมด)
+            </p>
+          )}
+
           {/* Always visible "Scan Next" button at bottom */}
           <button
             onClick={scanNextNow}
-            className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0"
+            className="w-full py-4 min-h-[56px] bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors font-medium text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />

@@ -50,7 +50,7 @@ const PendingReport = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -61,11 +61,11 @@ const PendingReport = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">นักเรียนค้างส่งงาน</h1>
-          <p className="text-gray-600">รายงานนักเรียนที่ยังไม่ส่งงานหรืองานไม่ผ่าน</p>
+          <p className="text-sm text-gray-500">รวมงานที่ยังไม่ส่งและไม่ผ่าน</p>
         </div>
         <button
           onClick={handlePrint}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 print:hidden"
+          className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -82,7 +82,7 @@ const PendingReport = () => {
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-64 px-3 py-2 min-h-[44px] border rounded-lg focus:ring-2 focus:ring-brand-500"
         >
           <option value="">ทั้งหมด</option>
           {classes.map(c => (
@@ -93,7 +93,7 @@ const PendingReport = () => {
 
       {/* Summary */}
       <div className="bg-red-50 rounded-lg shadow p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="p-3 bg-red-100 rounded-full">
             <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -103,7 +103,7 @@ const PendingReport = () => {
             <div className="text-2xl font-bold text-red-600">{Object.keys(groupedByStudent).length}</div>
             <div className="text-sm text-red-600">นักเรียนที่มีงานค้าง</div>
           </div>
-          <div className="ml-8">
+          <div className="ml-0 sm:ml-8">
             <div className="text-2xl font-bold text-red-600">{filteredSubmissions.length}</div>
             <div className="text-sm text-red-600">งานที่ยังไม่ส่ง/ไม่ผ่าน</div>
           </div>
@@ -113,9 +113,9 @@ const PendingReport = () => {
       {/* Student List */}
       <div className="space-y-4">
         {Object.values(groupedByStudent).map(({ student, tasks }) => (
-          <div key={student.id} className="bg-white rounded-lg shadow overflow-hidden">
+          <div key={student.id} className="bg-white rounded-lg shadow overflow-hidden print:overflow-visible">
             <div className="p-4 bg-gray-50 border-b">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="font-semibold text-gray-900">{student.name}</h3>
                   <p className="text-sm text-gray-500">{student.studentCode} - {student.class?.className}</p>
@@ -128,7 +128,7 @@ const PendingReport = () => {
             <div className="p-4">
               <div className="grid gap-2">
                 {tasks.map(task => (
-                  <div key={task.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div key={task.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-2 bg-gray-50 rounded">
                     <div>
                       <span className="font-medium text-gray-900">{task.taskName}</span>
                       <span className="ml-2 text-sm text-gray-500">({task.subject?.subjectName})</span>

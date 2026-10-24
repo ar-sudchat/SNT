@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { reportAPI } from '../../services/api';
 
 const StudentPortal = () => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState(null); // null = เลือกอัตโนมัติ
 
   useEffect(() => {
     fetchSubmissions();
@@ -62,17 +63,29 @@ const StudentPortal = () => {
     }
   };
 
+  const isPending = (t) => !t.submission || t.submission.status === 'NOT_SUBMITTED';
+  const isOverdue = (t) => isPending(t) && t.deadline && new Date(t.deadline).getTime() < Date.now();
+  const { pendingCount, totalCount } = useMemo(() => {
+    let p = 0; let a = 0;
+    subjects.forEach((s) => s.tasks.forEach((t) => { a += 1; if (!t.submission || t.submission.status === 'NOT_SUBMITTED') p += 1; }));
+    return { pendingCount: p, totalCount: a };
+  }, [subjects]);
+  const active = filter || (pendingCount > 0 ? 'pending' : 'all');
+  const visible = subjects
+    .map((s) => ({ ...s, shown: active === 'pending' ? s.tasks.filter(isPending) : s.tasks }))
+    .filter((s) => s.shown.length > 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">งานของฉัน</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800">งานของฉัน</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
@@ -80,25 +93,41 @@ const StudentPortal = () => {
         </div>
       )}
 
+      {totalCount > 0 && (
+        <div className="flex gap-2" role="group" aria-label="กรองงาน">
+          {[['pending', `ยังไม่ส่ง ${pendingCount}`], ['all', `ทั้งหมด ${totalCount}`]].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active === id}
+              onClick={() => setFilter(id)}
+              className={`min-h-[44px] rounded-full px-4 text-sm font-medium border ${active === id ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-6">
-        {subjects.map((subject) => (
+        {visible.map((subject) => (
           <div key={subject.subject.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-blue-600 text-white px-6 py-4">
-              <h2 className="text-lg font-semibold">{subject.subject.subjectName}</h2>
-              <p className="text-blue-100 text-sm">รหัสวิชา: {subject.subject.subjectCode}</p>
+            <div className="bg-brand-600 text-white px-4 sm:px-6 py-4">
+              <h2 className="text-lg font-semibold break-words">{subject.subject.subjectName}</h2>
+              <p className="text-brand-100 text-sm">{subject.subject.subjectCode}</p>
             </div>
 
             <div className="divide-y">
-              {subject.tasks.map((task) => (
-                <div key={task.taskId} className="px-6 py-4">
-                  <div className="flex justify-between items-start">
-                    <div>
+              {subject.shown.map((task) => (
+                <div key={task.taskId} className="px-4 sm:px-6 py-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                    <div className="min-w-0 break-words">
                       <h3 className="font-medium text-gray-800">
                         งาน {task.taskNumber}: {task.taskName}
                       </h3>
                       {task.deadline && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          กำหนดส่ง: {new Date(task.deadline).toLocaleDateString('th-TH')}
+                        <p className={`text-sm mt-1 ${isOverdue(task) ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                          {isOverdue(task) ? 'เลยกำหนดส่ง: ' : 'กำหนดส่ง: '}{new Date(task.deadline).toLocaleDateString('th-TH')}
                         </p>
                       )}
                       {task.submission?.notes && (
@@ -107,7 +136,7 @@ const StudentPortal = () => {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="sm:text-right flex-shrink-0">
                       {getStatusIcon(task.submission?.status)}
                       {task.submission?.reviewDate && (
                         <p className="text-xs text-gray-400 mt-1">
@@ -121,7 +150,7 @@ const StudentPortal = () => {
             </div>
 
             {/* Summary footer */}
-            <div className="bg-gray-50 px-6 py-3 flex justify-between text-sm">
+            <div className="bg-gray-50 px-4 sm:px-6 py-3 flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm">
               <span className="text-green-600">
                 ผ่าน: {subject.tasks.filter(t => t.submission?.status === 'APPROVED').length}
               </span>
@@ -136,7 +165,7 @@ const StudentPortal = () => {
         ))}
       </div>
 
-      {subjects.length === 0 && !error && (
+      {totalCount === 0 && !error && (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />

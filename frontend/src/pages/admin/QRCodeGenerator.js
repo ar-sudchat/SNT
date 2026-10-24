@@ -188,7 +188,7 @@ const QRCodeGenerator = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -222,7 +222,7 @@ const QRCodeGenerator = () => {
       )}
 
       {/* Selection Panel */}
-      <div className="bg-white rounded-lg shadow p-6 print:hidden">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 print:hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
@@ -273,11 +273,11 @@ const QRCodeGenerator = () => {
 
         {/* Quick Actions */}
         {selectedClass && selectedSubject && (
-          <div className="flex gap-3 mb-4 pb-4 border-b">
+          <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b">
             <button
               onClick={handleLoadExisting}
               disabled={loadingExisting}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+              className="px-4 py-2 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               {loadingExisting ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-transparent"></div>
@@ -306,14 +306,14 @@ const QRCodeGenerator = () => {
               emptyMessage="ไม่พบนักเรียนในห้องนี้"
             />
 
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 pt-4 border-t">
               <span className="text-sm text-gray-500">
                 เลือก {selectedStudents.length} จาก {students.length} คน
               </span>
               <button
                 onClick={handleGenerate}
                 disabled={generating || selectedStudents.length === 0 || !selectedSubject}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (
                   <>
@@ -351,7 +351,7 @@ const QRCodeGenerator = () => {
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {failedResults.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-sm bg-white p-2 rounded">
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm bg-white p-2 rounded">
                 <span className="text-gray-700">
                   {item.studentCode} - {item.studentName}
                 </span>
@@ -369,12 +369,12 @@ const QRCodeGenerator = () => {
 
       {/* Generated QR Codes */}
       {generatedQRCodes.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4 print:hidden">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 print:hidden">
             <h2 className="text-lg font-semibold">QR Codes ที่สร้างแล้ว ({generatedQRCodes.length} รายการ)</h2>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              className="px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -385,7 +385,7 @@ const QRCodeGenerator = () => {
 
           {/* Print Header - Only visible when printing */}
           <div className="hidden print:block mb-6 text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-2xl font-bold">ระบบติดตามสมุดนักเรียน (SNT)</h1>
+            <h1 className="text-2xl font-bold">KruScan — ครูสแกน</h1>
             <p className="text-lg mt-1">QR Code สำหรับวิชา: {subjects.find(s => s.id === parseInt(selectedSubject))?.subjectName}</p>
             <p className="text-sm text-gray-600 mt-1">
               พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -393,7 +393,7 @@ const QRCodeGenerator = () => {
           </div>
 
           {/* Screen view */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
             {generatedQRCodes.map((qr) => {
               const student = students.find(s => s.id === qr.studentId);
               return (
@@ -440,19 +440,19 @@ const QRCodeGenerator = () => {
 
           {/* Print Footer */}
           <div className="hidden print:block mt-6 pt-4 border-t text-center text-xs text-gray-500">
-            <p>SNT System - ระบบติดตามสมุดนักเรียนผ่าน QR Code</p>
+            <p>KruScan — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</p>
           </div>
         </div>
       )}
 
       {/* Existing QR Codes */}
       {existingQRCodes.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4 print:hidden">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 print:hidden">
             <h2 className="text-lg font-semibold">QR Codes ที่มีอยู่ ({existingQRCodes.length} รายการ)</h2>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              className="px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -463,7 +463,7 @@ const QRCodeGenerator = () => {
 
           {/* Print Header - Only visible when printing */}
           <div className="hidden print:block mb-6 text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-2xl font-bold">ระบบติดตามสมุดนักเรียน (SNT)</h1>
+            <h1 className="text-2xl font-bold">KruScan — ครูสแกน</h1>
             <p className="text-lg mt-1">QR Code สำหรับวิชา: {existingQRCodes[0]?.subjectName}</p>
             <p className="text-sm text-gray-600 mt-1">
               พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -471,7 +471,7 @@ const QRCodeGenerator = () => {
           </div>
 
           {/* Screen view */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
             {existingQRCodes.map((qr, idx) => (
               <div key={idx} className="border rounded-lg p-4 text-center">
                 <img
@@ -482,7 +482,7 @@ const QRCodeGenerator = () => {
                 />
                 <p className="text-sm font-medium truncate">{qr.studentName}</p>
                 <p className="text-xs text-gray-500">{qr.studentCode}</p>
-                <p className="text-xs text-blue-600 mt-1">{qr.subjectName}</p>
+                <p className="text-xs text-brand-600 mt-1">{qr.subjectName}</p>
               </div>
             ))}
           </div>
@@ -512,7 +512,7 @@ const QRCodeGenerator = () => {
 
           {/* Print Footer */}
           <div className="hidden print:block mt-6 pt-4 border-t text-center text-xs text-gray-500">
-            <p>SNT System - ระบบติดตามสมุดนักเรียนผ่าน QR Code</p>
+            <p>KruScan — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</p>
           </div>
         </div>
       )}

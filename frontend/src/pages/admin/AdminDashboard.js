@@ -1,354 +1,234 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { reportAPI } from '../../services/api';
+import { reportAPI, academicYearAPI, subjectAPI, teacherAPI, classAPI } from '../../services/api';
 
-// Simple Progress Ring Component
-const ProgressRing = ({ progress, size = 120, strokeWidth = 10, color = '#3B82F6' }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
-
-  return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#E5E7EB"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-all duration-500"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold" style={{ color }}>{progress}%</span>
-      </div>
-    </div>
-  );
+// หน้าแรกแอดมิน: ภาพรวมโรงเรียน · ตัวเลขหลัก · วิชาที่ต้องติดตาม · ความพร้อมของระบบ
+const fmt = (n) => (Number(n) || 0).toLocaleString('th-TH');
+const pct = (a, b) => {
+  if (!b) return 0;
+  const p = (a / b) * 100;
+  return p > 0 && p < 1 ? Math.round(p * 10) / 10 : Math.round(p);
 };
 
-// Horizontal Bar Component
-const HorizontalBar = ({ value, max, color, label, count }) => {
-  const percentage = max > 0 ? (value / max) * 100 : 0;
+const Chevron = () => (
+  <svg className="w-5 h-5 text-gray-400 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" d="M7.2 14.8a1 1 0 010-1.4L10.6 10 7.2 6.6a1 1 0 011.4-1.4l4.1 4.1a1 1 0 010 1.4l-4.1 4.1a1 1 0 01-1.4 0z" clipRule="evenodd" />
+  </svg>
+);
 
-  return (
-    <div className="mb-3">
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600">{label}</span>
-        <span className="font-medium" style={{ color }}>{count} ({percentage.toFixed(0)}%)</span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-3">
-        <div
-          className="h-3 rounded-full transition-all duration-500"
-          style={{ width: `${percentage}%`, backgroundColor: color }}
-        />
-      </div>
-    </div>
-  );
-};
+const settled = (p) => p.then((r) => r.data).catch(() => null);
 
 const AdminDashboard = () => {
-  const [overview, setOverview] = useState(null);
-  const [statistics, setStatistics] = useState([]);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchData();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const [overview, statistics, year, subjects, teachers, classes] = await Promise.all([
+      settled(reportAPI.adminOverview()),
+      settled(reportAPI.adminStatistics()),
+      settled(academicYearAPI.getCurrent()),
+      settled(subjectAPI.getAll()),
+      settled(teacherAPI.getAll()),
+      settled(classAPI.getAll())
+    ]);
+    if (!overview && !statistics) setError('โหลดข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง');
+    setData({ overview, statistics: statistics || [], year, subjects, teachers, classes });
+    setLoading(false);
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [overviewRes, statsRes] = await Promise.all([
-        reportAPI.adminOverview(),
-        reportAPI.adminStatistics()
-      ]);
-      setOverview(overviewRes.data);
-      setStatistics(statsRes.data);
-    } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="กำลังโหลด">
+        <div className="h-8 w-56 bg-gray-200 rounded" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-28 bg-gray-200 rounded-xl" />)}
+        </div>
+        <div className="h-64 bg-gray-200 rounded-xl" />
       </div>
     );
   }
 
-  // Calculate totals for submission breakdown
-  const totalSubmissions = overview?.submissions
-    ? (overview.submissions.approved || 0) +
-      (overview.submissions.rejected || 0) +
-      (overview.submissions.pending || 0) +
-      (overview.submissions.notSubmitted || 0)
-    : 0;
+  const { overview, statistics, year, subjects, teachers, classes } = data;
+  const counts = overview?.counts || {};
+  const sub = overview?.submissions || {};
+  const submitted = (sub.approved || 0) + (sub.pending || 0) + (sub.rejected || 0);
+  const expected = overview?.expectedSubmissions || 0;
 
-  const quickLinks = [
-    { path: '/admin/students', label: 'นักเรียน', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', color: 'text-blue-600' },
-    { path: '/admin/teachers', label: 'ครู', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', color: 'text-green-600' },
-    { path: '/admin/subjects', label: 'วิชา', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-purple-600' },
-    { path: '/admin/tasks', label: 'งาน', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', color: 'text-orange-600' },
-    { path: '/monitor/subject', label: 'Monitor วิชา', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', color: 'text-indigo-600' },
-    { path: '/admin/qrcode', label: 'สร้าง QR', icon: 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z', color: 'text-pink-600' }
+  // วิชาในปีปัจจุบัน (ถ้ารู้ปี)
+  const yearSubjects = Array.isArray(subjects)
+    ? subjects.filter((s) => !year?.id || s.academicYearId === year.id)
+    : [];
+  const subjectByName = new Map(yearSubjects.map((s) => [s.subjectName, s]));
+  const subjectById = new Map(yearSubjects.map((s) => [s.id, s]));
+
+  // รวมสถิติรายงาน → รายวิชา
+  const bySubject = new Map();
+  statistics.forEach((t) => {
+    const key = t.subjectId != null ? `id:${t.subjectId}` : `name:${t.subjectName}`;
+    const row = bySubject.get(key) || { name: t.subjectName, subjectId: t.subjectId, tasks: 0, done: 0, total: 0, pending: 0 };
+    row.tasks += 1;
+    row.total += t.total || 0;
+    row.done += (t.total || 0) - (t.notSubmitted || 0);
+    row.pending += t.pending || 0;
+    bySubject.set(key, row);
+  });
+  const subjectRows = [...bySubject.values()]
+    .map((r) => ({ ...r, subject: r.subjectId != null ? subjectById.get(r.subjectId) : subjectByName.get(r.name), rate: r.total ? r.done / r.total : 1 }))
+    .filter((r) => !year?.id || r.subject)
+    .sort((a, b) => a.rate - b.rate || (b.total - b.done) - (a.total - a.done));
+
+  const yearClasses = Array.isArray(classes) ? classes.filter((c) => !year?.id || c.academicYearId === year.id) : null;
+  const classCount = yearClasses ? yearClasses.length : null;
+  const teachersNoSubject = Array.isArray(teachers)
+    ? teachers.filter((t) => t.status !== 'INACTIVE' && !(t.subjects || []).some((s) => !year?.id || s.academicYearId === year.id)).length
+    : null;
+  const subjectsNoTask = yearSubjects.filter((s) => (s._count?.tasks || 0) === 0).length;
+  const subjectsNoQR = yearSubjects.filter((s) => (s._count?.tasks || 0) > 0 && (s._count?.qrcodes || 0) === 0).length;
+
+  const health = [
+    {
+      ok: !!year, path: '/admin/academic-years', label: 'ปีการศึกษาปัจจุบัน',
+      detail: year ? year.name : 'ยังไม่ได้ตั้งปีปัจจุบัน'
+    },
+    {
+      ok: classCount > 0, path: '/admin/classes', label: 'ห้องเรียน',
+      detail: classCount === null ? 'ตรวจไม่ได้' : classCount > 0 ? `${fmt(classCount)} ห้อง` : 'ยังไม่มีห้องเรียน'
+    },
+    {
+      ok: (counts.students || 0) > 0, path: '/admin/import', label: 'รายชื่อนักเรียน',
+      detail: counts.students ? `${fmt(counts.students)} คน` : 'ยังไม่ได้นำเข้า'
+    },
+    {
+      ok: teachersNoSubject === 0, path: '/admin/subjects', label: 'ครูมีวิชาสอน',
+      detail: teachersNoSubject === null ? 'ตรวจไม่ได้' : teachersNoSubject === 0 ? `ครบทั้ง ${fmt(counts.teachers)} คน` : `${fmt(teachersNoSubject)} คนยังไม่มีวิชา`
+    },
+    {
+      ok: yearSubjects.length > 0 && subjectsNoTask === 0, path: '/admin/tasks', label: 'วิชามีงาน',
+      detail: yearSubjects.length === 0 ? 'ยังไม่มีวิชา' : subjectsNoTask === 0 ? `ครบทั้ง ${fmt(yearSubjects.length)} วิชา` : `${fmt(subjectsNoTask)} วิชายังไม่มีงาน`
+    },
+    {
+      ok: yearSubjects.length > 0 && subjectsNoQR === 0, path: '/admin/qrcode', label: 'QR Code',
+      detail: yearSubjects.length === 0 ? 'ยังไม่มีวิชา' : subjectsNoQR === 0 ? 'สร้างครบทุกวิชาที่มีงาน' : `${fmt(subjectsNoQR)} วิชายังไม่ได้สร้าง`
+    }
+  ];
+  const healthIssues = health.filter((h) => !h.ok).length;
+
+  const numbers = [
+    { to: '/monitor', label: 'ส่งงานแล้ว', value: `${pct(submitted, expected)}%`, sub: `${fmt(submitted)}/${fmt(expected)} ชิ้น` },
+    { to: '/monitor', label: 'รอครูตรวจ', value: fmt(sub.pending), sub: `ผ่านแล้ว ${fmt(sub.approved)} · ให้แก้ ${fmt(sub.rejected)}` },
+    { to: '/admin/students', label: 'นักเรียน', value: fmt(counts.students), sub: classCount !== null ? `ใน ${fmt(classCount)} ห้อง` : 'คน' },
+    { to: '/admin/subjects', label: 'วิชา', value: fmt(yearSubjects.length || counts.subjects), sub: `ครู ${fmt(counts.teachers)} คน · งาน ${fmt(counts.tasks)} ชิ้น` }
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Dashboard ผู้บริหาร</h1>
+      <header>
+        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมโรงเรียน</h1>
+        <p className="text-sm text-gray-500">{year ? year.name : 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน'}</p>
+      </header>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button type="button" onClick={load} className="min-h-[44px] px-4 rounded-lg border border-red-300 text-sm font-medium hover:bg-red-100">ลองใหม่</button>
         </div>
       )}
 
-      {/* Main Stats Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Overview Summary Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">ภาพรวมระบบ</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-3xl font-bold text-blue-600">{overview?.counts?.students || 0}</div>
-              <div className="text-sm text-gray-500">นักเรียน</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-3xl font-bold text-green-600">{overview?.counts?.teachers || 0}</div>
-              <div className="text-sm text-gray-500">ครู</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-3xl font-bold text-purple-600">{overview?.counts?.subjects || 0}</div>
-              <div className="text-sm text-gray-500">วิชา</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-3xl font-bold text-orange-600">{overview?.counts?.tasks || 0}</div>
-              <div className="text-sm text-gray-500">งาน</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Approval Rate Ring */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">อัตราผ่านงาน</h2>
-          <div className="flex items-center justify-center">
-            <ProgressRing
-              progress={overview?.submissionRate || 0}
-              size={140}
-              strokeWidth={12}
-              color={
-                (overview?.submissionRate || 0) >= 80 ? '#10B981' :
-                (overview?.submissionRate || 0) >= 50 ? '#F59E0B' : '#EF4444'
-              }
-            />
-          </div>
-          <div className="text-center mt-4">
-            <p className="text-sm text-gray-500">
-              จากงานที่ส่งทั้งหมด {(overview?.submissions?.approved || 0) + (overview?.submissions?.rejected || 0) + (overview?.submissions?.pending || 0)} ชิ้น
-            </p>
-          </div>
-        </div>
-
-        {/* Submission Breakdown */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">สถานะการส่งงาน</h2>
-          <HorizontalBar
-            value={overview?.submissions?.approved || 0}
-            max={totalSubmissions}
-            color="#10B981"
-            label="ผ่าน"
-            count={overview?.submissions?.approved || 0}
-          />
-          <HorizontalBar
-            value={overview?.submissions?.pending || 0}
-            max={totalSubmissions}
-            color="#F59E0B"
-            label="รอตรวจ"
-            count={overview?.submissions?.pending || 0}
-          />
-          <HorizontalBar
-            value={overview?.submissions?.rejected || 0}
-            max={totalSubmissions}
-            color="#EF4444"
-            label="ไม่ผ่าน"
-            count={overview?.submissions?.rejected || 0}
-          />
-          <HorizontalBar
-            value={overview?.submissions?.notSubmitted || 0}
-            max={totalSubmissions}
-            color="#9CA3AF"
-            label="ยังไม่ส่ง"
-            count={overview?.submissions?.notSubmitted || 0}
-          />
-        </div>
-      </div>
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-        {quickLinks.map((link) => (
-          <Link
-            key={link.path}
-            to={link.path}
-            className="bg-white rounded-lg shadow p-4 hover:shadow-lg hover:scale-105 transition-all flex flex-col items-center text-center"
-          >
-            <svg className={`w-8 h-8 ${link.color} mb-2`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={link.icon} />
-            </svg>
-            <span className="text-xs text-gray-700">{link.label}</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {numbers.map((n) => (
+          <Link key={n.label} to={n.to} className="bg-white rounded-xl shadow p-4 hover:ring-2 hover:ring-brand-300 focus-visible:ring-2 focus-visible:ring-brand-500 outline-none">
+            <div className="text-sm text-gray-600">{n.label}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-gray-800 tabular-nums">{n.value}</div>
+            <div className="text-xs text-gray-500 mt-1">{n.sub}</div>
           </Link>
         ))}
       </div>
 
-      {/* Task Statistics - Visual Cards */}
-      {statistics.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-800">งานที่ต้องติดตาม</h2>
-            <p className="text-sm text-gray-500">งานที่มีอัตราผ่านต่ำกว่า 80%</p>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {statistics
-                .filter(stat => parseFloat(stat.approvalRate) < 80)
-                .slice(0, 6)
-                .map((stat) => {
-                  const rate = parseFloat(stat.approvalRate);
-                  const rateColor = rate >= 60 ? '#F59E0B' : '#EF4444';
-                  const bgColor = rate >= 60 ? 'bg-yellow-50' : 'bg-red-50';
-
-                  return (
-                    <div key={stat.taskId} className={`${bgColor} rounded-lg p-4`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 truncate flex-1">
-                          {stat.subjectName}
-                        </span>
-                        <span
-                          className="text-lg font-bold ml-2"
-                          style={{ color: rateColor }}
-                        >
-                          {stat.approvalRate}%
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 mb-2">
-                        งาน {stat.taskNumber}: {stat.taskName}
-                      </div>
-                      <div className="flex gap-3 text-xs">
-                        <span className="text-green-600">ผ่าน {stat.approved}</span>
-                        <span className="text-red-600">ไม่ผ่าน {stat.rejected}</span>
-                        <span className="text-gray-400">ยังไม่ส่ง {stat.notSubmitted}</span>
-                      </div>
-                      {/* Mini progress bar */}
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{ width: `${rate}%`, backgroundColor: rateColor }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-
-            {statistics.filter(stat => parseFloat(stat.approvalRate) < 80).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <svg className="w-12 h-12 mx-auto text-green-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                ทุกงานมีอัตราผ่านมากกว่า 80%
-              </div>
-            )}
-
-            {statistics.filter(stat => parseFloat(stat.approvalRate) < 80).length > 6 && (
-              <div className="text-center mt-4">
-                <Link
-                  to="/monitor/subject"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  ดูเพิ่มเติม ({statistics.filter(stat => parseFloat(stat.approvalRate) < 80).length - 6} รายการ) &rarr;
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* All Tasks Summary Table - Collapsed by default */}
-      {statistics.length > 0 && (
-        <details className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 flex items-center justify-between">
+      <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <section className="bg-white rounded-xl shadow overflow-hidden lg:col-span-2">
+          <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 inline">สถิติการส่งงานทั้งหมด</h2>
-              <span className="text-sm text-gray-500 ml-2">({statistics.length} รายการ)</span>
+              <h2 className="text-lg font-semibold text-gray-800">วิชาที่ต้องติดตาม</h2>
+              <p className="text-xs text-gray-500">เรียงจากวิชาที่ส่งน้อยที่สุด</p>
             </div>
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </summary>
-          <div className="overflow-x-auto border-t">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">วิชา</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">งาน</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">ผ่าน</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">ไม่ผ่าน</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">ยังไม่ส่ง</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">อัตราผ่าน</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {statistics.map((stat) => (
-                  <tr key={stat.taskId} className="hover:bg-gray-50">
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900">{stat.subjectName}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">งาน {stat.taskNumber}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-green-600 font-medium">{stat.approved}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-red-600 font-medium">{stat.rejected}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-400">{stat.notSubmitted}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full"
-                            style={{
-                              width: `${stat.approvalRate}%`,
-                              backgroundColor: parseFloat(stat.approvalRate) >= 80 ? '#10B981' :
-                                parseFloat(stat.approvalRate) >= 50 ? '#F59E0B' : '#EF4444'
-                            }}
-                          />
-                        </div>
-                        <span className={`font-medium ${
-                          parseFloat(stat.approvalRate) >= 80 ? 'text-green-600' :
-                          parseFloat(stat.approvalRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {stat.approvalRate}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Link to="/monitor" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">ดูทั้งหมด &rarr;</Link>
           </div>
-        </details>
-      )}
+          {subjectRows.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <p className="text-gray-500">ยังไม่มีวิชาที่มีงาน</p>
+              <Link to="/admin/tasks" className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-600 hover:text-brand-800">เพิ่มงานให้วิชา &rarr;</Link>
+            </div>
+          ) : (
+            <ul className="divide-y">
+              {subjectRows.slice(0, 6).map((r) => {
+                const p = pct(r.done, r.total);
+                const missing = r.total - r.done;
+                const to = r.subject
+                  ? `/monitor?mode=subject${r.subject.academicYearId ? `&ay=${r.subject.academicYearId}` : ''}&subject=${r.subject.id}`
+                  : '/monitor';
+                return (
+                  <li key={r.subjectId ?? r.name}>
+                    <Link to={to} className="flex items-center gap-3 px-4 sm:px-6 py-3 min-h-[44px] hover:bg-gray-50">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-medium text-gray-800 truncate">{r.name}</span>
+                          <span className="text-sm text-gray-600 shrink-0 tabular-nums">ส่ง {fmt(r.done)}/{fmt(r.total)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {r.subject?.teacher?.name || 'ยังไม่มีครูผู้สอน'} · {fmt(r.tasks)} งาน
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <div className="h-2 flex-1 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={p} aria-valuemin={0} aria-valuemax={100}>
+                            <div className="h-full bg-brand-500 rounded-full" style={{ width: `${Math.min(100, p)}%` }} />
+                          </div>
+                          <span className={`text-xs shrink-0 tabular-nums ${missing > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                            {missing > 0 ? `ขาด ${fmt(missing)}` : 'ครบ'}
+                          </span>
+                        </div>
+                      </div>
+                      <Chevron />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">ความพร้อมของระบบ</h2>
+              <p className="text-xs text-gray-500">{healthIssues === 0 ? 'พร้อมใช้งานครบทุกข้อ' : `ต้องแก้ ${healthIssues} ข้อ`}</p>
+            </div>
+            <Link to="/admin/settings" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">ตั้งค่า &rarr;</Link>
+          </div>
+          <ul className="divide-y">
+            {health.map((h) => (
+              <li key={h.label}>
+                <Link to={h.path} className="flex items-center gap-3 px-4 sm:px-6 py-3 min-h-[44px] hover:bg-gray-50">
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${h.ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                    aria-label={h.ok ? 'พร้อม' : 'ต้องแก้'}
+                  >
+                    {h.ok ? '✓' : '!'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-gray-800">{h.label}</div>
+                    <div className={`text-xs truncate ${h.ok ? 'text-gray-500' : 'text-amber-700'}`}>{h.detail}</div>
+                  </div>
+                  <Chevron />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 };

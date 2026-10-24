@@ -18,10 +18,10 @@ const Dashboard = () => {
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">
-          ยินดีต้อนรับสู่ระบบ SNT
+          ยินดีต้อนรับสู่ KruScan
         </h1>
         <p className="text-gray-600">
-          ระบบติดตามสมุดนักเรียนผ่าน QR Code
+          สแกนสมุด รู้ทันทีใครส่งงานแล้ว
         </p>
       </div>
     </div>
