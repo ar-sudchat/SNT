@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../../i18n';
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import PageHeader from '../../../components/ui/PageHeader';
@@ -60,29 +61,25 @@ const PendingReport = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <PageHeader title="นักเรียนค้างส่งงาน" subtitle="รวมงานที่ยังไม่ส่งและไม่ผ่าน">
+      <PageHeader title={t("นักเรียนค้างส่งงาน")} subtitle={t("รวมงานที่ยังไม่ส่งและไม่ผ่าน")}>
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          พิมพ์รายงาน
-        </button>
+          </svg>{t("พิมพ์รายงาน")}</button>
       </PageHeader>
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow p-4 print:hidden">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          กรองตามห้องเรียน
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{t("กรองตามห้องเรียน")}</label>
         <SmartComboBox
-          options={[{ value: '', label: 'ทั้งหมด' }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
+          options={[{ value: '', label: t('ทั้งหมด') }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
           value={selectedClass}
           onChange={(v) => setSelectedClass(v ?? '')}
           clearable={false}
-          ariaLabel="กรองตามห้องเรียน"
+          ariaLabel={t("กรองตามห้องเรียน")}
           className="w-full sm:w-64"
         />
       </div>
@@ -97,11 +94,11 @@ const PendingReport = () => {
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">{Object.keys(groupedByStudent).length}</div>
-            <div className="text-sm text-red-600">นักเรียนที่มีงานค้าง</div>
+            <div className="text-sm text-red-600">{t("นักเรียนที่มีงานค้าง")}</div>
           </div>
           <div className="ml-0 sm:ml-8">
             <div className="text-2xl font-bold text-red-600">{filteredSubmissions.length}</div>
-            <div className="text-sm text-red-600">งานที่ยังไม่ส่ง/ไม่ผ่าน</div>
+            <div className="text-sm text-red-600">{t("งานที่ยังไม่ส่ง/ไม่ผ่าน")}</div>
           </div>
         </div>
       </div>
@@ -116,9 +113,7 @@ const PendingReport = () => {
                   <h3 className="font-semibold text-gray-900">{student.name}</h3>
                   <p className="text-sm text-gray-500">{student.studentCode} - {student.class?.className}</p>
                 </div>
-                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-                  ค้าง {tasks.length} งาน
-                </span>
+                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">{t("ค้าง {value1} งาน", { value1: tasks.length })}</span>
               </div>
             </div>
             <div className="p-4">
@@ -130,7 +125,7 @@ const PendingReport = () => {
                       <span className="ml-2 text-sm text-gray-500">({task.subject?.subjectName})</span>
                     </div>
                     <span className="text-xs text-gray-400">
-                      {task.deadline ? `กำหนดส่ง: ${new Date(task.deadline).toLocaleDateString('th-TH')}` : 'ไม่มีกำหนด'}
+                      {task.deadline ? t("กำหนดส่ง: {value1}", { value1: new Date(task.deadline).toLocaleDateString(dateLocale()) }) : t('ไม่มีกำหนด')}
                     </span>
                   </div>
                 ))}
@@ -144,8 +139,8 @@ const PendingReport = () => {
             <svg className="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900">ไม่มีนักเรียนค้างส่งงาน</h3>
-            <p className="text-gray-500">นักเรียนทุกคนส่งงานครบแล้ว</p>
+            <h3 className="text-lg font-medium text-gray-900">{t("ไม่มีนักเรียนค้างส่งงาน")}</h3>
+            <p className="text-gray-500">{t("นักเรียนทุกคนส่งงานครบแล้ว")}</p>
           </div>
         )}
       </div>

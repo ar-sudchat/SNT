@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState } from 'react';
 import { importAPI, aiAPI } from '../../services/api';
 import { ConfirmDialog } from '../../components/ui';
@@ -61,13 +62,13 @@ const DataImport = () => {
   };
 
   const importTypes = [
-    { value: 'academicYear', label: 'ปีการศึกษา (Academic Year)', description: 'นำเข้าข้อมูลปีการศึกษา เช่น 2567, 2568' },
-    { value: 'grade', label: 'ชั้นปี (Grade)', description: 'นำเข้าข้อมูลชั้นปี เช่น ม.1, ม.2, ม.3' },
-    { value: 'teacher', label: 'ครู (Teacher)', description: 'นำเข้าข้อมูลครู' },
-    { value: 'class', label: 'ห้องเรียน (Class)', description: 'นำเข้าข้อมูลห้องเรียน (ต้องมีชั้นปีและครูก่อน)' },
-    { value: 'student', label: 'นักเรียน (Student)', description: 'นำเข้าข้อมูลนักเรียน (ต้องมีห้องเรียนก่อน)' },
-    { value: 'subject', label: 'วิชา (Subject)', description: 'นำเข้าข้อมูลวิชา (ต้องมีครูก่อน)' },
-    { value: 'task', label: 'งาน (Task)', description: 'นำเข้าข้อมูลงาน (ต้องมีวิชาก่อน)' }
+    { value: 'academicYear', label: t('ปีการศึกษา (Academic Year)'), description: t('นำเข้าข้อมูลปีการศึกษา เช่น 2567, 2568') },
+    { value: 'grade', label: t('ชั้นปี (Grade)'), description: t('นำเข้าข้อมูลชั้นปี เช่น ม.1, ม.2, ม.3') },
+    { value: 'teacher', label: t('ครู (Teacher)'), description: t('นำเข้าข้อมูลครู') },
+    { value: 'class', label: t('ห้องเรียน (Class)'), description: t('นำเข้าข้อมูลห้องเรียน (ต้องมีชั้นปีและครูก่อน)') },
+    { value: 'student', label: t('นักเรียน (Student)'), description: t('นำเข้าข้อมูลนักเรียน (ต้องมีห้องเรียนก่อน)') },
+    { value: 'subject', label: t('วิชา (Subject)'), description: t('นำเข้าข้อมูลวิชา (ต้องมีครูก่อน)') },
+    { value: 'task', label: t('งาน (Task)'), description: t('นำเข้าข้อมูลงาน (ต้องมีวิชาก่อน)') }
   ];
 
   const handleDownloadTemplate = async (type) => {
@@ -81,7 +82,7 @@ const DataImport = () => {
       link.click();
       link.remove();
     } catch (err) {
-      showAlert('danger', 'ดาวน์โหลดไม่สำเร็จ', err?.response?.status === 403 ? 'เฉพาะผู้ดูแลระบบ' : 'โหลดไฟล์ตัวอย่างไม่ได้ ลองใหม่อีกครั้ง');
+      showAlert('danger', t('ดาวน์โหลดไม่สำเร็จ'), err?.response?.status === 403 ? t('เฉพาะผู้ดูแลระบบ') : t('โหลดไฟล์ตัวอย่างไม่ได้ ลองใหม่อีกครั้ง'));
     }
   };
 
@@ -97,7 +98,7 @@ const DataImport = () => {
 
   const handleImport = async () => {
     if (!selectedType || !file) {
-      showAlert('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกประเภทข้อมูลและไฟล์');
+      showAlert('warning', t('ข้อมูลไม่ครบ'), t('กรุณาเลือกประเภทข้อมูลและไฟล์'));
       return;
     }
 
@@ -140,14 +141,14 @@ const DataImport = () => {
       const failedCount = response.data.results?.failed?.length || 0;
 
       if (failedCount === 0 && successCount > 0) {
-        showAlert('success', 'นำเข้าสำเร็จ', response.data.message);
+        showAlert('success', t('นำเข้าสำเร็จ'), response.data.message);
       } else if (successCount > 0 && failedCount > 0) {
-        showAlert('warning', 'นำเข้าบางส่วน', response.data.message);
+        showAlert('warning', t('นำเข้าบางส่วน'), response.data.message);
       } else if (successCount === 0) {
-        showAlert('danger', 'นำเข้าไม่สำเร็จ', 'ไม่สามารถนำเข้าข้อมูลได้ กรุณาตรวจสอบไฟล์');
+        showAlert('danger', t('นำเข้าไม่สำเร็จ'), t('ไม่สามารถนำเข้าข้อมูลได้ กรุณาตรวจสอบไฟล์'));
       }
     } catch (err) {
-      showAlert('danger', 'เกิดข้อผิดพลาด', err.response?.data?.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+      showAlert('danger', t('เกิดข้อผิดพลาด'), err.response?.data?.error || t('เกิดข้อผิดพลาดในการนำเข้าข้อมูล'));
     } finally {
       setLoading(false);
     }
@@ -177,7 +178,7 @@ const DataImport = () => {
       });
       setAiAdvice(response.data.advice || '');
     } catch (err) {
-      setAiError(err.response?.data?.error || 'ไม่สามารถขอคำแนะนำจาก AI ได้ กรุณาลองใหม่อีกครั้ง');
+      setAiError(err.response?.data?.error || t('ไม่สามารถขอคำแนะนำจาก AI ได้ กรุณาลองใหม่อีกครั้ง'));
     } finally {
       setAiLoading(false);
     }
@@ -185,19 +186,19 @@ const DataImport = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="นำเข้าข้อมูล" />
+      <PageHeader title={t("นำเข้าข้อมูล")} />
 
       <section className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4">
-        <h2 className="text-lg font-semibold">นำเข้ารายชื่อนักเรียน (แนะนำ)</h2>
+        <h2 className="text-lg font-semibold">{t("นำเข้ารายชื่อนักเรียน (แนะนำ)")}</h2>
         <SmartImport />
       </section>
 
       <div className="space-y-6">
-      <h2 className="text-lg font-semibold pt-2">นำเข้าแบบแม่แบบ (ขั้นสูง)</h2>
+      <h2 className="text-lg font-semibold pt-2">{t("นำเข้าแบบแม่แบบ (ขั้นสูง)")}</h2>
       {/* ขั้น 1: เลือกประเภท */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h2 className="text-lg font-semibold mb-1">1. เลือกประเภทข้อมูล</h2>
-        <p className="text-xs text-gray-500 mb-4">ลำดับที่แนะนำ: ปีการศึกษา → ชั้นปี → ครู → ห้องเรียน → นักเรียน → วิชา → งาน</p>
+        <h2 className="text-lg font-semibold mb-1">{t("1. เลือกประเภทข้อมูล")}</h2>
+        <p className="text-xs text-gray-500 mb-4">{t("ลำดับที่แนะนำ: ปีการศึกษา → ชั้นปี → ครู → ห้องเรียน → นักเรียน → วิชา → งาน")}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {importTypes.filter(type => canManage || type.value !== 'teacher').map((type) => (
             <button
@@ -222,17 +223,15 @@ const DataImport = () => {
 
       {/* ขั้น 2: ตัวอย่าง + เลือกไฟล์ */}
       <div className={`bg-white rounded-lg shadow p-4 sm:p-6 ${selectedType ? '' : 'opacity-50 pointer-events-none'}`}>
-        <h2 className="text-lg font-semibold mb-1">2. โหลดไฟล์ตัวอย่าง แล้วเลือกไฟล์</h2>
-        <p className="text-xs text-gray-500 mb-4">หัวคอลัมน์ต้องตรงกับไฟล์ตัวอย่าง ไม่ต้องลบหรือเปลี่ยนชื่อหัวคอลัมน์</p>
+        <h2 className="text-lg font-semibold mb-1">{t("2. โหลดไฟล์ตัวอย่าง แล้วเลือกไฟล์")}</h2>
+        <p className="text-xs text-gray-500 mb-4">{t("หัวคอลัมน์ต้องตรงกับไฟล์ตัวอย่าง ไม่ต้องลบหรือเปลี่ยนชื่อหัวคอลัมน์")}</p>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             type="button"
             onClick={() => handleDownloadTemplate(selectedType)}
             disabled={!selectedType}
             className="px-4 py-2 min-h-[44px] border border-brand-600 text-brand-600 rounded-lg hover:bg-brand-50 disabled:opacity-50"
-          >
-            โหลดไฟล์ตัวอย่าง
-          </button>
+          >{t("โหลดไฟล์ตัวอย่าง")}</button>
           <input
             type="file"
             accept=".csv,.xlsx,.xls,.json"
@@ -245,14 +244,14 @@ const DataImport = () => {
             htmlFor="file-upload"
             className="flex-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-lg px-4 py-2 min-h-[44px] flex items-center justify-center text-sm text-brand-600 hover:border-brand-400"
           >
-            {file ? <span className="text-green-700 break-all">{file.name}</span> : <span className="flex items-center gap-2"><ImportFile className="h-8 w-auto text-brand-500 shrink-0" />เลือกไฟล์ (CSV, Excel, JSON)</span>}
+            {file ? <span className="text-green-700 break-all">{file.name}</span> : <span className="flex items-center gap-2"><ImportFile className="h-8 w-auto text-brand-500 shrink-0" />{t("เลือกไฟล์ (CSV, Excel, JSON)")}</span>}
           </label>
         </div>
       </div>
 
       {/* ขั้น 3: นำเข้า */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h2 className="text-lg font-semibold mb-4">3. นำเข้า</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("3. นำเข้า")}</h2>
         <button
           onClick={handleImport}
           disabled={loading || !selectedType || !file}
@@ -263,11 +262,9 @@ const DataImport = () => {
               <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              กำลังนำเข้า...
-            </span>
+              </svg>{t("กำลังนำเข้า...")}</span>
           ) : (
-            'นำเข้าข้อมูล'
+            t('นำเข้าข้อมูล')
           )}
         </button>
       </div>
@@ -275,23 +272,23 @@ const DataImport = () => {
       {/* Result */}
       {result && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h2 className="text-lg font-semibold mb-4">ผลลัพธ์</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("ผลลัพธ์")}</h2>
           <p className="text-green-600 mb-4">{result.message}</p>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-green-50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{result.results?.success?.length || 0}</div>
-              <div className="text-sm text-gray-500">สำเร็จ</div>
+              <div className="text-sm text-gray-500">{t("สำเร็จ")}</div>
             </div>
             <div className="bg-red-50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-red-600">{result.results?.failed?.length || 0}</div>
-              <div className="text-sm text-gray-500">ล้มเหลว</div>
+              <div className="text-sm text-gray-500">{t("ล้มเหลว")}</div>
             </div>
           </div>
 
           {result.results?.failed?.length > 0 && (
             <div className="mt-4">
-              <h3 className="font-medium text-red-600 mb-2">รายการที่ล้มเหลว:</h3>
+              <h3 className="font-medium text-red-600 mb-2">{t("รายการที่ล้มเหลว:")}</h3>
               <div className="bg-red-50 rounded-lg p-4 max-h-60 overflow-y-auto">
                 {result.results.failed.map((item, index) => (
                   <div key={index} className="text-sm text-red-700 mb-1 break-words">
@@ -306,7 +303,7 @@ const DataImport = () => {
                   disabled={aiLoading}
                   className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                 >
-                  {aiLoading ? 'AI กำลังตรวจสอบ...' : 'ให้ AI ช่วยดูปัญหา'}
+                  {aiLoading ? t('AI กำลังตรวจสอบ...') : t('ให้ AI ช่วยดูปัญหา')}
                 </button>
               </div>
               {aiError && (
@@ -314,9 +311,9 @@ const DataImport = () => {
               )}
               {aiAdvice && (
                 <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <h3 className="font-medium text-purple-800 mb-2">คำแนะนำจาก AI</h3>
+                  <h3 className="font-medium text-purple-800 mb-2">{t("คำแนะนำจาก AI")}</h3>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{aiAdvice}</p>
-                  <p className="mt-3 text-xs text-gray-500">AI อาจผิดพลาด ควรตรวจสอบก่อนใช้</p>
+                  <p className="mt-3 text-xs text-gray-500">{t("AI อาจผิดพลาด ควรตรวจสอบก่อนใช้")}</p>
                 </div>
               )}
             </div>
@@ -331,7 +328,7 @@ const DataImport = () => {
         onClose={() => setAlert({ ...alert, show: false })}
         title={alert.title}
         message={alert.message}
-        confirmText="ตกลง"
+        confirmText={t("ตกลง")}
         type={alert.type}
         mode="alert"
       />

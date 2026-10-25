@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
@@ -65,8 +66,8 @@ const SmartTable = ({
   getRowId,
   bulkActions,
   actions,
-  emptyMessage = 'ไม่พบข้อมูล',
-  searchPlaceholder = 'ค้นหา...',
+  emptyMessage = t('ไม่พบข้อมูล'),
+  searchPlaceholder = t('ค้นหา...'),
   className = '',
   stickyHeader = true,
   preservePageOnReload = true,
@@ -316,7 +317,7 @@ const SmartTable = ({
   };
 
   const flash = (msg) => { setToast(msg); setTimeout(() => setToast(''), 1800); };
-  const copyText = async (text, msg = 'คัดลอกแล้ว') => {
+  const copyText = async (text, msg = t('คัดลอกแล้ว')) => {
     try {
       await navigator.clipboard.writeText(text);
     } catch (e) {
@@ -382,13 +383,13 @@ const SmartTable = ({
     <div className="flex flex-col items-center gap-3 text-center">
       {searchTerm ? (
         <>
-          <span className="text-gray-500">ไม่พบ ลองค้นหาคำอื่น</span>
-          <button type="button" onClick={() => { setSearchTerm(''); setMobileLimit(50); }} className="min-h-[44px] px-4 text-brand-600 text-sm hover:text-brand-700">ล้างการค้นหา</button>
+          <span className="text-gray-500">{t("ไม่พบ ลองค้นหาคำอื่น")}</span>
+          <button type="button" onClick={() => { setSearchTerm(''); setMobileLimit(50); }} className="min-h-[44px] px-4 text-brand-600 text-sm hover:text-brand-700">{t("ล้างการค้นหา")}</button>
         </>
       ) : activeFilterCount > 0 && onClearFilters ? (
         <>
-          <span className="text-gray-500">ไม่พบ ลองล้างตัวกรอง</span>
-          <button type="button" onClick={onClearFilters} className="min-h-[44px] px-4 text-brand-600 text-sm hover:text-brand-700">ล้างตัวกรอง</button>
+          <span className="text-gray-500">{t("ไม่พบ ลองล้างตัวกรอง")}</span>
+          <button type="button" onClick={onClearFilters} className="min-h-[44px] px-4 text-brand-600 text-sm hover:text-brand-700">{t("ล้างตัวกรอง")}</button>
         </>
       ) : (
         <>
@@ -414,12 +415,12 @@ const SmartTable = ({
               {title && <h3 className="text-lg font-semibold text-gray-800">{title}</h3>}
               <p className="text-sm text-gray-500" aria-live="polite">
                 {loading && paginatedData.length === 0
-                  ? 'กำลังโหลด...'
+                  ? t('กำลังโหลด...')
                   : (searchTerm || activeFilterCount > 0)
-                    ? `พบ ${sortedData.length} รายการ${loading ? ' (กำลังอัพเดต...)' : ''}`
+                    ? t("พบ {length} รายการ{value2}", { length: sortedData.length, value2: loading ? t(' (กำลังอัพเดต...)') : '' })
                     : mobileData.length < sortedData.length
-                      ? <><span className="md:hidden">{`แสดง ${mobileData.length} จาก ${sortedData.length} รายการ`}</span></>
-                      : loading ? 'กำลังอัพเดต...' : null}
+                      ? <><span className="md:hidden">{t("แสดง {length} จาก {length1} รายการ", { length: mobileData.length, length1: sortedData.length })}</span></>
+                      : loading ? t('กำลังอัพเดต...') : null}
               </p>
             </div>
           )}
@@ -465,8 +466,7 @@ const SmartTable = ({
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18l-7 8v6l-4 2v-8L3 4z" />
-                </svg>
-                ตัวกรอง{activeFilterCount > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-xs text-white">{activeFilterCount}</span>}
+                </svg>{t("ตัวกรอง")}{activeFilterCount > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-xs text-white">{activeFilterCount}</span>}
               </button>
             )}
 
@@ -476,7 +476,7 @@ const SmartTable = ({
                 <button
                   type="button"
                   onClick={() => setMenuOpen(o => !o)}
-                  aria-label="เมนูเพิ่มเติม"
+                  aria-label={t("เมนูเพิ่มเติม")}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-100"
@@ -490,13 +490,13 @@ const SmartTable = ({
                     <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} aria-hidden="true" />
                     <div role="menu" className="absolute right-0 z-30 mt-1 w-60 rounded-lg border bg-white py-1 shadow-lg">
                       {[
-                        { label: `ดาวน์โหลด Excel (${sortedData.length} แถว)`, run: () => handleExport() },
-                        { label: 'ดาวน์โหลด CSV', run: () => handleExportCsv() },
-                        selectedCount > 0 && { label: `ดาวน์โหลด Excel เฉพาะที่เลือก (${selectedCount})`, run: () => handleExport(selectedList) },
+                        { label: t("ดาวน์โหลด Excel ({length} แถว)", { length: sortedData.length }), run: () => handleExport() },
+                        { label: t('ดาวน์โหลด CSV'), run: () => handleExportCsv() },
+                        selectedCount > 0 && { label: t("ดาวน์โหลด Excel เฉพาะที่เลือก ({selectedCount})", { selectedCount: selectedCount }), run: () => handleExport(selectedList) },
                         { sep: true },
-                        { label: 'คัดลอกทั้งตาราง (วางใน Excel ได้)', run: () => copyText(rowsToTsv(sortedData, true), `คัดลอก ${sortedData.length} แถวแล้ว`) },
-                        { label: 'พิมพ์ตาราง', run: () => window.print(), desktop: true },
-                        { label: 'เลือกคอลัมน์ที่แสดง', run: () => setColPanel(true), desktop: true },
+                        { label: t('คัดลอกทั้งตาราง (วางใน Excel ได้)'), run: () => copyText(rowsToTsv(sortedData, true), t("คัดลอก {length} แถวแล้ว", { length: sortedData.length })) },
+                        { label: t('พิมพ์ตาราง'), run: () => window.print(), desktop: true },
+                        { label: t('เลือกคอลัมน์ที่แสดง'), run: () => setColPanel(true), desktop: true },
                       ].filter(Boolean).map((item, i) => (item.sep
                         ? <div key={i} className="my-1 border-t" role="separator" />
                         : (
@@ -530,7 +530,7 @@ const SmartTable = ({
           <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
-              <span className="text-gray-600 text-sm">กำลังโหลด...</span>
+              <span className="text-gray-600 text-sm">{t("กำลังโหลด...")}</span>
             </div>
           </div>
         )}
@@ -542,7 +542,7 @@ const SmartTable = ({
                 <th className={`w-12 px-4 py-3 print:hidden ${stickyHeader ? 'sticky top-0 z-10 bg-th' : ''}`}>
                   <input
                     type="checkbox"
-                    aria-label="เลือกทั้งหมดในหน้านี้"
+                    aria-label={t("เลือกทั้งหมดในหน้านี้")}
                     checked={isAllSelected}
                     ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
                     disabled={bulkBusy || paginatedData.length === 0}
@@ -568,7 +568,7 @@ const SmartTable = ({
                   onClick={() => col.sortable && handleSort(col.key)}
                 >
                   <div className="flex flex-nowrap items-center gap-1">
-                    <span className="whitespace-nowrap">{col.label}</span>
+                    <span className="whitespace-nowrap">{typeof col.label === 'string' ? t(col.label) : col.label}</span>
                     {col.sortable && (
                       <span className="flex flex-col">
                         <svg
@@ -600,7 +600,7 @@ const SmartTable = ({
                 <td colSpan={visibleColumns.length + (selectable ? 1 : 0) + (onRowClick ? 1 : 0) + (showRowNumber ? 1 : 0)} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
-                    <span className="text-gray-500">กำลังโหลดข้อมูล...</span>
+                    <span className="text-gray-500">{t("กำลังโหลดข้อมูล...")}</span>
                   </div>
                 </td>
               </tr>
@@ -631,7 +631,7 @@ const SmartTable = ({
                       <td className="w-12 px-4 py-3 print:hidden" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          aria-label="เลือกแถวนี้"
+                          aria-label={t("เลือกแถวนี้")}
                           checked={isSelected}
                           disabled={bulkBusy}
                           onChange={() => handleSelectRow(row)}
@@ -667,13 +667,11 @@ const SmartTable = ({
         <div className="md:hidden print:hidden p-3 space-y-3">
           {selectable && paginatedData.length > 0 && (
             <label className="flex min-h-[44px] items-center gap-3 text-sm">
-              <input type="checkbox" checked={isMobileAllSelected} disabled={bulkBusy} onChange={(e) => handleSelectAll(e.target.checked, mobileData)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
-              เลือกทั้งหมด
-            </label>
+              <input type="checkbox" checked={isMobileAllSelected} disabled={bulkBusy} onChange={(e) => handleSelectAll(e.target.checked, mobileData)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />{t("เลือกทั้งหมด")}</label>
           )}
           {paginatedData.length === 0 ? (
             <div className="py-12" role="status">
-              {loading ? <div className="text-center text-gray-500">กำลังโหลดข้อมูล...</div> : renderEmpty()}
+              {loading ? <div className="text-center text-gray-500">{t("กำลังโหลดข้อมูล...")}</div> : renderEmpty()}
             </div>
           ) : mobileData.map((row, rowIndex) => (
             <div
@@ -686,9 +684,7 @@ const SmartTable = ({
             >
               {selectable && (
                 <label className="flex min-h-[44px] min-w-[44px] items-center gap-3 text-sm" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedRows.has(idOf(row))} disabled={bulkBusy} onChange={() => handleSelectRow(row)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
-                  เลือก
-                </label>
+                  <input type="checkbox" checked={selectedRows.has(idOf(row))} disabled={bulkBusy} onChange={() => handleSelectRow(row)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />{t("เลือก")}</label>
               )}
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0 flex-1">
@@ -722,9 +718,7 @@ const SmartTable = ({
               type="button"
               onClick={() => setMobileLimit(l => l + 50)}
               className="w-full min-h-[44px] rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 active:bg-gray-100"
-            >
-              โหลดเพิ่ม ({sortedData.length - mobileData.length} รายการ)
-            </button>
+            >{t('โหลดเพิ่ม ({count} รายการ)', { count: sortedData.length - mobileData.length })}</button>
           )}
         </div>
       </div>
@@ -733,7 +727,7 @@ const SmartTable = ({
       {filters && (
         <WindowModal
           open={filterSheet}
-          title="ตัวกรอง"
+          title={t("ตัวกรอง")}
           onClose={() => setFilterSheet(false)}
           id="smart-table-filter"
           footer={
@@ -741,8 +735,7 @@ const SmartTable = ({
               type="button"
               onClick={() => setFilterSheet(false)}
               className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white"
-            >
-              ดูผลลัพธ์ ({sortedData.length})
+            >{t('ดูผลลัพธ์ ({count})', { count: sortedData.length })}
             </button>
           }
         >
@@ -756,32 +749,32 @@ const SmartTable = ({
           <div className="fixed inset-0 z-[60]" onClick={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }} aria-hidden="true" />
           <div
             role="menu"
-            aria-label="เมนูของแถว"
+            aria-label={t("เมนูของแถว")}
             className="fixed z-[61] w-64 rounded-lg border bg-white py-1 text-sm shadow-xl"
             style={{ left: Math.min(ctxMenu.x, window.innerWidth - 264), top: Math.min(ctxMenu.y, window.innerHeight - 420) }}
           >
             {(() => {
               const { row, col, cellText } = ctxMenu;
               const items = [
-                row && onRowClick && { label: 'เปิด', run: () => onRowClick(row), bold: true },
+                row && onRowClick && { label: t('เปิด'), run: () => onRowClick(row), bold: true },
                 ...(row && rowActions ? rowActions.filter(a => !a.show || a.show(row)).map(a => ({ label: a.label, run: () => a.onClick(row), danger: a.danger })) : []),
                 { sep: true },
-                cellText && { label: `คัดลอก "${cellText.length > 24 ? `${cellText.slice(0, 24)}…` : cellText}"`, run: () => copyText(cellText) },
-                row && { label: 'คัดลอกทั้งแถว', run: () => copyText(rowsToTsv([row], false)) },
-                row && cellText && searchable && { label: `ค้นหา "${cellText.length > 18 ? `${cellText.slice(0, 18)}…` : cellText}"`, run: () => { setSearchTerm(cellText); setCurrentPage(1); } },
-                searchTerm && { label: 'ล้างการค้นหา', run: () => setSearchTerm('') },
+                cellText && { label: t("คัดลอก \"{value1}\"", { value1: cellText.length > 24 ? `${cellText.slice(0, 24)}…` : cellText }), run: () => copyText(cellText) },
+                row && { label: t('คัดลอกทั้งแถว'), run: () => copyText(rowsToTsv([row], false)) },
+                row && cellText && searchable && { label: t("ค้นหา \"{value1}\"", { value1: cellText.length > 18 ? `${cellText.slice(0, 18)}…` : cellText }), run: () => { setSearchTerm(cellText); setCurrentPage(1); } },
+                searchTerm && { label: t('ล้างการค้นหา'), run: () => setSearchTerm('') },
                 { sep: true },
-                row && selectable && { label: selectedRows.has(idOf(row)) ? 'ไม่เลือกแถวนี้' : 'เลือกแถวนี้', run: () => handleSelectRow(row) },
-                selectable && { label: `เลือกทั้งหมด (${sortedData.length})`, run: handleSelectAllFiltered },
-                col && col.sortable && { label: `เรียง "${col.label}" น้อย → มาก`, run: () => setSortConfig({ key: col.key, direction: 'asc' }) },
-                col && col.sortable && { label: `เรียง "${col.label}" มาก → น้อย`, run: () => setSortConfig({ key: col.key, direction: 'desc' }) },
-                sortConfig.key && { label: 'ยกเลิกการเรียง', run: () => setSortConfig({ key: null, direction: 'asc' }) },
-                col && !row && { label: `ซ่อนคอลัมน์ "${col.label}"`, run: () => toggleCol(col.key) },
+                row && selectable && { label: selectedRows.has(idOf(row)) ? t('ไม่เลือกแถวนี้') : t('เลือกแถวนี้'), run: () => handleSelectRow(row) },
+                selectable && { label: t("เลือกทั้งหมด ({length})", { length: sortedData.length }), run: handleSelectAllFiltered },
+                col && col.sortable && { label: t("เรียง \"{label}\" น้อย → มาก", { label: typeof col.label === 'string' ? t(col.label) : col.label }), run: () => setSortConfig({ key: col.key, direction: 'asc' }) },
+                col && col.sortable && { label: t("เรียง \"{label}\" มาก → น้อย", { label: typeof col.label === 'string' ? t(col.label) : col.label }), run: () => setSortConfig({ key: col.key, direction: 'desc' }) },
+                sortConfig.key && { label: t('ยกเลิกการเรียง'), run: () => setSortConfig({ key: null, direction: 'asc' }) },
+                col && !row && { label: t("ซ่อนคอลัมน์ \"{label}\"", { label: typeof col.label === 'string' ? t(col.label) : col.label }), run: () => toggleCol(col.key) },
                 { sep: true },
-                exportable && { label: `ดาวน์โหลด Excel (${sortedData.length} แถว)`, run: () => handleExport() },
-                exportable && selectedCount > 0 && { label: `ดาวน์โหลดเฉพาะที่เลือก (${selectedCount})`, run: () => handleExport(selectedList) },
-                exportable && { label: 'ดาวน์โหลด CSV', run: () => handleExportCsv() },
-                { label: 'พิมพ์ตาราง', run: () => window.print() },
+                exportable && { label: t("ดาวน์โหลด Excel ({length} แถว)", { length: sortedData.length }), run: () => handleExport() },
+                exportable && selectedCount > 0 && { label: t("ดาวน์โหลดเฉพาะที่เลือก ({selectedCount})", { selectedCount: selectedCount }), run: () => handleExport(selectedList) },
+                exportable && { label: t('ดาวน์โหลด CSV'), run: () => handleExportCsv() },
+                { label: t('พิมพ์ตาราง'), run: () => window.print() },
               ].filter(Boolean);
               // ตัดเส้นคั่นที่หัว/ท้าย/ซ้อนกัน
               const clean = items.filter((it, i) => !it.sep || (i > 0 && !items[i - 1].sep && i < items.length - 1));
@@ -811,16 +804,16 @@ const SmartTable = ({
 
       {/* เลือกคอลัมน์ที่แสดง */}
       {colPanel && (
-        <WindowModal open id="smarttable-columns" title="เลือกคอลัมน์ที่แสดง" onClose={() => setColPanel(false)} initialWidth="max-w-sm"
-          footer={<button type="button" onClick={() => setColPanel(false)} className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white">เสร็จ</button>}>
+        <WindowModal open id="smarttable-columns" title={t("เลือกคอลัมน์ที่แสดง")} onClose={() => setColPanel(false)} initialWidth="max-w-sm"
+          footer={<button type="button" onClick={() => setColPanel(false)} className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white">{t("เสร็จ")}</button>}>
           <div className="p-4 space-y-1">
             {columns.map(col => (
               <label key={col.key} className="flex min-h-[44px] items-center gap-3 rounded-lg px-2 hover:bg-gray-50">
                 <input type="checkbox" checked={!hiddenCols.has(col.key)} onChange={() => toggleCol(col.key)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
-                <span className="text-sm text-gray-800">{typeof col.label === 'string' ? col.label : col.key}</span>
+                <span className="text-sm text-gray-800">{typeof col.label === 'string' ? t(col.label) : col.key}</span>
               </label>
             ))}
-            <p className="pt-2 text-xs text-gray-500">ระบบจำไว้ในเครื่องนี้ ซ่อนได้แต่ต้องเหลืออย่างน้อย 1 คอลัมน์</p>
+            <p className="pt-2 text-xs text-gray-500">{t("ระบบจำไว้ในเครื่องนี้ ซ่อนได้แต่ต้องเหลืออย่างน้อย 1 คอลัมน์")}</p>
           </div>
         </WindowModal>
       )}
@@ -831,31 +824,27 @@ const SmartTable = ({
           <div className="h-16 lg:hidden print:hidden" aria-hidden="true" />
           <div
             role="toolbar"
-            aria-label="จัดการรายการที่เลือก"
+            aria-label={t("จัดการรายการที่เลือก")}
             aria-busy={bulkBusy}
             className="print:hidden fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-lg lg:inset-x-auto lg:right-6 lg:bottom-4 lg:max-w-3xl"
           >
-            <span className="text-sm font-medium text-gray-800" aria-live="polite">เลือกแล้ว {selectedCount} รายการ</span>
+            <span className="text-sm font-medium text-gray-800" aria-live="polite">{t('เลือกแล้ว {count} รายการ', { count: selectedCount })}</span>
             {canSelectAllFiltered && (
               <button
                 type="button"
                 onClick={handleSelectAllFiltered}
                 disabled={bulkBusy}
                 className="min-h-[44px] px-1 text-sm text-brand-600 hover:text-brand-700 disabled:opacity-50"
-              >
-                เลือกทั้งหมด {sortedData.length} รายการ
-              </button>
+              >{t('เลือกทั้งหมด {count} รายการ', { count: sortedData.length })}</button>
             )}
             <button
               type="button"
               onClick={handleClearSelection}
               disabled={bulkBusy}
               className="min-h-[44px] px-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              ยกเลิกการเลือก
-            </button>
+            >{t("ยกเลิกการเลือก")}</button>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              {bulkBusy && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label="กำลังดำเนินการ" />}
+              {bulkBusy && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label={t("กำลังดำเนินการ")} />}
               {(bulkActions || []).map((action) => (
                 <button
                   key={action.label}
@@ -880,7 +869,7 @@ const SmartTable = ({
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
             {/* Page Size Selector */}
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-              <span>แสดง</span>
+              <span>{t("แสดง")}</span>
               <SmartComboBox
                 options={pageSizeOptions.map(size => ({ value: size, label: String(size) }))}
                 value={pageSize}
@@ -890,7 +879,7 @@ const SmartTable = ({
                 clearable={false}
                 className="w-24"
               />
-              <span>รายการ</span>
+              <span>{t("รายการ")}</span>
             </div>
 
             {/* Page Navigation */}
@@ -899,7 +888,7 @@ const SmartTable = ({
                 onClick={() => handlePageChange(1)}
                 disabled={currentPage === 1}
                 className="flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="หน้าแรก"
+                title={t("หน้าแรก")}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -909,7 +898,7 @@ const SmartTable = ({
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="หน้าก่อน"
+                title={t("หน้าก่อน")}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -942,7 +931,7 @@ const SmartTable = ({
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="หน้าถัดไป"
+                title={t("หน้าถัดไป")}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -952,7 +941,7 @@ const SmartTable = ({
                 onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
                 className="flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="หน้าสุดท้าย"
+                title={t("หน้าสุดท้าย")}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -961,8 +950,7 @@ const SmartTable = ({
             </div>
 
             {/* Page Info */}
-            <div className="text-sm text-gray-600">
-              หน้า {currentPage} จาก {totalPages}
+            <div className="text-sm text-gray-600">{t('หน้า {currentPage} จาก {totalPages}', { currentPage, totalPages })}
             </div>
           </div>
         </div>

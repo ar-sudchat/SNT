@@ -1,3 +1,4 @@
+import { t, tMsg } from '../../i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assessmentAPI, subjectAPI } from '../../services/api';
 import { useDialog } from '../ui/DialogProvider';
@@ -57,7 +58,7 @@ function LevelPill({ label }) {
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${
       weak ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-brand-50 text-brand-800 border-brand-200'}`}>
-      {label}
+      {t(label)}
     </span>
   );
 }
@@ -157,9 +158,9 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
   };
 
   const BULK = {
-    SCORE: { label: 'ให้เต็มทุกคน', warn: `คะแนนที่ลดไว้ ${changedCount} คน จะกลับเป็นเต็ม ${max} ทุกช่อง` },
-    PASSFAIL: { label: 'ให้ผ่านทุกคน', warn: `ที่ปรับไว้ ${changedCount} คน จะกลับเป็นผ่านทุกช่อง` },
-    CHECK: { label: 'เช็กทุกคน', warn: `ที่เอาเครื่องหมายออกไว้ ${changedCount} คน จะกลับเป็น ✓ ทุกช่อง` },
+    SCORE: { label: t('ให้เต็มทุกคน'), warn: t("คะแนนที่ลดไว้ {changedCount} คน จะกลับเป็นเต็ม {max} ทุกช่อง", { changedCount: changedCount, max: max }) },
+    PASSFAIL: { label: t('ให้ผ่านทุกคน'), warn: t("ที่ปรับไว้ {changedCount} คน จะกลับเป็นผ่านทุกช่อง", { changedCount: changedCount }) },
+    CHECK: { label: t('เช็กทุกคน'), warn: t("ที่เอาเครื่องหมายออกไว้ {changedCount} คน จะกลับเป็น ✓ ทุกช่อง", { changedCount: changedCount }) },
   }[type];
 
   const fillAll = async () => {
@@ -193,9 +194,9 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
       const detail = res.data;
       applyDetail(detail);
       if (onSaved) onSaved(detail);
-      flash('บันทึกแล้ว');
+      flash(t('บันทึกแล้ว'));
     } catch (e) {
-      setError(errText(e, 'บันทึกไม่สำเร็จ ลองกดบันทึกอีกครั้ง'));
+      setError(errText(e, t('บันทึกไม่สำเร็จ ลองกดบันทึกอีกครั้ง')));
     } finally {
       setSaving(false);
     }
@@ -203,9 +204,9 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
 
   // ---- ดึงคะแนนจากการส่งงาน ----
   const FILL = {
-    SCORE: { title: 'ดึงคะแนนจากงาน', what: 'คะแนน', button: 'ดึงคะแนน', link: 'คะแนน', rule: `ส่งตรงเวลา = ${max} · ส่งช้า = ${Math.max(1, max - 1)} · ยังไม่ส่ง/ไม่ผ่าน = 1 (ใช้กับช่องนี้ช่องเดียว)` },
-    PASSFAIL: { title: 'ดึงผลจากงาน', what: 'ผล ผ่าน/ไม่ผ่าน', button: 'ดึงผล', link: 'ผล ผ่าน/ไม่ผ่าน', rule: 'ส่งตรงเวลา/ส่งช้า = ผ่าน · ยังไม่ส่ง = ไม่ผ่าน (ใช้กับช่องนี้ช่องเดียว)' },
-    CHECK: { title: 'ดึงการเช็กจากงาน', what: 'การเช็ก ✓', button: 'ดึงการเช็ก', link: 'การเช็ก ✓', rule: 'ส่งตรงเวลา/ส่งช้า = ✓ · ยังไม่ส่ง = – (ใช้กับช่องนี้ช่องเดียว)' },
+    SCORE: { title: t('ดึงคะแนนจากงาน'), what: t('คะแนน'), button: t('ดึงคะแนน'), link: t('คะแนน'), rule: t("ส่งตรงเวลา = {max} · ส่งช้า = {value2} · ยังไม่ส่ง/ไม่ผ่าน = 1 (ใช้กับช่องนี้ช่องเดียว)", { max: max, value2: Math.max(1, max - 1) }) },
+    PASSFAIL: { title: t('ดึงผลจากงาน'), what: t('ผล ผ่าน/ไม่ผ่าน'), button: t('ดึงผล'), link: t('ผล ผ่าน/ไม่ผ่าน'), rule: t('ส่งตรงเวลา/ส่งช้า = ผ่าน · ยังไม่ส่ง = ไม่ผ่าน (ใช้กับช่องนี้ช่องเดียว)') },
+    CHECK: { title: t('ดึงการเช็กจากงาน'), what: t('การเช็ก ✓'), button: t('ดึงการเช็ก'), link: t('การเช็ก ✓'), rule: t('ส่งตรงเวลา/ส่งช้า = ✓ · ยังไม่ส่ง = – (ใช้กับช่องนี้ช่องเดียว)') },
   }[type] || {};
   const scanIdx = type === 'TEXT' ? [] : criteria.map((c, i) => (c.source === 'scan' ? i : -1)).filter(i => i >= 0);
   const hasSubject = !!record.subject?.id;
@@ -221,7 +222,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
       const res = await subjectAPI.getTasks(record.subject.id);
       setTasks(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      setTasksError(errText(e, 'โหลดรายการงานไม่สำเร็จ'));
+      setTasksError(errText(e, t('โหลดรายการงานไม่สำเร็จ')));
     } finally {
       setTasksLoading(false);
     }
@@ -233,7 +234,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
     if (changedCount > 0) {
       const ok = await dialog.confirm({
         title: FILL.title,
-        message: `ช่อง "${criteria[idx].label}" จะถูกแทนด้วย${FILL.what}จากงานนี้ และที่ปรับไว้แต่ยังไม่บันทึก ${changedCount} คนจะหายไป`,
+        message: t("ช่อง \"{label}\" จะถูกแทนด้วย{what}จากงานนี้ และที่ปรับไว้แต่ยังไม่บันทึก {changedCount} คนจะหายไป", { label: t(criteria[idx].label), what: FILL.what, changedCount: changedCount }),
         confirmText: FILL.button,
         type: 'warning',
       });
@@ -248,9 +249,9 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
       applyDetail(detail);
       if (onSaved) onSaved(detail);
       setFillOpen(null);
-      flash(`ดึงจากงาน ${task?.taskName || ''} แล้ว ${detail.filled ?? 0} คน`);
+      flash(t("ดึงจากงาน {value1} แล้ว {value2} คน", { value1: task?.taskName || '', value2: detail.filled ?? 0 }));
     } catch (e) {
-      setError(errText(e, 'ดึงคะแนนไม่สำเร็จ'));
+      setError(errText(e, t('ดึงคะแนนไม่สำเร็จ')));
     } finally {
       setFilling(false);
     }
@@ -300,21 +301,23 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
     }
   };
 
-  const totalText = (r) => (avgMode ? `เฉลี่ย ${r.average.toFixed(2)}` : `${r.total}/${pts}`);
+  const taskLabel = (task) => t('งานที่ {taskNumber} {taskName}', { taskNumber: task.taskNumber, taskName: task.taskName });
+
+  const totalText = (r) => (avgMode ? t("เฉลี่ย {value1}", { value1: r.average.toFixed(2) }) : `${r.total}/${pts}`);
 
   // สีช่อง: CHECK ที่ไม่ติ๊กเป็นสีกลาง ไม่ใช่สีแดง
   const cellCls = (v) => (type === 'CHECK' && v !== 1 ? TONE_OFF : TONE_ON[toneOf(record, v)]);
 
   const HINT = {
-    SCORE: `ทุกคนได้ ${max} คะแนนไว้ก่อน แตะช่องเพื่อลดคะแนนเฉพาะคน`,
-    PASSFAIL: 'ทุกคนได้ผ่านไว้ก่อน แตะเพื่อเปลี่ยนเฉพาะคน',
-    CHECK: 'ทุกคนเช็ก ✓ ไว้ก่อน แตะเพื่อเอาออกเฉพาะคน',
-    TEXT: `พิมพ์สั้นๆ ในแต่ละช่อง (ไม่เกิน ${TEXT_MAX} ตัวอักษร) เว้นว่างได้`,
+    SCORE: t("ทุกคนได้ {max} คะแนนไว้ก่อน แตะช่องเพื่อลดคะแนนเฉพาะคน", { max: max }),
+    PASSFAIL: t('ทุกคนได้ผ่านไว้ก่อน แตะเพื่อเปลี่ยนเฉพาะคน'),
+    CHECK: t('ทุกคนเช็ก ✓ ไว้ก่อน แตะเพื่อเอาออกเฉพาะคน'),
+    TEXT: t("พิมพ์สั้นๆ ในแต่ละช่อง (ไม่เกิน {TEXT_MAX} ตัวอักษร) เว้นว่างได้", { TEXT_MAX: TEXT_MAX }),
   }[type];
   const KEY_HELP = {
-    SCORE: `ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กดตัวเลข 1 ถึง ${max} เพื่อใส่คะแนน`,
-    PASSFAIL: 'ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กด 2 = ผ่าน, 1 = ไม่ผ่าน, เว้นวรรคเพื่อสลับ',
-    CHECK: 'ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กดเว้นวรรคเพื่อเช็กหรือเอาออก',
+    SCORE: t("ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กดตัวเลข 1 ถึง {max} เพื่อใส่คะแนน", { max: max }),
+    PASSFAIL: t('ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กด 2 = ผ่าน, 1 = ไม่ผ่าน, เว้นวรรคเพื่อสลับ'),
+    CHECK: t('ใช้ปุ่มลูกศรเลื่อนระหว่างช่อง กดเว้นวรรคเพื่อเช็กหรือเอาออก'),
     TEXT: '',
   }[type];
 
@@ -331,20 +334,18 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
             <span key={l.label}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 min-h-[32px] text-sm ${
                 weak ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-brand-50 text-brand-800 border-brand-200'}`}>
-              {l.label}
+              {t(l.label)}
               <b className="tabular-nums">{count}</b>
             </span>
           );
         })}
-        <span className="text-xs text-gray-500">{canEdit ? HINT : 'ดูได้อย่างเดียว แก้ไขได้เฉพาะผู้สร้างบันทึกหรือผู้จัดการกลุ่ม'}</span>
+        <span className="text-xs text-gray-500">{canEdit ? HINT : t('ดูได้อย่างเดียว แก้ไขได้เฉพาะผู้สร้างบันทึกหรือผู้จัดการกลุ่ม')}</span>
         {criteria.some(c => c.short && c.short !== c.label) && (
           <details className="relative ml-auto">
-            <summary className="flex min-h-[36px] cursor-pointer select-none items-center rounded-lg px-2 text-sm text-brand-700 hover:bg-brand-50">
-              ความหมายของแต่ละช่อง
-            </summary>
+            <summary className="flex min-h-[36px] cursor-pointer select-none items-center rounded-lg px-2 text-sm text-brand-700 hover:bg-brand-50">{t("ความหมายของแต่ละช่อง")}</summary>
             <ul className="absolute right-0 z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] space-y-1 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 shadow-lg">
               {criteria.map((c, i) => (
-                <li key={i}><b>{c.short || c.label}</b> = {c.label}</li>
+                <li key={i}><b>{tMsg(c.short || c.label)}</b> = {tMsg(c.label)}</li>
               ))}
             </ul>
           </details>
@@ -358,27 +359,24 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
             {scanIdx.map(idx => (
               <div key={idx}>
                 <button type="button" onClick={() => openFill(idx)} aria-expanded={fillOpen === idx}
-                  className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 text-left">
-                  ดึง{FILL.link} '{criteria[idx].label}' จากการส่งงาน
-                </button>
+                  className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 text-left">{t("ดึง{link} '{label}' จากการส่งงาน", { link: FILL.link, label: t(criteria[idx].label) })}</button>
                 {fillOpen === idx && (
                   <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50/50 p-3 space-y-3">
-                    <p className="block text-sm text-gray-700">
-                      เลือกงานของวิชา {record.subject.subjectName}
+                    <p className="block text-sm text-gray-700">{t('เลือกงานของวิชา {subjectName}', { subjectName: record.subject.subjectName })}
                     </p>
-                    {tasksLoading && <p className="text-sm text-gray-600">กำลังโหลดรายการงาน…</p>}
+                    {tasksLoading && <p className="text-sm text-gray-600">{t("กำลังโหลดรายการงาน…")}</p>}
                     {tasksError && <p className="text-sm text-red-700">{tasksError}</p>}
                     {tasks && tasks.length === 0 && (
-                      <p className="text-sm text-gray-600">วิชานี้ยังไม่มีงาน สร้างงานแล้วสแกนส่งงานก่อน จึงจะดึงคะแนนได้</p>
+                      <p className="text-sm text-gray-600">{t("วิชานี้ยังไม่มีงาน สร้างงานแล้วสแกนส่งงานก่อน จึงจะดึงคะแนนได้")}</p>
                     )}
                     {tasks && tasks.length > 0 && (
                       <>
                         <SmartComboBox
-                          options={tasks.map(t => ({ value: String(t.id), label: `งานที่ ${t.taskNumber} ${t.taskName}` }))}
+                          options={tasks.map(t => ({ value: String(t.id), label: taskLabel(t) }))}
                           value={pickedTask}
                           onChange={v => setPickedTask(v ?? '')}
-                          placeholder="เลือกงาน…"
-                          ariaLabel={`เลือกงานของวิชา ${record.subject.subjectName}`}
+                          placeholder={t("เลือกงาน…")}
+                          ariaLabel={t("เลือกงานของวิชา {subjectName}", { subjectName: record.subject.subjectName })}
                         />
                         <p className="text-xs text-gray-600">
                           {FILL.rule}
@@ -387,12 +385,10 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                     )}
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => setFillOpen(null)}
-                        className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-                        ปิด
-                      </button>
+                        className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">{t("ปิด")}</button>
                       <button type="button" onClick={() => doFill(idx)} disabled={!pickedTask || filling}
                         className="min-h-[44px] px-4 rounded-lg border border-brand-600 text-brand-700 bg-white text-sm font-medium hover:bg-brand-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        {filling ? 'กำลังดึง…' : FILL.button}
+                        {filling ? t('กำลังดึง…') : FILL.button}
                       </button>
                     </div>
                   </div>
@@ -401,19 +397,17 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-600">เลือกวิชาตอนสร้างบันทึกเพื่อดึง{FILL.link}จากการส่งงาน</p>
+          <p className="text-sm text-gray-600">{t('เลือกวิชาตอนสร้างบันทึกเพื่อดึง{link}จากการส่งงาน', { link: FILL.link })}</p>
         )
       )}
 
       {students.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">
-          ห้องนี้ยังไม่มีนักเรียน เพิ่มนักเรียนในห้องก่อน แล้วกลับมาประเมิน
-        </div>
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">{t("ห้องนี้ยังไม่มีนักเรียน เพิ่มนักเรียนในห้องก่อน แล้วกลับมาประเมิน")}</div>
       )}
 
       {/* มือถือ: การ์ดรายคน */}
       {students.length > 0 && (
-        <ul className="space-y-3 md:hidden" aria-label="ให้ข้อมูลรายคน">
+        <ul className="space-y-3 md:hidden" aria-label={t("ให้ข้อมูลรายคน")}>
           {rows.map(r => {
             const s = r.student;
             const changed = changedIds.has(s.id);
@@ -437,7 +431,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                       const id = `rb-${record.id}-${s.id}-${i}`;
                       return (
                         <div key={i}>
-                          <label htmlFor={id} className="block text-sm text-gray-700 mb-1">{c.label}</label>
+                          <label htmlFor={id} className="block text-sm text-gray-700 mb-1">{tMsg(c.label)}</label>
                           <input id={id} type="text" value={r.values[i] ?? ''} maxLength={TEXT_MAX}
                             readOnly={!canEdit}
                             onChange={e => setScore(s.id, i, e.target.value)}
@@ -451,24 +445,24 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                     {criteria.map((c, i) => {
                       const v = r.values[i];
                       const cls = cellCls(v);
-                      const big = type === 'PASSFAIL' ? (v === 2 ? 'ผ่าน' : 'ไม่ผ่าน') : type === 'CHECK' ? (v === 1 ? '✓' : '–') : v;
-                      const word = type === 'PASSFAIL' ? (v === 2 ? 'ผ่าน' : 'ไม่ผ่าน') : type === 'CHECK' ? (v === 1 ? 'เช็กแล้ว' : 'ยังไม่เช็ก') : `ได้ ${v} คะแนน`;
-                      const hintTap = type === 'SCORE' ? 'แตะเพื่อลด' : 'แตะเพื่อเปลี่ยน';
+                      const big = type === 'PASSFAIL' ? (v === 2 ? t('ผ่าน') : t('ไม่ผ่าน')) : type === 'CHECK' ? (v === 1 ? '✓' : '–') : v;
+                      const word = type === 'PASSFAIL' ? (v === 2 ? t('ผ่าน') : t('ไม่ผ่าน')) : type === 'CHECK' ? (v === 1 ? t('เช็กแล้ว') : t('ยังไม่เช็ก')) : t("ได้ {v} คะแนน", { v: v });
+                      const hintTap = type === 'SCORE' ? t('แตะเพื่อลด') : t('แตะเพื่อเปลี่ยน');
                       const inner = (
                         <>
                           <span className={`${type === 'PASSFAIL' ? 'text-lg' : 'text-xl'} font-semibold leading-none tabular-nums`}>{big}</span>
-                          <span className="text-xs mt-1 leading-tight line-clamp-2">{c.short || c.label}</span>
+                          <span className="text-xs mt-1 leading-tight line-clamp-2">{tMsg(c.short || c.label)}</span>
                         </>
                       );
                       return canEdit ? (
                         <button key={i} type="button"
                           onClick={() => setScore(s.id, i, cycleDown(record, v))}
-                          aria-label={`${c.label} ${word} ${hintTap}`}
+                          aria-label={`${tMsg(c.label)} ${word} ${hintTap}`}
                           className={`min-h-[56px] rounded-lg border px-1 py-2 flex flex-col items-center justify-center active:scale-95 transition-transform ${cls}`}>
                           {inner}
                         </button>
                       ) : (
-                        <div key={i} aria-label={`${c.label} ${word}`}
+                        <div key={i} aria-label={`${tMsg(c.label)} ${word}`}
                           className={`min-h-[56px] rounded-lg border px-1 py-2 flex flex-col items-center justify-center ${cls}`}>
                           {inner}
                         </div>
@@ -489,21 +483,21 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
           <table className="min-w-full text-sm border-separate border-spacing-0">
             <thead>
               <tr>
-                <th className="sticky top-0 left-0 z-30 bg-gray-50 border-b border-gray-200 px-2 py-2 w-12 min-w-[3rem] text-center font-medium text-gray-700">ที่</th>
-                <th className="sticky top-0 left-12 z-30 bg-gray-50 border-b border-gray-200 px-3 py-2 min-w-[9rem] text-left font-medium text-gray-700">ชื่อ-สกุล</th>
+                <th className="sticky top-0 left-0 z-30 bg-gray-50 border-b border-gray-200 px-2 py-2 w-12 min-w-[3rem] text-center font-medium text-gray-700">{t("ที่")}</th>
+                <th className="sticky top-0 left-12 z-30 bg-gray-50 border-b border-gray-200 px-3 py-2 min-w-[9rem] text-left font-medium text-gray-700">{t("ชื่อ-สกุล")}</th>
                 {criteria.map((c, i) => (
                   <th key={i} className={`sticky top-0 z-20 bg-gray-50 border-b border-gray-200 px-2 py-2 text-center font-medium text-gray-700 ${
                     type === 'TEXT' ? 'min-w-[12rem]' : type === 'PASSFAIL' ? 'min-w-[9rem]' : 'min-w-[6.5rem]'}`}>
-                    {c.label}
+                    {tMsg(c.label)}
                   </th>
                 ))}
                 {showTotals && (
                   <th className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200 px-3 py-2 text-center font-medium text-gray-700 whitespace-nowrap">
-                    {avgMode ? 'เฉลี่ย' : 'รวม'}
+                    {avgMode ? t('เฉลี่ย') : t('รวม')}
                   </th>
                 )}
                 {showLevels && (
-                  <th className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700 whitespace-nowrap">ระดับ</th>
+                  <th className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700 whitespace-nowrap">{t("ระดับ")}</th>
                 )}
               </tr>
             </thead>
@@ -526,7 +520,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                             <input type="text" value={v ?? ''} maxLength={TEXT_MAX}
                               ref={el => { groupRefs.current[`${ri}-${ci}`] = el; }}
                               readOnly={!canEdit}
-                              aria-label={`${s.name} ${c.label}`}
+                              aria-label={`${s.name} ${tMsg(c.label)}`}
                               onChange={e => setScore(s.id, ci, e.target.value)}
                               onKeyDown={e => onTextKey(e, ri, ci)}
                               className="w-full min-w-[10rem] h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent read-only:bg-gray-50" />
@@ -534,7 +528,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                             <div
                               ref={el => { groupRefs.current[`${ri}-${ci}`] = el; }}
                               role="group"
-                              aria-label={`${s.name} ${c.label} ${type === 'SCORE' ? `ได้ ${v} คะแนน` : type === 'PASSFAIL' ? (v === 2 ? 'ผ่าน' : 'ไม่ผ่าน') : (v === 1 ? 'เช็กแล้ว' : 'ยังไม่เช็ก')}`}
+                              aria-label={`${s.name} ${tMsg(c.label)} ${type === 'SCORE' ? t("ได้ {v} คะแนน", { v: v }) : type === 'PASSFAIL' ? (v === 2 ? t('ผ่าน') : t('ไม่ผ่าน')) : (v === 1 ? t('เช็กแล้ว') : t('ยังไม่เช็ก'))}`}
                               tabIndex={0}
                               onKeyDown={e => onGroupKey(e, ri, ci, s.id)}
                               className="inline-flex rounded-lg border border-gray-300 overflow-hidden focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1">
@@ -549,7 +543,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
                                 </button>
                               ) : (type === 'PASSFAIL' ? [2, 1] : scale).map(num => {
                                 const on = num === v;
-                                const label = type === 'PASSFAIL' ? (num === 2 ? 'ผ่าน' : 'ไม่ผ่าน') : num;
+                                const label = type === 'PASSFAIL' ? (num === 2 ? t('ผ่าน') : t('ไม่ผ่าน')) : num;
                                 return (
                                   <button key={num} type="button" tabIndex={-1}
                                     disabled={!canEdit}
@@ -592,7 +586,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
       {canEdit && students.length > 0 && (
         <div className="sticky z-20 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-0 -mx-1 rounded-lg border border-gray-200 bg-white/95 backdrop-blur p-3 shadow-lg flex flex-wrap items-center gap-3">
           <span className="text-sm text-gray-600 mr-auto" aria-live="polite">
-            {changedCount > 0 ? `ปรับคะแนนแล้ว ${changedCount} คน ยังไม่บันทึก` : 'ยังไม่มีการเปลี่ยนแปลง'}
+            {changedCount > 0 ? t("ปรับคะแนนแล้ว {changedCount} คน ยังไม่บันทึก", { changedCount: changedCount }) : t('ยังไม่มีการเปลี่ยนแปลง')}
           </span>
           {BULK && (
             <button type="button" onClick={fillAll} disabled={saving}
@@ -602,7 +596,7 @@ const RubricEditor = ({ record, canEdit, onSaved }) => {
           )}
           <button type="button" onClick={save} disabled={saving}
             className="min-h-[44px] px-6 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 disabled:opacity-60">
-            {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+            {saving ? t('กำลังบันทึก…') : t('บันทึก')}
           </button>
         </div>
       )}

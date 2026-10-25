@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { gradeAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
@@ -58,7 +59,7 @@ const ManageGrades = () => {
       const response = await gradeAPI.getAll();
       setGrades(response.data);
     } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
+      setError(t('ไม่สามารถโหลดข้อมูลได้'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ const ManageGrades = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate(e.currentTarget, [
-      { key: 'gradeName', message: 'กรุณากรอกชื่อชั้นปี', missing: !String(formData.gradeName ?? '').trim() },
+      { key: 'gradeName', message: t('กรุณากรอกชื่อชั้นปี'), missing: !String(formData.gradeName ?? '').trim() },
     ])) return;
     try {
       if (editingGrade) {
@@ -82,7 +83,7 @@ const ManageGrades = () => {
       fetchGrades();
       closeModal();
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาด');
+      setError(err.response?.data?.error || t('เกิดข้อผิดพลาด'));
     }
   };
 
@@ -96,7 +97,7 @@ const ManageGrades = () => {
         await gradeAPI.delete(deleteConfirm.item.id);
         fetchGrades();
       } catch (err) {
-        setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+        setError(err.response?.data?.error || t('ไม่สามารถลบได้'));
       }
     }
   };
@@ -149,17 +150,17 @@ const ManageGrades = () => {
       const res = await gradeAPI.bulkCreate(bulkNew.map((gradeName) => ({ gradeName })));
       const { created = 0, skipped = [] } = res.data || {};
       const createdN = Array.isArray(created) ? created.length : created;
-      let msg = `เพิ่มแล้ว ${createdN}`;
+      let msg = t("เพิ่มแล้ว {createdN}", { createdN: createdN });
       if (skipped.length) {
         const detail = skipped.slice(0, SKIP_DETAIL_MAX).map((x) => `${x.gradeName}: ${x.reason}`).join(', ');
-        msg += ` · ข้าม ${skipped.length} (${detail}${skipped.length > SKIP_DETAIL_MAX ? ' ...' : ''})`;
+        msg = t("เพิ่มแล้ว {createdN} · ข้าม {count} ({detail}{more})", { createdN, count: skipped.length, detail, more: skipped.length > SKIP_DETAIL_MAX ? ' ...' : '' });
       }
       setNotice(msg);
       setShowBulk(false);
       setBulkText('');
       fetchGrades();
     } catch (err) {
-      setBulkError(err.response?.data?.error || 'เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง');
+      setBulkError(err.response?.data?.error || t('เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง'));
     } finally {
       setBulkBusy(false);
     }
@@ -170,28 +171,28 @@ const ManageGrades = () => {
     if (!rows || !rows.length) return;
     const preview = rows.slice(0, 8).map((r) => r.gradeName).join(', ') + (rows.length > 8 ? ' ...' : '');
     const ok = await dialog.confirm({
-      title: 'ลบชั้นปีที่เลือก',
-      message: `ต้องการลบ ${rows.length} ชั้นปี\n${preview}\nชั้นที่ยังมีห้องเรียนอาจลบไม่ได้`,
+      title: t('ลบชั้นปีที่เลือก'),
+      message: t("ต้องการลบ {value1} ชั้นปี\n{preview}\nชั้นที่ยังมีห้องเรียนอาจลบไม่ได้", { value1: rows.length, preview: preview }),
       type: 'danger',
-      confirmText: `ลบ ${rows.length} รายการ`,
-      cancelText: 'ยกเลิก',
+      confirmText: t("ลบ {value1} รายการ", { value1: rows.length }),
+      cancelText: t('ยกเลิก'),
     });
     if (!ok) return;
     try {
       const res = await gradeAPI.bulkDelete(rows.map((r) => r.id));
       const { deleted = 0, failed = [] } = res.data || {};
       const deletedN = Array.isArray(deleted) ? deleted.length : deleted;
-      setNotice(`ลบแล้ว ${deletedN}${failed.length ? ` · ลบไม่ได้ ${failed.length}` : ''}`);
+      setNotice(failed.length ? t("ลบแล้ว {deletedN} · ลบไม่ได้ {count}", { deletedN, count: failed.length }) : t("ลบแล้ว {deletedN}", { deletedN }));
       await fetchGrades();
       if (failed.length) {
         await dialog.alert({
-          title: `ลบไม่ได้ ${failed.length} รายการ`,
+          title: t("ลบไม่ได้ {value1} รายการ", { value1: failed.length }),
           message: failed.map((f) => `${f.name}: ${f.reason}`).join('\n'),
           type: 'danger',
         });
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถลบได้');
+      setError(err.response?.data?.error || t('ไม่สามารถลบได้'));
     }
   };
 
@@ -200,32 +201,30 @@ const ManageGrades = () => {
     {
       key: 'gradeName',
       mobilePrimary: true,
-      label: 'ชั้นปี',
+      label: t('ชั้นปี'),
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'description',
       mobileSecondary: true,
-      label: 'คำอธิบาย',
+      label: t('คำอธิบาย'),
       render: (value) => value || '-'
     },
     {
       key: '_count.classes',
       hideOnMobile: true,
-      label: 'ห้องเรียน',
+      label: t('ห้องเรียน'),
       render: (value) => (
-        <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">
-          {value || 0} ห้อง
-        </span>
+        <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">{t("{value1} ห้อง", { value1: value || 0 })}</span>
       )
     },
     {
       key: 'status',
-      label: 'สถานะ',
+      label: t('สถานะ'),
       mobileBadge: true,
       render: (value) => value === 'INACTIVE' ? (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">{t("ไม่ใช้งาน")}</span>
       ) : null
     }
   ];
@@ -233,31 +232,27 @@ const ManageGrades = () => {
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <PageHeader title="ชั้นปี">
+      <PageHeader title={t("ชั้นปี")}>
         <button
           type="button"
           onClick={openBulk}
           className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
-        >
-          เพิ่มหลายชั้น
-        </button>
+        >{t("เพิ่มหลายชั้น")}</button>
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มชั้นปี
-        </button>
+          </svg>{t("เพิ่มชั้นปี")}</button>
       </PageHeader>
-      <AddFab onClick={() => openModal()} label="เพิ่มชั้นปี" />
+      <AddFab onClick={() => openModal()} label={t("เพิ่มชั้นปี")} />
 
       {/* ผลลัพธ์ */}
       {notice && (
         <div role="status" className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start justify-between gap-3">
           <span className="break-words min-w-0">{notice}</span>
-          <button onClick={() => setNotice('')} aria-label="ปิด" className="min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-green-600 hover:text-green-800 shrink-0">
+          <button onClick={() => setNotice('')} aria-label={t("ปิด")} className="min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-green-600 hover:text-green-800 shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -288,21 +283,21 @@ const ManageGrades = () => {
         pagination
         selectable
         getRowId={(row) => row.id}
-        bulkActions={[{ label: 'ลบที่เลือก', danger: true, onClick: handleBulkDelete }]}
+        bulkActions={[{ label: t('ลบที่เลือก'), danger: true, onClick: handleBulkDelete }]}
         emptyAction={
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button type="button" onClick={openBulk} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มหลายชั้น (ป.1–ป.6 ฯลฯ)</button>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">เพิ่มทีละชั้น</button>
+            <button type="button" onClick={openBulk} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มหลายชั้น (ป.1–ป.6 ฯลฯ)")}</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">{t("เพิ่มทีละชั้น")}</button>
           </div>
         }
-        emptyMessage="ยังไม่มีชั้นปี"
+        emptyMessage={t("ยังไม่มีชั้นปี")}
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
       <WindowModal
         open={showModal}
-        title={editingGrade ? 'แก้ไขชั้นปี' : 'เพิ่มชั้นปี'}
+        title={editingGrade ? t('แก้ไขชั้นปี') : t('เพิ่มชั้นปี')}
         onClose={closeModal}
         id="grade-form"
         initialWidth="max-w-md"
@@ -313,24 +308,17 @@ const ManageGrades = () => {
                 type="button"
                 onClick={() => { const target = editingGrade; closeModal(); handleDeleteClick(target); }}
                 className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
-              >
-                ลบ…
-              </button>
+              >{t("ลบ…")}</button>
             )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
-                  ยกเลิก
-                </button>
-                <button type="submit" form="grade-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                  บันทึก
-                </button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">{t("ยกเลิก")}</button>
+                <button type="submit" form="grade-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("บันทึก")}</button>
           </div>
         }
       >
         <div className="p-4">
           <form id="grade-form" onSubmit={handleSubmit} noValidate className="space-y-4">
               <div data-field="gradeName">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อชั้นปี <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชื่อชั้นปี ")}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -342,10 +330,10 @@ const ManageGrades = () => {
               </div>
 
               <details className="border rounded-lg px-3 py-2">
-                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">{t("ข้อมูลเพิ่มเติม (ไม่บังคับ)")}</summary>
                 <div className="space-y-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("คำอธิบาย")}</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -355,14 +343,14 @@ const ManageGrades = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
                     <SmartComboBox
-                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
+                      options={[{ value: 'ACTIVE', label: t('ใช้งาน') }, { value: 'INACTIVE', label: t('ไม่ใช้งาน') }]}
                       value={formData.status}
                       onChange={(v) => v && setFormData({ ...formData, status: v })}
                       searchable={false}
                       clearable={false}
-                      ariaLabel="สถานะ"
+                      ariaLabel={t("สถานะ")}
                     />
                   </div>
                 </div>
@@ -375,29 +363,27 @@ const ManageGrades = () => {
       {/* เพิ่มหลายชั้น */}
       <WindowModal
         open={showBulk}
-        title="เพิ่มหลายชั้น"
+        title={t("เพิ่มหลายชั้น")}
         onClose={closeBulk}
         id="grade-bulk"
         initialWidth="max-w-lg"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" onClick={closeBulk} disabled={bulkBusy} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50 disabled:opacity-50">
-              ยกเลิก
-            </button>
+            <button type="button" onClick={closeBulk} disabled={bulkBusy} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50 disabled:opacity-50">{t("ยกเลิก")}</button>
             <button
               type="button"
               onClick={handleBulkCreate}
               disabled={!bulkNew.length || bulkBusy}
               className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {bulkBusy ? 'กำลังเพิ่ม...' : bulkNew.length ? `เพิ่ม ${bulkNew.length} ชั้น` : 'เพิ่มชั้น'}
+              {bulkBusy ? t('กำลังเพิ่ม...') : bulkNew.length ? t("เพิ่ม {value1} ชั้น", { value1: bulkNew.length }) : t('เพิ่มชั้น')}
             </button>
           </div>
         }
       >
         <div className="p-4 space-y-4">
           <div>
-            <p className="block text-sm font-medium text-gray-700 mb-2">เลือกทางลัด</p>
+            <p className="block text-sm font-medium text-gray-700 mb-2">{t("เลือกทางลัด")}</p>
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((p) => (
                 <button
@@ -406,7 +392,7 @@ const ManageGrades = () => {
                   onClick={() => addPreset(p.names)}
                   className="px-4 min-h-[44px] rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
                 >
-                  {p.label}
+                  {t(p.label)}
                 </button>
               ))}
             </div>
@@ -414,11 +400,9 @@ const ManageGrades = () => {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label htmlFor="grade-bulk-text" className="block text-sm font-medium text-gray-700">หนึ่งบรรทัดต่อหนึ่งชั้น</label>
+              <label htmlFor="grade-bulk-text" className="block text-sm font-medium text-gray-700">{t("หนึ่งบรรทัดต่อหนึ่งชั้น")}</label>
               {bulkText && (
-                <button type="button" onClick={() => setBulkText('')} className="min-h-[44px] px-2 text-sm text-gray-500 hover:text-gray-700 underline">
-                  ล้าง
-                </button>
+                <button type="button" onClick={() => setBulkText('')} className="min-h-[44px] px-2 text-sm text-gray-500 hover:text-gray-700 underline">{t("ล้าง")}</button>
               )}
             </div>
             <textarea
@@ -427,17 +411,15 @@ const ManageGrades = () => {
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
               rows={6}
-              placeholder={'ป.1\nป.2\nป.3'}
+              placeholder={t('ป.1\nป.2\nป.3')}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
             />
-            <p className="mt-1 text-xs text-gray-500">พิมพ์คั่นด้วยจุลภาคก็ได้ เช่น ป.1, ป.2, ป.3</p>
+            <p className="mt-1 text-xs text-gray-500">{t("พิมพ์คั่นด้วยจุลภาคก็ได้ เช่น ป.1, ป.2, ป.3")}</p>
           </div>
 
           {bulkNames.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                จะสร้าง {bulkNew.length} ชั้น{bulkNames.length > bulkNew.length ? ` · มีแล้ว ${bulkNames.length - bulkNew.length}` : ''}
-              </p>
+              <p className="text-sm font-medium text-gray-700 mb-2">{bulkNames.length > bulkNew.length ? t("จะสร้าง {count} ชั้น · มีแล้ว {existing}", { count: bulkNew.length, existing: bulkNames.length - bulkNew.length }) : t("จะสร้าง {count} ชั้น", { count: bulkNew.length })}</p>
               <div className="flex flex-wrap gap-2">
                 {bulkNames.map((n) => {
                   const exists = existingNames.has(normName(n));
@@ -446,7 +428,7 @@ const ManageGrades = () => {
                       key={n}
                       className={`px-3 py-1 rounded-full text-sm ${exists ? 'bg-gray-100 text-gray-500' : 'bg-brand-100 text-brand-800'}`}
                     >
-                      {n}{exists ? ' · มีแล้ว' : ''}
+                      {n}{exists ? t(' · มีแล้ว') : ''}
                     </span>
                   );
                 })}
@@ -462,10 +444,10 @@ const ManageGrades = () => {
         isOpen={deleteConfirm.show}
         onClose={() => setDeleteConfirm({ show: false, item: null })}
         onConfirm={handleDeleteConfirm}
-        title="ยืนยันการลบ"
-        message={`ต้องการลบชั้นปี "${deleteConfirm.item?.gradeName}" หรือไม่?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
+        title={t("ยืนยันการลบ")}
+        message={t("ต้องการลบชั้นปี \"{value1}\" หรือไม่?", { value1: deleteConfirm.item?.gradeName })}
+        confirmText={t("ลบ")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
     </div>

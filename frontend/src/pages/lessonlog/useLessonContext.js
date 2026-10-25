@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 // Which class + subject the teacher is working on in บันทึกหลังแผน.
 // Remembers the last choice (DESIGN.md: don't ask what the system already knows).
 import { useEffect, useState, useCallback } from 'react';
@@ -29,7 +30,7 @@ export default function useLessonContext() {
         // Saved class gone (new year, other group) -> first class.
         setClassIdState(prev => (cl.some(x => x.id === prev) ? prev : (cl[0] ? cl[0].id : null)));
       } catch (e) {
-        if (!cancelled) setError(e.response?.data?.error || 'โหลดห้องเรียนไม่สำเร็จ');
+        if (!cancelled) setError(e.response?.data?.error || t('โหลดห้องเรียนไม่สำเร็จ'));
       } finally {
         if (!cancelled) setLoading(false);
       }

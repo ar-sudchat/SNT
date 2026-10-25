@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
@@ -6,7 +7,9 @@ import PageHeader, { CRUMB_LINK } from '../../components/ui/PageHeader';
 import PaperPreview from '../../components/lessonlog/PaperPreview';
 import useLessonContext from './useLessonContext';
 import LessonContextBar from './LessonContextBar';
-import { RESPONSE_TYPES, SCOPE_LABEL, scopeOf, shortName } from './lessonLogCore';
+import { RESPONSE_TYPES, SCOPE_LABEL, scopeOf, shortName, SHORT_NAME } from './lessonLogCore';
+
+const i18n = { t };
 
 const PRIMARY = 'min-h-[44px] rounded-xl px-5 py-2.5 font-medium bg-primary !text-primary-fg disabled:opacity-50';
 const LINK = 'inline-flex items-center min-h-[44px] text-sm text-brand-700 underline';
@@ -30,7 +33,7 @@ async function blobError(e, fallback) {
 function formatLabel(r) {
   const scope = scopeOf(r);
   const rt = RESPONSE_TYPES.find(x => x.id === r.responseType);
-  return scope === 'CLASS' || !rt ? SCOPE_LABEL[scope] : `${SCOPE_LABEL[scope]} · ${rt.label}`;
+  return scope === 'CLASS' || !rt ? t(SCOPE_LABEL[scope]) : `${t(SCOPE_LABEL[scope])} · ${t(rt.label)}`;
 }
 
 export default function ExportPage() {
@@ -59,7 +62,7 @@ export default function ExportPage() {
         setRecords(list);
         setPicked(new Set(list.map(x => x.id)));
       })
-      .catch(e => { if (!cancelled) setError(e.response?.data?.error || 'โหลดรายการไม่สำเร็จ'); })
+      .catch(e => { if (!cancelled) setError(e.response?.data?.error || t('โหลดรายการไม่สำเร็จ')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [classId, subjectId]);
@@ -124,22 +127,22 @@ export default function ExportPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      const msg = await blobError(e, 'ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง');
-      await dialog.alert({ title: 'ส่งออกไม่สำเร็จ', message: msg, type: 'danger' });
+      const msg = await blobError(e, t('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง'));
+      await dialog.alert({ title: t('ส่งออกไม่สำเร็จ'), message: msg, type: 'danger' });
     } finally {
       setExporting(false);
     }
   };
 
-  const contextLabel = cls ? `${cls.className} · ${subject ? subject.subjectName : 'ทุกวิชา'}` : '';
-  const exportLabel = exporting ? 'กำลังสร้างไฟล์…' : `ส่งออก Word · ${checkedIds.length} รายการ`;
+  const contextLabel = cls ? `${cls.className} · ${subject ? subject.subjectName : t('ทุกวิชา')}` : '';
+  const exportLabel = exporting ? t('กำลังสร้างไฟล์…') : t('ส่งออก Word · {value1} รายการ', { value1: checkedIds.length });
   const chip = (active) => `min-h-[44px] rounded-full px-4 text-sm border ${active ? 'bg-brand-600 border-brand-600 !text-white' : 'bg-white border-gray-300 text-gray-700'}`;
 
   const previews = previewIds.map(id => details[id]).filter(Boolean);
 
   return (
     <div className="space-y-4 pb-2">
-      <PageHeader title="ส่งออกเป็น Word" crumb={<Link to="/lesson-log" className={CRUMB_LINK}>‹ บันทึกหลังแผน</Link>}>
+      <PageHeader title={t("ส่งออกเป็น Word")} crumb={<Link to="/lesson-log" className={CRUMB_LINK}>{t('‹ บันทึกหลังแผน')}</Link>}>
         {/* Primary action sits in the header on computer; phones use the sticky bar below. */}
         <button onClick={doExport} disabled={!checkedIds.length || exporting} className={`${PRIMARY} hidden lg:inline-flex items-center`}>
           {exportLabel}
@@ -153,42 +156,42 @@ export default function ExportPage() {
 
       {!ctxLoading && !cls && !ctxError && (
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 space-y-1">
-          <p className="font-medium text-gray-800">ยังไม่มีห้องเรียน</p>
-          <p className="text-sm text-gray-500">เพิ่มห้องเรียนและนักเรียนก่อน แล้วค่อยกลับมาส่งออก</p>
-          <Link to="/lesson-log" className={LINK}>กลับไปบันทึกหลังแผน</Link>
+          <p className="font-medium text-gray-800">{t('ยังไม่มีห้องเรียน')}</p>
+          <p className="text-sm text-gray-500">{t('เพิ่มห้องเรียนและนักเรียนก่อน แล้วค่อยกลับมาส่งออก')}</p>
+          <Link to="/lesson-log" className={LINK}>{t('กลับไปบันทึกหลังแผน')}</Link>
         </div>
       )}
 
       {cls && !loading && records.length === 0 && !error && (
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 space-y-1">
-          <p className="font-medium text-gray-800">ยังไม่มีรายการที่บันทึกแล้วของ {contextLabel}</p>
-          <p className="text-sm text-gray-500">บันทึกรายการให้เสร็จก่อน (กด บันทึก) จึงจะส่งออกเป็น Word ได้</p>
-          <Link to="/lesson-log" className={LINK}>ไปที่รายการบันทึก</Link>
+          <p className="font-medium text-gray-800">{t('ยังไม่มีรายการที่บันทึกแล้วของ {contextLabel}', { contextLabel: contextLabel })}</p>
+          <p className="text-sm text-gray-500">{t('บันทึกรายการให้เสร็จก่อน (กด บันทึก) จึงจะส่งออกเป็น Word ได้')}</p>
+          <Link to="/lesson-log" className={LINK}>{t('ไปที่รายการบันทึก')}</Link>
         </div>
       )}
 
-      {(loading || ctxLoading) && <p className="text-sm text-gray-500" role="status">กำลังโหลด…</p>}
+      {(loading || ctxLoading) && <p className="text-sm text-gray-500" role="status">{t('กำลังโหลด…')}</p>}
 
       {records.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <section className="space-y-3 min-w-0">
-            <p className="text-sm text-gray-600">เลือกรายการที่จะรวมเป็นไฟล์เดียว ระบบเรียงตามวันที่ ฟอนต์ TH SarabunPSK กระดาษ A4</p>
+            <p className="text-sm text-gray-600">{t('เลือกรายการที่จะรวมเป็นไฟล์เดียว ระบบเรียงตามวันที่ ฟอนต์ TH SarabunPSK กระดาษ A4')}</p>
 
             {types.length > 1 && (
-              <div className="flex flex-wrap gap-2" role="group" aria-label="กรองตามประเภท">
-                <button type="button" onClick={() => setTypeFilter('ALL')} aria-pressed={typeFilter === 'ALL'} className={chip(typeFilter === 'ALL')}>ทั้งหมด {records.length}</button>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={t("กรองตามประเภท")}>
+                <button type="button" onClick={() => setTypeFilter('ALL')} aria-pressed={typeFilter === 'ALL'} className={chip(typeFilter === 'ALL')}>{t('ทั้งหมด {value1}', { value1: records.length })}</button>
                 {types.map(t => (
                   <button key={t.key} type="button" onClick={() => setTypeFilter(t.key)} aria-pressed={typeFilter === t.key} className={chip(typeFilter === t.key)}>
-                    {t.label} {records.filter(r => r.templateKey === t.key).length}
+                    {SHORT_NAME[t.key] ? i18n.t(SHORT_NAME[t.key]) : i18n.t(t.label)} {records.filter(r => r.templateKey === t.key).length}
                   </button>
                 ))}
               </div>
             )}
 
             <div className="flex flex-wrap items-center gap-x-4">
-              <button type="button" onClick={selectVisible} className={LINK}>เลือกทั้งหมด</button>
-              <button type="button" onClick={clearVisible} className={LINK}>ไม่เลือก</button>
-              <span className="text-sm text-gray-500 ml-auto">เลือก {checkedIds.length} จาก {records.length}</span>
+              <button type="button" onClick={selectVisible} className={LINK}>{t('เลือกทั้งหมด')}</button>
+              <button type="button" onClick={clearVisible} className={LINK}>{t('ไม่เลือก')}</button>
+              <span className="text-sm text-gray-500 ml-auto">{t('เลือก {value1} จาก {value2}', { value1: checkedIds.length, value2: records.length })}</span>
             </div>
 
             <ul className="space-y-2">
@@ -201,7 +204,7 @@ export default function ExportPage() {
                     />
                     <span className="min-w-0">
                       <span className="block font-medium text-gray-800 break-words">{r.name}</span>
-                      <span className="block text-sm text-gray-500">{shortName({ key: r.templateKey, templateName: r.templateName })} · {formatLabel(r)}{r.dateText ? ` · ${r.dateText}` : ''}</span>
+                      <span className="block text-sm text-gray-500">{SHORT_NAME[r.templateKey] ? t(SHORT_NAME[r.templateKey]) : t(shortName({ key: r.templateKey, templateName: r.templateName }))} · {formatLabel(r)}{r.dateText ? ` · ${r.dateText}` : ''}</span>
                     </span>
                   </label>
                 </li>
@@ -210,9 +213,9 @@ export default function ExportPage() {
           </section>
 
           <section className="space-y-3 min-w-0">
-            <p className="text-sm font-medium text-gray-700">ตัวอย่าง 2 รายการล่าสุดที่เลือก</p>
-            {previewIds.length === 0 && <p className="text-sm text-gray-500">ยังไม่ได้เลือกรายการ</p>}
-            {previewIds.length > 0 && previews.length < previewIds.length && <p className="text-sm text-gray-500" role="status">กำลังโหลดตัวอย่าง…</p>}
+            <p className="text-sm font-medium text-gray-700">{t('ตัวอย่าง 2 รายการล่าสุดที่เลือก')}</p>
+            {previewIds.length === 0 && <p className="text-sm text-gray-500">{t('ยังไม่ได้เลือกรายการ')}</p>}
+            {previewIds.length > 0 && previews.length < previewIds.length && <p className="text-sm text-gray-500" role="status">{t('กำลังโหลดตัวอย่าง…')}</p>}
             <div className="space-y-4">
               {previews.map(rec => (
                 <div key={rec.id} className="overflow-x-auto">

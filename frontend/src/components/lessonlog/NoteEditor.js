@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assessmentAPI } from '../../services/api';
 import { useDialog } from '../ui/DialogProvider';
@@ -29,7 +30,7 @@ function ChipGroup({ suggestions, selected, onToggle, onAdd, disabled, addLabel 
         return (
           <button key={s} type="button" aria-pressed={on} disabled={disabled} onClick={() => onToggle(s)}
             className={`${chipBase} ${on ? chipOn : chipOff}`}>
-            {on && <span aria-hidden="true">{'✓ '}</span>}{s}
+            {on && <span aria-hidden="true">{'✓ '}</span>}{suggestions.includes(s) ? t(s) : s}
           </button>
         );
       })}
@@ -85,15 +86,17 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
 
   const addCustom = async (key, title, placeholder) => {
     if (note[key].length >= MAX_ITEMS) {
-      await dialog.alert({ title: 'เพิ่มไม่ได้', message: `เลือกได้ไม่เกิน ${MAX_ITEMS} ข้อ`, type: 'warning' });
+      await dialog.alert({ title: t('เพิ่มไม่ได้'), message: t("เลือกได้ไม่เกิน {MAX_ITEMS} ข้อ", { MAX_ITEMS: MAX_ITEMS }), type: 'warning' });
       return;
     }
+    const emptyTextError = t('พิมพ์ข้อความก่อน');
+    const longTextError = t('ยาวเกิน {MAX_TEXT} ตัวอักษร', { MAX_TEXT });
     const v = await dialog.prompt({
-      title, label: 'ข้อความ', placeholder, confirmText: 'เพิ่ม',
+      title, label: t('ข้อความ'), placeholder, confirmText: t('เพิ่ม'),
       validate: (t) => {
         const s = (t || '').trim();
-        if (!s) return 'พิมพ์ข้อความก่อน';
-        if (s.length > MAX_TEXT) return `ยาวเกิน ${MAX_TEXT} ตัวอักษร`;
+        if (!s) return emptyTextError;
+        if (s.length > MAX_TEXT) return longTextError;
         return '';
       }
     });
@@ -110,12 +113,12 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
     try {
       const { data } = await assessmentAPI.updateRecord(record.id, { note, status: 'DONE' });
       setBaseline(JSON.stringify(note));
-      setMessage('บันทึกแล้ว');
+      setMessage(t('บันทึกแล้ว'));
       clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => setMessage(''), 4000);
       if (onSaved) onSaved(data);
     } catch (e) {
-      setError(e?.response?.data?.error || 'บันทึกไม่สำเร็จ ลองอีกครั้ง');
+      setError(e?.response?.data?.error || t('บันทึกไม่สำเร็จ ลองอีกครั้ง'));
     } finally {
       setSaving(false);
     }
@@ -128,47 +131,46 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
 
   const form = (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600">
-        แผนที่ {h.planNo} · หน่วยที่ {h.unitNo} {h.unitName} · สอนวันที่ {record.dateText}
+      <div className="text-sm text-gray-600">{t('แผนที่ {planNo} · หน่วยที่ {unitNo} {unitName} · สอนวันที่ {dateText}', { planNo: h.planNo, unitNo: h.unitNo, unitName: h.unitName, dateText: record.dateText })}
       </div>
 
       {disabled && (
-        <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">ดูได้อย่างเดียว — แก้ไขได้เฉพาะครูเจ้าของบันทึกหรือผู้ดูแล</div>
+        <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">{t("ดูได้อย่างเดียว — แก้ไขได้เฉพาะครูเจ้าของบันทึกหรือผู้ดูแล")}</div>
       )}
 
       <section className={card} aria-labelledby="ll-outcome">
-        <h3 id="ll-outcome" className="mb-3 text-base font-semibold text-gray-900">ผลการเรียนรู้</h3>
+        <h3 id="ll-outcome" className="mb-3 text-base font-semibold text-gray-900">{t("ผลการเรียนรู้")}</h3>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={disabled || note.pct <= 0} aria-label="ลดร้อยละ 5"
+          <button type="button" disabled={disabled || note.pct <= 0} aria-label={t("ลดร้อยละ 5")}
             onClick={() => patch({ pct: Math.max(0, note.pct - 5) })}
             className="h-12 w-12 rounded-xl border border-gray-300 bg-white text-2xl text-gray-800 hover:bg-gray-50 disabled:opacity-40">−</button>
           <span className="min-w-[4.5rem] text-center text-4xl font-bold tabular-nums text-gray-900" aria-live="polite">{note.pct}%</span>
-          <button type="button" disabled={disabled || note.pct >= 100} aria-label="เพิ่มร้อยละ 5"
+          <button type="button" disabled={disabled || note.pct >= 100} aria-label={t("เพิ่มร้อยละ 5")}
             onClick={() => patch({ pct: Math.min(100, note.pct + 5) })}
             className="h-12 w-12 rounded-xl border border-gray-300 bg-white text-2xl text-gray-800 hover:bg-gray-50 disabled:opacity-40">+</button>
-          <span className="text-sm text-gray-600">ของนักเรียนทำได้</span>
+          <span className="text-sm text-gray-600">{t("ของนักเรียนทำได้")}</span>
         </div>
-        <label htmlFor="ll-outcome-text" className="mt-4 block text-sm font-medium text-gray-700">นักเรียนทำอะไรได้</label>
+        <label htmlFor="ll-outcome-text" className="mt-4 block text-sm font-medium text-gray-700">{t("นักเรียนทำอะไรได้")}</label>
         <textarea id="ll-outcome-text" rows={3} maxLength={MAX_TEXT} readOnly={disabled} value={note.outcome}
           onChange={(e) => patch({ outcome: e.target.value })}
-          placeholder="เช่น จำแนกพืชดอกได้ถูกต้อง"
+          placeholder={t("เช่น จำแนกพืชดอกได้ถูกต้อง")}
           className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/30" />
         <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">{outcomeSentence(record.name, note)}</p>
       </section>
 
       <section className={card} aria-labelledby="ll-problems">
-        <h3 id="ll-problems" className="mb-3 text-base font-semibold text-gray-900">ปัญหา / อุปสรรค</h3>
-        <ChipGroup suggestions={PROBLEM_SUGGESTIONS} selected={note.problems} disabled={disabled} addLabel="เพิ่มเอง"
+        <h3 id="ll-problems" className="mb-3 text-base font-semibold text-gray-900">{t("ปัญหา / อุปสรรค")}</h3>
+        <ChipGroup suggestions={PROBLEM_SUGGESTIONS} selected={note.problems} disabled={disabled} addLabel={t("เพิ่มเอง")}
           onToggle={(s) => toggle('problems', s)}
-          onAdd={() => addCustom('problems', 'เพิ่มปัญหา / อุปสรรค', 'เช่น เครื่องฉายไม่ทำงาน')} />
+          onAdd={() => addCustom('problems', t('เพิ่มปัญหา / อุปสรรค'), t('เช่น เครื่องฉายไม่ทำงาน'))} />
       </section>
 
       <section className={card} aria-labelledby="ll-fixes">
-        <h3 id="ll-fixes" className="mb-3 text-base font-semibold text-gray-900">ข้อเสนอแนะ / แนวทางแก้ไข</h3>
-        <ChipGroup suggestions={FIX_SUGGESTIONS} selected={note.fixes} disabled={disabled} addLabel="เพิ่มเอง"
+        <h3 id="ll-fixes" className="mb-3 text-base font-semibold text-gray-900">{t("ข้อเสนอแนะ / แนวทางแก้ไข")}</h3>
+        <ChipGroup suggestions={FIX_SUGGESTIONS} selected={note.fixes} disabled={disabled} addLabel={t("เพิ่มเอง")}
           onToggle={(s) => toggle('fixes', s)}
-          onAdd={() => addCustom('fixes', 'เพิ่มข้อเสนอแนะ / แนวทางแก้ไข', 'เช่น ใช้สื่อของจริงประกอบ')} />
-        <label htmlFor="ll-extra" className="mt-4 block text-sm font-medium text-gray-700">พิมพ์เพิ่มเอง (ไม่บังคับ)</label>
+          onAdd={() => addCustom('fixes', t('เพิ่มข้อเสนอแนะ / แนวทางแก้ไข'), t('เช่น ใช้สื่อของจริงประกอบ'))} />
+        <label htmlFor="ll-extra" className="mt-4 block text-sm font-medium text-gray-700">{t("พิมพ์เพิ่มเอง (ไม่บังคับ)")}</label>
         <textarea id="ll-extra" rows={2} maxLength={MAX_TEXT} readOnly={disabled} value={note.extra}
           onChange={(e) => patch({ extra: e.target.value })}
           className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/30" />
@@ -187,7 +189,7 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
           <div className="mt-4 lg:hidden">
             <button type="button" aria-expanded={showPaper} onClick={() => setShowPaper((v) => !v)}
               className="min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              {showPaper ? 'ซ่อนหน้ากระดาษ' : 'ดูหน้ากระดาษ'}
+              {showPaper ? t('ซ่อนหน้ากระดาษ') : t('ดูหน้ากระดาษ')}
             </button>
             {showPaper && (
               <div className="mt-3 rounded-xl border border-gray-200 bg-gray-100 p-2">
@@ -200,10 +202,10 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
             <div className="mt-4 hidden items-center gap-3 lg:flex">
               <button type="button" onClick={save} disabled={saving}
                 className="min-h-[44px] rounded-lg bg-brand-600 px-6 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-                {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+                {saving ? t('กำลังบันทึก…') : t('บันทึก')}
               </button>
               {message && <span role="status" className="text-sm text-green-700">{message}</span>}
-              {!message && dirty && <span className="text-sm text-gray-600">ยังไม่ได้บันทึก</span>}
+              {!message && dirty && <span className="text-sm text-gray-600">{t("ยังไม่ได้บันทึก")}</span>}
             </div>
           )}
         </div>
@@ -221,7 +223,7 @@ export default function NoteEditor({ record, canEdit, settings, onSaved }) {
           {message && <p role="status" className="mb-2 text-center text-sm text-green-700">{message}</p>}
           <button type="button" onClick={save} disabled={saving}
             className="min-h-[48px] w-full rounded-lg bg-brand-600 px-4 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-            {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+            {saving ? t('กำลังบันทึก…') : t('บันทึก')}
           </button>
         </div>
       )}

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { tMsg } from '../i18n';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001/api',
@@ -21,9 +22,20 @@ api.interceptors.request.use(
   }
 );
 
+// ข้อความจาก server (message และ reason ของแต่ละรายการ) แปลตามภาษาที่เลือก · ค่าที่ไม่มีในพจนานุกรมคงเดิม
+const translateBody = (data, depth = 0) => {
+  if (!data || typeof data !== 'object' || depth > 3 || data instanceof Blob) return;
+  if (Array.isArray(data)) { data.forEach((x) => translateBody(x, depth + 1)); return; }
+  for (const k of Object.keys(data)) {
+    const v = data[k];
+    if ((k === 'reason' || (k === 'message' && depth === 0)) && typeof v === 'string') data[k] = tMsg(v);
+    else if (v && typeof v === 'object') translateBody(v, depth + 1);
+  }
+};
+
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => { translateBody(response.data); return response; },
   (error) => {
     // รหัสผิดตอนล็อกอินก็ได้ 401 เหมือนกัน — อย่า redirect ไม่งั้นข้อความแจ้งเตือนในหน้า login หาย
     const isLoginRequest = (error.config?.url || '').includes('/auth/login');
@@ -50,6 +62,8 @@ api.interceptors.response.use(
           else if (res.status >= 500) data.error = 'ระบบขัดข้อง ลองใหม่อีกครั้ง';
         }
         if (msg && data.error !== msg) data.originalError = msg;
+        if (typeof data.error === 'string') data.error = tMsg(data.error);
+        translateBody(data);
       }
     }
     return Promise.reject(error);

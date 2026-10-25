@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../config/database');
-const { withoutTenant, setTenantId, getTenantId } = require('../services/tenantContext');
+const { withoutTenant, runWithTenant, getTenantId } = require('../services/tenantContext');
 
 const INVALID_MSG = 'ลิงก์หมดอายุหรือไม่ถูกต้อง';
 const FORBIDDEN_MSG = 'คุณไม่มีสิทธิ์สร้างลิงก์ให้นักเรียนคนนี้ (ไม่ได้สอนห้อง/ระดับชั้นนี้)';
@@ -89,63 +89,66 @@ exports.getPublic = async (req, res) => {
   if (!data) return res.status(401).json({ error: INVALID_MSG });
   try {
     // Public link: the tenant comes from the signed student id, then everything below is scoped.
-    const owner = await withoutTenant(() => prisma.student.findUnique({ where: { id: data.sid }, select: { tenantId: true, tenant: { select: { status: true } } } }));
+    // async + await: PrismaPromise ทำงานตอน await จึงต้อง await ภายใน withoutTenant ไม่งั้นหลุด scope (Student เป็นตารางของกลุ่ม)
+    const owner = await withoutTenant(async () => await prisma.student.findUnique({ where: { id: data.sid }, select: { tenantId: true, tenant: { select: { status: true } } } }));
     if (!owner) return res.status(401).json({ error: INVALID_MSG });
     // Suspended / pending-delete groups stop serving data, like the logged-in API (authenticate).
     if (owner.tenant && owner.tenant.status !== 'ACTIVE') return res.status(401).json({ error: INVALID_MSG });
     // New tokens bind tid in the signed payload; it must match the student's tenant. Legacy tokens: no tid.
     if (data.tid && data.tid !== owner.tenantId) return res.status(401).json({ error: INVALID_MSG });
-    setTenantId(owner.tenantId);
-    const student = await prisma.student.findUnique({
-      where: { id: data.sid },
-      select: {
-        id: true, name: true, status: true,
-        class: { select: { className: true, gradeId: true, academicYearId: true, academicYear: { select: { year: true, name: true } } } }
-      }
-    });
-    if (!student || student.status !== 'ACTIVE') return res.status(401).json({ error: INVALID_MSG });
-    const yearId = student.class.academicYearId;
-    const subjects = await prisma.subject.findMany({
-      where: { gradeId: student.class.gradeId, academicYearId: yearId, status: 'ACTIVE' },
-      select: {
-        id: true, subjectName: true,
-        tasks: { where: { status: 'ACTIVE' }, orderBy: { taskNumber: 'asc' }, select: { id: true, taskName: true, taskNumber: true, deadline: true } }
-      },
-      orderBy: { subjectName: 'asc' }
-    });
-    const subs = await prisma.submission.findMany({
-      where: { studentId: student.id, taskId: { in: subjects.flatMap(s => s.tasks.map(t => t.id)) } },
-      select: { taskId: true, status: true, submitDate: true }
-    });
-    const byTask = Object.fromEntries(subs.map(s => [s.taskId, s]));
-    const now = Date.now();
-    const summary = { total: 0, submitted: 0, approved: 0, pending: 0, rejected: 0, missing: 0, overdue: 0 };
-    const out = subjects.map(s => ({
-      subjectName: s.subjectName,
-      tasks: s.tasks.map(t => {
-        const st = (byTask[t.id] && byTask[t.id].status) || 'NOT_SUBMITTED';
-        const done = st === 'APPROVED' || st === 'PENDING';
-        const overdue = !done && !!t.deadline && new Date(t.deadline).getTime() < now;
-        summary.total++;
-        if (st !== 'NOT_SUBMITTED') summary.submitted++;
-        if (st === 'APPROVED') summary.approved++;
-        if (st === 'PENDING') summary.pending++;
-        if (st === 'REJECTED') summary.rejected++;
-        if (!done) summary.missing++;
-        if (overdue) summary.overdue++;
-        return { taskNumber: t.taskNumber, taskName: t.taskName, deadline: t.deadline, status: st, statusText: STATUS_WORDS[st], overdue };
-      })
-    }));
-    const firstName = String(student.name || '').trim().replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|น\.ส\.)\s*/, '').split(/\s+/)[0];
-    res.set('Cache-Control', 'no-store');
-    res.set('X-Robots-Tag', 'noindex');
-    res.json({
-      student: { firstName, className: student.class.className },
-      academicYear: student.class.academicYear ? (student.class.academicYear.name || student.class.academicYear.year) : null,
-      subjects: out,
-      summary,
-      expiresAt: new Date(data.exp * 1000).toISOString(),
-      generatedAt: new Date().toISOString()
+    // เปิด scope ของกลุ่มนักเรียนเอง: setTenantId() เงียบเมื่อ scope ของ request หลุด (เจอจริงที่ลิงก์ผู้ปกครอง ตอบ 500)
+    await runWithTenant(owner.tenantId, async () => {
+      const student = await prisma.student.findUnique({
+        where: { id: data.sid },
+        select: {
+          id: true, name: true, status: true,
+          class: { select: { className: true, gradeId: true, academicYearId: true, academicYear: { select: { year: true, name: true } } } }
+        }
+      });
+      if (!student || student.status !== 'ACTIVE') return res.status(401).json({ error: INVALID_MSG });
+      const yearId = student.class.academicYearId;
+      const subjects = await prisma.subject.findMany({
+        where: { gradeId: student.class.gradeId, academicYearId: yearId, status: 'ACTIVE' },
+        select: {
+          id: true, subjectName: true,
+          tasks: { where: { status: 'ACTIVE' }, orderBy: { taskNumber: 'asc' }, select: { id: true, taskName: true, taskNumber: true, deadline: true } }
+        },
+        orderBy: { subjectName: 'asc' }
+      });
+      const subs = await prisma.submission.findMany({
+        where: { studentId: student.id, taskId: { in: subjects.flatMap(s => s.tasks.map(t => t.id)) } },
+        select: { taskId: true, status: true, submitDate: true }
+      });
+      const byTask = Object.fromEntries(subs.map(s => [s.taskId, s]));
+      const now = Date.now();
+      const summary = { total: 0, submitted: 0, approved: 0, pending: 0, rejected: 0, missing: 0, overdue: 0 };
+      const out = subjects.map(s => ({
+        subjectName: s.subjectName,
+        tasks: s.tasks.map(t => {
+          const st = (byTask[t.id] && byTask[t.id].status) || 'NOT_SUBMITTED';
+          const done = st === 'APPROVED' || st === 'PENDING';
+          const overdue = !done && !!t.deadline && new Date(t.deadline).getTime() < now;
+          summary.total++;
+          if (st !== 'NOT_SUBMITTED') summary.submitted++;
+          if (st === 'APPROVED') summary.approved++;
+          if (st === 'PENDING') summary.pending++;
+          if (st === 'REJECTED') summary.rejected++;
+          if (!done) summary.missing++;
+          if (overdue) summary.overdue++;
+          return { taskNumber: t.taskNumber, taskName: t.taskName, deadline: t.deadline, status: st, statusText: STATUS_WORDS[st], overdue };
+        })
+      }));
+      const firstName = String(student.name || '').trim().replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|น\.ส\.)\s*/, '').split(/\s+/)[0];
+      res.set('Cache-Control', 'no-store');
+      res.set('X-Robots-Tag', 'noindex');
+      res.json({
+        student: { firstName, className: student.class.className },
+        academicYear: student.class.academicYear ? (student.class.academicYear.name || student.class.academicYear.year) : null,
+        subjects: out,
+        summary,
+        expiresAt: new Date(data.exp * 1000).toISOString(),
+        generatedAt: new Date().toISOString()
+      });
     });
   } catch (e) {
     console.error('getPublic parent', e);

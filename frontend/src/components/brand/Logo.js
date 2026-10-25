@@ -1,7 +1,10 @@
+import { t } from '../../i18n';
 import React from 'react';
 
 // โลโก้ KruScan (ครูสแกน) — อักษร K: สันสมุด + ลำแสงสแกน + เครื่องหมายถูกสีดาวเรือง (ส่งแล้ว) · ดู /BRAND.md
 // variant: 'mark' | 'horizontal' · tone: 'color' | 'white' | 'mono'
+const logoTagline = () => t('สแกนสมุด รู้ทันทีใครส่งงานแล้ว');
+
 const TONES = {
   // ตามธีมสี (CSS variables ใน src/theme/themes.css)
   side: { cover: 'rgb(var(--side-logo))', cut: 'rgb(var(--side))', accent: 'rgb(var(--accent))', word: 'rgb(var(--side-logo))', kru: 'rgb(var(--accent))', tag: 'rgb(var(--side-fg))' },
@@ -36,9 +39,7 @@ export default function Logo({ variant = 'horizontal', size = 40, tone = 'color'
           <span className="font-bold" style={{ color: t.kru || t.word }}>Kru</span><span className="font-medium">Scan</span>
         </span>
         {tagline && (
-          <span className="mt-1 font-display font-normal" style={{ color: t.tag, fontSize: Math.max(10, size * 0.26) }}>
-            สแกนสมุด รู้ทันทีใครส่งงานแล้ว
-          </span>
+          <span className="mt-1 font-display font-normal" style={{ color: t.tag, fontSize: Math.max(10, size * 0.26) }}>{logoTagline()}</span>
         )}
       </span>
     </span>

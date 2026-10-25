@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React from 'react';
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import ClassMonitor from './ClassMonitor';
@@ -25,8 +26,8 @@ const MonitorPage = () => {
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ติดตามงาน</h1>
-        <div role="tablist" aria-label="มุมมอง" className="inline-flex rounded-lg bg-gray-100 p-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงาน')}</h1>
+        <div role="tablist" aria-label={t("มุมมอง")} className="inline-flex rounded-lg bg-gray-100 p-1">
           {MODES.map(m => (
             <button
               key={m.id}
@@ -38,7 +39,7 @@ const MonitorPage = () => {
                 mode === m.id ? 'bg-white text-brand-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {m.label}
+              {t(m.label)}
             </button>
           ))}
         </div>

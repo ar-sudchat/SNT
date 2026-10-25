@@ -275,7 +275,7 @@ const qrcodeController = {
       });
 
       if (!student) {
-        return res.status(404).json({ error: 'ไม่พบนักเรียนรหัส ' + studentCode });
+        return res.status(404).json({ error: `ไม่พบนักเรียนรหัส ${studentCode}` });
       }
 
       // If subjectId provided, get tasks for that subject

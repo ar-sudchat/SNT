@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React from 'react';
 
 // ภาพประกอบที่วาดเอง (SVG/HTML) สำหรับหน้าแรก — สมุด, QR, ภาพขั้นตอน, ไอคอนเส้น
@@ -56,10 +57,10 @@ export function NotebookCover({ name, room = 'ม.2/1', no, subject = 'คณิ
       <span className="absolute inset-y-0 left-[13%] w-[2%] bg-black/10" />
       <div className="absolute left-[24%] right-[9%] top-[11%] rounded-[0.4em] bg-white px-[0.8em] py-[0.6em] leading-[1.45] text-[#26324d] shadow-[0_1px_0_rgb(0_0_0/0.08)]">
         <div className="text-[1.05em] font-bold" style={{ color: c.spine }}>{subject}</div>
-        <div className="mt-[0.2em] truncate border-b border-dashed border-[#b9c3d6] text-[0.95em]"><span className="text-[#7a859c]">ชื่อ </span>{name}</div>
+        <div className="mt-[0.2em] truncate border-b border-dashed border-[#b9c3d6] text-[0.95em]"><span className="text-[#7a859c]">{t('ชื่อ ')}</span>{name}</div>
         <div className="mt-[0.2em] flex gap-[0.8em] border-b border-dashed border-[#b9c3d6] text-[0.95em]">
-          <span><span className="text-[#7a859c]">ชั้น </span>{room}</span>
-          <span><span className="text-[#7a859c]">เลขที่ </span>{no}</span>
+          <span><span className="text-[#7a859c]">{t('ชั้น ')}</span>{room}</span>
+          <span><span className="text-[#7a859c]">{t('เลขที่ ')}</span>{no}</span>
         </div>
       </div>
       <div className="absolute bottom-[9%] right-[9%] w-[40%] rounded-[0.35em] bg-white p-[0.35em] shadow-[0_1px_2px_rgb(0_0_0/0.15)]">

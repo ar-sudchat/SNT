@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { classAPI, studentAPI, academicYearAPI, transferAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
@@ -42,7 +43,7 @@ const ClassTransfer = () => {
       setStudents(studentRes.data);
       setAcademicYears(academicYearRes.data);
     } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลได้');
+      setError(t('ไม่สามารถโหลดข้อมูลได้'));
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ const ClassTransfer = () => {
 
   const handleIndividualTransfer = async () => {
     if (!selectedStudent || !targetClass) {
-      setError('กรุณาเลือกนักเรียนและห้องเรียนปลายทาง');
+      setError(t('กรุณาเลือกนักเรียนและห้องเรียนปลายทาง'));
       return;
     }
     try {
@@ -109,13 +110,13 @@ const ClassTransfer = () => {
       setTargetClass(null);
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถย้ายนักเรียนได้');
+      setError(err.response?.data?.error || t('ไม่สามารถย้ายนักเรียนได้'));
     }
   };
 
   const handleBulkTransfer = async () => {
     if (!sourceClass || !bulkTargetClass) {
-      setError('กรุณาเลือกห้องต้นทางและห้องปลายทาง');
+      setError(t('กรุณาเลือกห้องต้นทางและห้องปลายทาง'));
       return;
     }
     try {
@@ -130,7 +131,7 @@ const ClassTransfer = () => {
       setSelectedStudents([]);
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถย้ายนักเรียนได้');
+      setError(err.response?.data?.error || t('ไม่สามารถย้ายนักเรียนได้'));
     }
   };
 
@@ -143,14 +144,14 @@ const ClassTransfer = () => {
       }));
 
     if (promotions.length === 0) {
-      setError('กรุณาเลือกห้องปลายทางอย่างน้อย 1 ห้อง');
+      setError(t('กรุณาเลือกห้องปลายทางอย่างน้อย 1 ห้อง'));
       return;
     }
 
     const okPromote = await dialog.confirm({
-      title: 'เลื่อนชั้นนักเรียน',
-      message: `ต้องการเลื่อนชั้นนักเรียนทั้ง ${promotions.length} ห้องเรียนหรือไม่?`,
-      confirmText: 'เลื่อนชั้น',
+      title: t('เลื่อนชั้นนักเรียน'),
+      message: t("ต้องการเลื่อนชั้นนักเรียนทั้ง {value1} ห้องเรียนหรือไม่?", { value1: promotions.length }),
+      confirmText: t('เลื่อนชั้น'),
       type: 'warning',
     });
     if (!okPromote) {
@@ -168,7 +169,7 @@ const ClassTransfer = () => {
       setPromotionPreview(null);
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถเลื่อนชั้นได้');
+      setError(err.response?.data?.error || t('ไม่สามารถเลื่อนชั้นได้'));
     }
   };
 
@@ -198,7 +199,7 @@ const ClassTransfer = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="ย้ายชั้นเรียน" />
+      <PageHeader title={t("ย้ายชั้นเรียน")} />
 
       {/* Alerts */}
       {error && (
@@ -234,9 +235,7 @@ const ClassTransfer = () => {
                   ? 'border-brand-500 text-brand-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-            >
-              ย้ายทีละคน
-            </button>
+            >{t("ย้ายทีละคน")}</button>
             <button
               onClick={() => setActiveTab('bulk')}
               className={`px-4 sm:px-6 py-3 min-h-[44px] whitespace-nowrap border-b-2 font-medium text-sm ${
@@ -244,9 +243,7 @@ const ClassTransfer = () => {
                   ? 'border-brand-500 text-brand-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-            >
-              ย้ายทั้งห้อง
-            </button>
+            >{t("ย้ายทั้งห้อง")}</button>
             <button
               onClick={() => setActiveTab('promote')}
               className={`px-4 sm:px-6 py-3 min-h-[44px] whitespace-nowrap border-b-2 font-medium text-sm ${
@@ -254,9 +251,7 @@ const ClassTransfer = () => {
                   ? 'border-brand-500 text-brand-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-            >
-              เลื่อนชั้นปีใหม่
-            </button>
+            >{t("เลื่อนชั้นปีใหม่")}</button>
           </nav>
         </div>
 
@@ -266,16 +261,14 @@ const ClassTransfer = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เลือกนักเรียน
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("เลือกนักเรียน")}</label>
                   <SmartComboBox
                     options={students}
                     value={selectedStudent}
                     onChange={setSelectedStudent}
                     labelKey="name"
                     valueKey="id"
-                    placeholder="ค้นหานักเรียน..."
+                    placeholder={t("ค้นหานักเรียน...")}
                     searchable
                     renderOption={(student) => (
                       <div>
@@ -288,9 +281,7 @@ const ClassTransfer = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ห้องเรียนปลายทาง
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("ห้องเรียนปลายทาง")}</label>
                   <SmartComboBox
                     options={classes.filter(c => {
                       const student = students.find(s => s.id === selectedStudent);
@@ -300,7 +291,7 @@ const ClassTransfer = () => {
                     onChange={setTargetClass}
                     labelKey="className"
                     valueKey="id"
-                    placeholder="เลือกห้องเรียน..."
+                    placeholder={t("เลือกห้องเรียน...")}
                     searchable
                   />
                 </div>
@@ -309,9 +300,7 @@ const ClassTransfer = () => {
                 onClick={handleIndividualTransfer}
                 disabled={!selectedStudent || !targetClass}
                 className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                ย้ายนักเรียน
-              </button>
+              >{t("ย้ายนักเรียน")}</button>
             </div>
           )}
 
@@ -320,30 +309,26 @@ const ClassTransfer = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ห้องต้นทาง
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("ห้องต้นทาง")}</label>
                   <SmartComboBox
                     options={classes}
                     value={sourceClass}
                     onChange={setSourceClass}
                     labelKey="className"
                     valueKey="id"
-                    placeholder="เลือกห้องต้นทาง..."
+                    placeholder={t("เลือกห้องต้นทาง...")}
                     searchable
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ห้องปลายทาง
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("ห้องปลายทาง")}</label>
                   <SmartComboBox
                     options={classes.filter(c => c.id !== sourceClass)}
                     value={bulkTargetClass}
                     onChange={setBulkTargetClass}
                     labelKey="className"
                     valueKey="id"
-                    placeholder="เลือกห้องปลายทาง..."
+                    placeholder={t("เลือกห้องปลายทาง...")}
                     searchable
                   />
                 </div>
@@ -352,14 +337,12 @@ const ClassTransfer = () => {
               {sourceClass && classStudents.length > 0 && (
                 <div className="border rounded-lg p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <h3 className="font-medium">
-                      นักเรียนในห้อง ({selectedStudents.length}/{classStudents.length} คน)
-                    </h3>
+                    <h3 className="font-medium">{t("นักเรียนในห้อง ({value1}/{value2} คน)", { value1: selectedStudents.length, value2: classStudents.length })}</h3>
                     <button
                       onClick={selectAllStudents}
                       className="text-sm text-brand-600 hover:text-brand-800 px-2 py-2 min-h-[44px]"
                     >
-                      {selectedStudents.length === classStudents.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                      {selectedStudents.length === classStudents.length ? t('ยกเลิกทั้งหมด') : t('เลือกทั้งหมด')}
                     </button>
                   </div>
                   <div className="max-h-64 overflow-y-auto space-y-2">
@@ -385,9 +368,7 @@ const ClassTransfer = () => {
                 onClick={handleBulkTransfer}
                 disabled={!sourceClass || !bulkTargetClass}
                 className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                ย้ายนักเรียน {selectedStudents.length > 0 ? `(${selectedStudents.length} คน)` : '(ทั้งหมด)'}
-              </button>
+              >{selectedStudents.length > 0 ? t("ย้ายนักเรียน ({count} คน)", { count: selectedStudents.length }) : t("ย้ายนักเรียน (ทั้งหมด)")}</button>
             </div>
           )}
 
@@ -396,30 +377,26 @@ const ClassTransfer = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ปีการศึกษาต้นทาง
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("ปีการศึกษาต้นทาง")}</label>
                   <SmartComboBox
                     options={academicYears}
                     value={fromAcademicYear}
                     onChange={setFromAcademicYear}
                     labelKey="year"
                     valueKey="id"
-                    placeholder="เลือกปีการศึกษา..."
+                    placeholder={t("เลือกปีการศึกษา...")}
                     searchable
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ปีการศึกษาปลายทาง
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("ปีการศึกษาปลายทาง")}</label>
                   <SmartComboBox
                     options={academicYears.filter(a => a.id !== fromAcademicYear)}
                     value={toAcademicYear}
                     onChange={setToAcademicYear}
                     labelKey="year"
                     valueKey="id"
-                    placeholder="เลือกปีการศึกษา..."
+                    placeholder={t("เลือกปีการศึกษา...")}
                     searchable
                   />
                 </div>
@@ -430,15 +407,9 @@ const ClassTransfer = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-th print:bg-transparent">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">
-                          ห้องต้นทาง
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">
-                          จำนวนนักเรียน
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">
-                          ห้องปลายทาง
-                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ห้องต้นทาง")}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("จำนวนนักเรียน")}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ห้องปลายทาง")}</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -449,15 +420,11 @@ const ClassTransfer = () => {
                             <div className="text-sm text-gray-500">{suggestion.sourceClass.gradeName}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">
-                              {suggestion.sourceClass.studentCount} คน
-                            </span>
+                            <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">{t("{value1} คน", { value1: suggestion.sourceClass.studentCount })}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap min-w-[200px]">
                             {suggestion.isGraduating ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                จบการศึกษา
-                              </span>
+                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">{t("จบการศึกษา")}</span>
                             ) : (
                               <SmartComboBox
                                 options={promotionPreview.targetClasses}
@@ -470,7 +437,7 @@ const ClassTransfer = () => {
                                 }
                                 labelKey="className"
                                 valueKey="id"
-                                placeholder="เลือกห้อง..."
+                                placeholder={t("เลือกห้อง...")}
                                 searchable
                                 clearable
                               />
@@ -487,9 +454,7 @@ const ClassTransfer = () => {
                 onClick={handlePromotion}
                 disabled={!fromAcademicYear || !toAcademicYear || !promotionPreview}
                 className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                เลื่อนชั้นนักเรียน
-              </button>
+              >{t("เลื่อนชั้นนักเรียน")}</button>
             </div>
           )}
         </div>

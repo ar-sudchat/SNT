@@ -1,3 +1,4 @@
+import { t, t as translate } from '../../i18n';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { classAPI, gradeAPI } from '../../services/api';
 import { SmartComboBox } from '../../components/ui';
@@ -39,14 +40,14 @@ const ClassroomTools = () => {
     let alive = true;
     classAPI.getAll()
       .then((r) => { if (alive) { setClasses(asList(r.data)); setClassesLoaded(true); } })
-      .catch((e) => { if (alive) setError(e.response?.data?.error || 'ไม่สามารถโหลดรายชื่อห้องได้'); });
+      .catch((e) => { if (alive) setError(e.response?.data?.error || t('ไม่สามารถโหลดรายชื่อห้องได้')); });
     gradeAPI.getAll()
       .then((r) => { if (alive) setGrades(asList(r.data)); })
       .catch(() => { /* ไม่มีรายชื่อชั้น: ใช้ตัวกรอง "ทุกชั้น" ต่อไป */ });
     return () => { alive = false; };
   }, []);
 
-  const gradeOptions = useMemo(() => [{ id: ALL, gradeName: 'ทุกชั้น' }, ...grades], [grades]);
+  const gradeOptions = useMemo(() => [{ id: ALL, gradeName: t('ทุกชั้น') }, ...grades], [grades]);
   const visibleClasses = useMemo(
     () => (gradeId === ALL ? classes : classes.filter((c) => String(c.gradeId) === String(gradeId))),
     [classes, gradeId],
@@ -85,7 +86,7 @@ const ClassroomTools = () => {
         const list = asList(r.data).filter((s) => !s.status || s.status === 'ACTIVE');
         setStudents(list);
       })
-      .catch((e) => { if (alive) setError(e.response?.data?.error || 'ไม่สามารถโหลดรายชื่อนักเรียนได้'); })
+      .catch((e) => { if (alive) setError(e.response?.data?.error || t('ไม่สามารถโหลดรายชื่อนักเรียนได้')); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [classId]);
@@ -105,36 +106,36 @@ const ClassroomTools = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
-      <PageHeader title="เครื่องมือห้องเรียน" className="print:hidden">
-        {canFullscreen && <button type="button" onClick={toggleFullscreen} className={btnSecondary}>เต็มจอ</button>}
+      <PageHeader title={t("เครื่องมือห้องเรียน")} className="print:hidden">
+        {canFullscreen && <button type="button" onClick={toggleFullscreen} className={btnSecondary}>{t('เต็มจอ')}</button>}
       </PageHeader>
 
       <div ref={panelRef} className="space-y-4 bg-ink-50 [&:fullscreen]:p-6 [&:fullscreen]:overflow-auto">
         <div className="flex flex-wrap gap-3 items-end print:hidden">
           <div className="grid grid-cols-2 gap-3 w-full md:w-auto md:flex">
             <div className="min-w-0 md:w-48">
-              <label className="block text-sm text-ink-600 mb-1">ชั้นปี</label>
+              <label className="block text-sm text-ink-600 mb-1">{t('ชั้นปี')}</label>
               <SmartComboBox
                 options={gradeOptions} value={gradeId} onChange={changeGrade}
-                labelKey="gradeName" valueKey="id" placeholder="ทุกชั้น" clearable={false}
+                labelKey="gradeName" valueKey="id" placeholder={t("ทุกชั้น")} clearable={false}
               />
             </div>
             <div className="min-w-0 md:w-64">
-              <label className="block text-sm text-ink-600 mb-1">ห้องเรียน</label>
+              <label className="block text-sm text-ink-600 mb-1">{t('ห้องเรียน')}</label>
               <SmartComboBox
                 options={visibleClasses} value={classId} onChange={changeClass}
-                labelKey="className" valueKey="id" placeholder="เลือกห้อง" clearable={false}
+                labelKey="className" valueKey="id" placeholder={t("เลือกห้อง")} clearable={false}
               />
             </div>
           </div>
-          {classId && <p className="text-sm text-ink-500 pb-3">{loading ? 'กำลังโหลด...' : `นักเรียน ${students.length} คน`}</p>}
+          {classId && <p className="text-sm text-ink-500 pb-3">{loading ? t('กำลังโหลด...') : t('นักเรียน {value1} คน', { value1: students.length })}</p>}
         </div>
 
-        <div role="tablist" aria-label="เครื่องมือ" className="flex gap-1 border-b border-ink-200 print:hidden">
+        <div role="tablist" aria-label={t("เครื่องมือ")} className="flex gap-1 border-b border-ink-200 print:hidden">
           {TABS.map((t) => (
             <button key={t.key} role="tab" type="button" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
               className={`min-h-[44px] flex-1 sm:flex-none px-6 font-semibold border-b-2 -mb-px ${tab === t.key ? 'border-brand text-brand-800' : 'border-transparent text-ink-500 hover:text-ink-800'}`}>
-              {t.label}
+              {translate(t.label)}
             </button>
           ))}
         </div>
@@ -142,9 +143,9 @@ const ClassroomTools = () => {
         {error && <p className="rounded-lg bg-red-50 text-red-700 px-4 py-3" role="alert">{error}</p>}
 
         <div role="tabpanel">
-          {needsClass && !classId && <p className="text-ink-500 py-10 text-center">เลือกห้องเรียนก่อน เพื่อโหลดรายชื่อนักเรียน</p>}
+          {needsClass && !classId && <p className="text-ink-500 py-10 text-center">{t('เลือกห้องเรียนก่อน เพื่อโหลดรายชื่อนักเรียน')}</p>}
           {needsClass && classId && !loading && students.length === 0 && !error && (
-            <p className="text-ink-500 py-10 text-center">ห้องนี้ยังไม่มีนักเรียน</p>
+            <p className="text-ink-500 py-10 text-center">{t('ห้องนี้ยังไม่มีนักเรียน')}</p>
           )}
           {tab === 'pick' && classId && students.length > 0 && <RandomPicker students={students} />}
           {tab === 'group' && classId && students.length > 0 && <GroupMaker students={students} className={cls?.className || ''} />}

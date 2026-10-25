@@ -1,11 +1,14 @@
+import { t } from '../../i18n';
 import React, { useEffect, useRef, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
+
+const dialogButtonText = (text) => text === 'ตกลง' ? t('ตกลง') : text === 'ยกเลิก' ? t('ยกเลิก') : text === 'ยืนยัน' ? t('ยืนยัน') : text;
 
 const ConfirmDialog = ({
   isOpen,
   onClose,
   onConfirm,
-  title = 'แจ้งเตือน',
+  title = t('แจ้งเตือน'),
   message = '',
   confirmText = 'ตกลง',
   cancelText = 'ยกเลิก',
@@ -136,7 +139,7 @@ const ConfirmDialog = ({
     try { await navigator.clipboard.writeText(text); ok = true; } catch (err) {
       try { if (el) { el.focus(); el.select(); } ok = document.execCommand('copy'); } catch (err2) { ok = false; }
     }
-    if (ok) setCopied(true); else if (el) { el.focus(); el.select(); setError('คัดลอกอัตโนมัติไม่ได้ — ข้อความถูกเลือกไว้แล้ว กดคัดลอก (Ctrl/Cmd + C) เอง'); }
+    if (ok) setCopied(true); else if (el) { el.focus(); el.select(); setError(t('คัดลอกอัตโนมัติไม่ได้ — ข้อความถูกเลือกไว้แล้ว กดคัดลอก (Ctrl/Cmd + C) เอง')); }
   };
 
   const fieldCls = 'w-full rounded-xl border-2 border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
@@ -209,7 +212,7 @@ const ConfirmDialog = ({
                   aria-label={title}
                   className={`${fieldCls} resize-none break-all`}
                 />
-                {copied ? <p role="status" className="mt-1.5 text-sm text-pass">คัดลอกแล้ว</p> : null}
+                {copied ? <p role="status" className="mt-1.5 text-sm text-pass">{t("คัดลอกแล้ว")}</p> : null}
                 {error ? <p role="alert" className="mt-1.5 text-sm text-fail">{error}</p> : null}
               </div>
             )}
@@ -220,11 +223,11 @@ const ConfirmDialog = ({
                 <>
                   <button type="button" ref={cancelRef} onClick={onClose}
                     className={`${btnBase} border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300`}>
-                    {cancelText === 'ยกเลิก' ? 'ปิด' : cancelText}
+                    {cancelText === 'ยกเลิก' ? t('ปิด') : dialogButtonText(cancelText)}
                   </button>
                   <button type="button" ref={primaryRef} onClick={handleCopy}
                     className={`${btnBase} text-white ${style.confirmBtn}`}>
-                    {confirmText === 'ตกลง' ? 'คัดลอก' : confirmText}
+                    {confirmText === 'ตกลง' ? t('คัดลอก') : dialogButtonText(confirmText)}
                   </button>
                 </>
               ) : (
@@ -232,12 +235,12 @@ const ConfirmDialog = ({
                   {(mode === 'confirm' || mode === 'prompt') && (
                     <button type="button" ref={cancelRef} onClick={onClose}
                       className={`${btnBase} border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300`}>
-                      {cancelText}
+                      {dialogButtonText(cancelText)}
                     </button>
                   )}
                   <button type="submit" ref={primaryRef}
                     className={`${btnBase} text-white ${style.confirmBtn}`}>
-                    {confirmText}
+                    {dialogButtonText(confirmText)}
                   </button>
                 </>
               )}

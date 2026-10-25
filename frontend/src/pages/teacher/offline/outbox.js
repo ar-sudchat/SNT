@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 // Outbox สำหรับบันทึกผลการส่งงานตอนเน็ตหลุด (ไม่ใช้ service worker)
 // เก็บคิวใน IndexedDB (สำรองด้วย localStorage) — key = studentId:taskId เก็บเฉพาะค่าล่าสุด
 // backend createOrUpdate เป็น upsert ตาม (studentId, taskId) จึงส่งซ้ำได้อย่างปลอดภัย
@@ -147,7 +148,7 @@ export const flushOutbox = () => {
         } catch (err) {
           if (isNetworkError(err)) { result.stillOffline = true; break; }
           await removeItem(item.key, item.clientId);
-          result.rejected.push({ item, error: err.response?.data?.error || 'บันทึกไม่สำเร็จ' });
+          result.rejected.push({ item, error: err.response?.data?.error || t('บันทึกไม่สำเร็จ') });
         }
       }
     } finally {

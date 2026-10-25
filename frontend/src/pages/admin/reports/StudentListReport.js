@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import PageHeader from '../../../components/ui/PageHeader';
@@ -47,29 +48,25 @@ const StudentListReport = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <PageHeader title="รายชื่อนักเรียน">
+      <PageHeader title={t("รายชื่อนักเรียน")}>
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          พิมพ์รายงาน
-        </button>
+          </svg>{t("พิมพ์รายงาน")}</button>
       </PageHeader>
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow p-4 print:hidden">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          กรองตามห้องเรียน
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{t("กรองตามห้องเรียน")}</label>
         <SmartComboBox
-          options={[{ value: '', label: 'ทั้งหมด' }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
+          options={[{ value: '', label: t('ทั้งหมด') }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
           value={selectedClass}
           onChange={(v) => setSelectedClass(v ?? '')}
           clearable={false}
-          ariaLabel="กรองตามห้องเรียน"
+          ariaLabel={t("กรองตามห้องเรียน")}
           className="w-full sm:w-64"
         />
       </div>
@@ -77,20 +74,18 @@ const StudentListReport = () => {
       {/* Report Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden print:overflow-visible">
         <div className="p-4 border-b print:border-b-2">
-          <h2 className="text-lg font-semibold">
-            รายชื่อนักเรียน {selectedClass ? `- ${classes.find(c => c.id === parseInt(selectedClass))?.className}` : '- ทั้งหมด'}
-          </h2>
-          <p className="text-sm text-gray-500">จำนวน {filteredStudents.length} คน</p>
+          <h2 className="text-lg font-semibold">{selectedClass ? t("รายชื่อนักเรียน - {className}", { className: classes.find(c => c.id === parseInt(selectedClass))?.className }) : t("รายชื่อนักเรียน - ทั้งหมด")}</h2>
+          <p className="text-sm text-gray-500">{t("จำนวน {value1} คน", { value1: filteredStudents.length })}</p>
         </div>
         <div className="overflow-x-auto print:overflow-visible">
           <table className="min-w-[560px] w-full divide-y divide-gray-200">
             <thead className="bg-th print:bg-transparent">
               <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ลำดับ</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">รหัสนักเรียน</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ชื่อ-นามสกุล</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ห้องเรียน</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">สถานะ</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ลำดับ")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("รหัสนักเรียน")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ชื่อ-นามสกุล")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ห้องเรียน")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("สถานะ")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -106,7 +101,7 @@ const StudentListReport = () => {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {student.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                      {student.status === 'ACTIVE' ? t('ใช้งาน') : t('ไม่ใช้งาน')}
                     </span>
                   </td>
                 </tr>

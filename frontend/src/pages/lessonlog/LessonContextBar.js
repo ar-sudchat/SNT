@@ -1,9 +1,10 @@
+import { t } from '../../i18n';
 // ชั้น → ห้อง → วิชา ที่แสดงตลอด เปลี่ยนแล้วใช้ทันที (ไม่ต้องกด "เปลี่ยน")
 import React, { useMemo, useState } from 'react';
 import { SmartComboBox } from '../../components/ui';
 
 // roomIds + onRoomIdsChange = เลือกได้หลายห้องในชั้นเดียวกัน (ตอนสร้างบันทึก)
-export default function LessonContextBar({ ctx, allSubjectsLabel = 'ทุกวิชา', roomIds, onRoomIdsChange }) {
+export default function LessonContextBar({ ctx, allSubjectsLabel = t('ทุกวิชา'), roomIds, onRoomIdsChange }) {
   const { classes, subjects, classId, subjectId, cls, setClassId, setSubjectId } = ctx;
   const [gradeId, setGradeId] = useState(null);
 
@@ -28,21 +29,21 @@ export default function LessonContextBar({ ctx, allSubjectsLabel = 'ทุกว
     <div className="grid grid-cols-2 gap-3 rounded-lg bg-white p-3 shadow sm:grid-cols-3 sm:p-4">
       {grades.length > 1 && (
         <div className="min-w-0">
-          <span className="mb-1 block text-sm font-medium text-gray-700">ชั้น</span>
+          <span className="mb-1 block text-sm font-medium text-gray-700">{t('ชั้น')}</span>
           <SmartComboBox
             options={grades}
             value={activeGrade}
             onChange={(v) => v && pickGrade(Number(v))}
             labelKey="name"
             valueKey="id"
-            placeholder="เลือกชั้น"
+            placeholder={t("เลือกชั้น")}
             clearable={false}
-            ariaLabel="ชั้น"
+            ariaLabel={t("ชั้น")}
           />
         </div>
       )}
       <div className={`min-w-0 ${grades.length > 1 ? '' : 'col-span-2 sm:col-span-1'}`}>
-        <span className="mb-1 block text-sm font-medium text-gray-700">ห้องเรียน</span>
+        <span className="mb-1 block text-sm font-medium text-gray-700">{t('ห้องเรียน')}</span>
         {onRoomIdsChange ? (
           <SmartComboBox
             multiple
@@ -55,8 +56,8 @@ export default function LessonContextBar({ ctx, allSubjectsLabel = 'ทุกว
             }}
             labelKey="className"
             valueKey="id"
-            placeholder="เลือกห้องเรียน (ได้หลายห้อง)"
-            ariaLabel="ห้องเรียน"
+            placeholder={t("เลือกห้องเรียน (ได้หลายห้อง)")}
+            ariaLabel={t("ห้องเรียน")}
           />
         ) : (
         <SmartComboBox
@@ -65,14 +66,14 @@ export default function LessonContextBar({ ctx, allSubjectsLabel = 'ทุกว
           onChange={(v) => { if (v == null) return; setClassId(Number(v) || null); setSubjectId(null); }}
           labelKey="className"
           valueKey="id"
-          placeholder="เลือกห้องเรียน"
+          placeholder={t("เลือกห้องเรียน")}
           clearable={false}
-          ariaLabel="ห้องเรียน"
+          ariaLabel={t("ห้องเรียน")}
         />
         )}
       </div>
       <div className="col-span-2 min-w-0 sm:col-span-1">
-        <span className="mb-1 block text-sm font-medium text-gray-700">วิชา</span>
+        <span className="mb-1 block text-sm font-medium text-gray-700">{t('วิชา')}</span>
         <SmartComboBox
           options={[{ id: '', subjectName: allSubjectsLabel }, ...subjects]}
           value={subjectId || ''}
@@ -80,7 +81,7 @@ export default function LessonContextBar({ ctx, allSubjectsLabel = 'ทุกว
           labelKey="subjectName"
           valueKey="id"
           clearable={false}
-          ariaLabel="วิชา"
+          ariaLabel={t("วิชา")}
         />
       </div>
     </div>

@@ -150,3 +150,10 @@ code {
     page-break-inside: avoid !important;
   }
 }
+
+/* หลายภาษา: Bai Jamjuree ไม่มีอักษรจีน/ญี่ปุ่น/เกาหลี — ให้ตกไปใช้ฟอนต์ระบบของภาษานั้น (ไม่ต้องโหลดฟอนต์เพิ่ม) */
+html:lang(zh) :is(body, .font-sans, .font-display, h1, h2, h3, button, input, textarea, select) { font-family: "Bai Jamjuree", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+html:lang(ja) :is(body, .font-sans, .font-display, h1, h2, h3, button, input, textarea, select) { font-family: "Bai Jamjuree", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif; }
+html:lang(ko) :is(body, .font-sans, .font-display, h1, h2, h3, button, input, textarea, select) { font-family: "Bai Jamjuree", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+/* คำภาษาเยอรมัน/ฝรั่งเศสยาว: ตัดคำได้แทนที่จะล้นกรอบ */
+html:lang(de), html:lang(fr) { overflow-wrap: break-word; hyphens: auto; }

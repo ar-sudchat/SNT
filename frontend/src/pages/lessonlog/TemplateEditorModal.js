@@ -1,3 +1,4 @@
+import { t, tc, tx } from '../../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { assessmentAPI } from '../../services/api';
 import WindowModal from '../../components/ui/WindowModal';
@@ -118,49 +119,49 @@ const totalPoints = (form) => filledCount(form.criteria) * (form.responseType ==
 // "14–15 = ดีมาก, 11–13 = ดี, 8–10 = พอใช้, ต่ำกว่า 8 = ปรับปรุง"
 function rangesText(levels, total) {
   if (!levels.length || total < 1) return '';
-  const head = levels.slice(0, -1).map(l => ({ label: l.label.trim() || '(ยังไม่ตั้งชื่อ)', p: parseInt(l.points, 10) }));
+  const head = levels.slice(0, -1).map(l => ({ label: l.label.trim() || t('(ยังไม่ตั้งชื่อ)'), p: parseInt(l.points, 10) }));
   const last = levels[levels.length - 1];
-  const lastLabel = last.label.trim() || '(ยังไม่ตั้งชื่อ)';
+  const lastLabel = last.label.trim() || t('(ยังไม่ตั้งชื่อ)');
   if (head.some(h => !Number.isInteger(h.p))) return '';
   head.sort((a, b) => b.p - a.p);
   const parts = head.map((h, i) => {
     const hi = i === 0 ? total : head[i - 1].p - 1;
     return `${h.p === hi ? h.p : `${h.p}–${hi}`} = ${h.label}`;
   });
-  if (head.length) parts.push(`ต่ำกว่า ${head[head.length - 1].p} = ${lastLabel}`);
-  else parts.push(`ทุกคะแนน = ${lastLabel}`);
+  if (head.length) parts.push(t('ต่ำกว่า {value1} = {lastLabel}', { value1: head[head.length - 1].p, lastLabel: lastLabel }));
+  else parts.push(t('ทุกคะแนน = {lastLabel}', { lastLabel: lastLabel }));
   return parts.join(', ');
 }
 
 // คืน { step, msg } (ข้อความภาษาครู + ขั้นที่ต้องแก้) หรือ null ถ้าผ่าน
 function validate(form) {
   const fail = (step, msg) => ({ step, msg });
-  if (!form.name.trim()) return fail('basic', 'ตั้งชื่อแบบประเมินก่อน');
+  if (!form.name.trim()) return fail('basic', t('ตั้งชื่อแบบประเมินก่อน'));
   if (form.scope === 'NOTE') return null;
   if (hasClassQs(form)) {
-    if (!form.classFields.length) return fail('class', 'เพิ่มคำถามระดับห้องอย่างน้อย 1 ข้อ');
+    if (!form.classFields.length) return fail('class', t('เพิ่มคำถามระดับห้องอย่างน้อย 1 ข้อ'));
     for (let i = 0; i < form.classFields.length; i++) {
       const f = form.classFields[i];
-      if (!f.label.trim()) return fail('class', `พิมพ์คำถามข้อที่ ${i + 1} หรือเอาข้อนั้นออก`);
-      if (hasChoices(f.type) && !f.options.length) return fail('class', `ใส่ตัวเลือกให้คำถามข้อที่ ${i + 1} อย่างน้อย 1 ตัว`);
+      if (!f.label.trim()) return fail('class', t('พิมพ์คำถามข้อที่ {value1} หรือเอาข้อนั้นออก', { value1: i + 1 }));
+      if (hasChoices(f.type) && !f.options.length) return fail('class', t('ใส่ตัวเลือกให้คำถามข้อที่ {value1} อย่างน้อย 1 ตัว', { value1: i + 1 }));
     }
   }
   if (!hasStudents(form)) return null;
   const n = filledCount(form.criteria);
   const text = form.responseType === 'TEXT';
-  if (!n) return fail('items', text ? 'เพิ่มหัวข้อที่ให้เขียนอย่างน้อย 1 รายการ' : 'เพิ่มรายการประเมินอย่างน้อย 1 รายการ');
+  if (!n) return fail('items', text ? t('เพิ่มหัวข้อที่ให้เขียนอย่างน้อย 1 รายการ') : t('เพิ่มรายการประเมินอย่างน้อย 1 รายการ'));
   if (form.responseType === 'SCORE') {
     const max = Number(form.maxScore);
-    if (!Number.isInteger(max) || max < 2 || max > 10) return fail('basic', 'ระดับคะแนนต้องเป็น 2–10');
+    if (!Number.isInteger(max) || max < 2 || max > 10) return fail('basic', t('ระดับคะแนนต้องเป็น 2–10'));
   }
   if (!levelsOn(form)) return null;
   const total = totalPoints(form);
-  if (!form.levels.length) return fail('levels', 'กำหนดระดับคุณภาพอย่างน้อย 1 ระดับ');
-  if (form.levels.some(l => !l.label.trim())) return fail('levels', 'ตั้งชื่อระดับคุณภาพให้ครบทุกแถว');
+  if (!form.levels.length) return fail('levels', t('กำหนดระดับคุณภาพอย่างน้อย 1 ระดับ'));
+  if (form.levels.some(l => !l.label.trim())) return fail('levels', t('ตั้งชื่อระดับคุณภาพให้ครบทุกแถว'));
   const pts = form.levels.slice(0, -1).map(l => parseInt(l.points, 10));
   const bad = pts.some(p => !Number.isInteger(p) || p < 1 || p > total);
-  if (bad) return fail('levels', `คะแนนเริ่มต้นของแต่ละระดับต้องอยู่ระหว่าง 1–${total}`);
-  if (new Set(pts).size !== pts.length) return fail('levels', 'คะแนนเริ่มต้นของแต่ละระดับต้องไม่ซ้ำกัน');
+  if (bad) return fail('levels', t('คะแนนเริ่มต้นของแต่ละระดับต้องอยู่ระหว่าง 1–{total}', { total: total }));
+  if (new Set(pts).size !== pts.length) return fail('levels', t('คะแนนเริ่มต้นของแต่ละระดับต้องไม่ซ้ำกัน'));
   return null;
 }
 
@@ -216,11 +217,11 @@ function stepsOf(form, isEdit) {
 }
 
 const stepLabel = (step, form) => ({
-  type: 'เลือกแบบ',
-  basic: 'ข้อมูลทั่วไป',
-  class: 'คำถามระดับห้อง',
-  items: form.responseType === 'TEXT' ? 'หัวข้อที่ให้เขียน' : 'รายการประเมิน',
-  levels: 'ระดับคุณภาพ',
+  type: t('เลือกแบบ'),
+  basic: t('ข้อมูลทั่วไป'),
+  class: t('คำถามระดับห้อง'),
+  items: form.responseType === 'TEXT' ? t('หัวข้อที่ให้เขียน') : t('รายการประเมิน'),
+  levels: t('ระดับคุณภาพ'),
 }[step]);
 
 // ---- ส่วนย่อย ----
@@ -260,7 +261,7 @@ const StepHead = ({ title, sub }) => (
 function Stepper({ steps, current, form, onPick }) {
   const at = steps.indexOf(current);
   return (
-    <nav aria-label="ขั้นตอน" className="sticky top-0 z-10 border-b border-gray-200 bg-white px-2 py-1">
+    <nav aria-label={t("ขั้นตอน")} className="sticky top-0 z-10 border-b border-gray-200 bg-white px-2 py-1">
       <ol className="flex items-center gap-1 overflow-x-auto">
         {steps.map((s, i) => {
           const active = s === current;
@@ -297,7 +298,7 @@ function OptionsEditor({ options, onChange, index }) {
   };
   return (
     <div className="pl-8 space-y-2">
-      <p className="text-xs text-gray-500">ตัวเลือก (ใส่ได้ถึง {MAX_OPTIONS} ตัว)</p>
+      <p className="text-xs text-gray-500">{t('ตัวเลือก (ใส่ได้ถึง {MAX_OPTIONS} ตัว)', { MAX_OPTIONS: MAX_OPTIONS })}</p>
       {options.length > 0 && (
         <ul className="flex flex-wrap gap-2">
           {options.map((o, i) => (
@@ -306,7 +307,7 @@ function OptionsEditor({ options, onChange, index }) {
               <button
                 type="button"
                 className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] text-red-700"
-                aria-label={`เอาตัวเลือก ${o} ออก`}
+                aria-label={t('เอาตัวเลือก {o} ออก', { o: o })}
                 onClick={() => onChange(options.filter((_, j) => j !== i))}
               >✕</button>
             </li>
@@ -318,14 +319,14 @@ function OptionsEditor({ options, onChange, index }) {
           className={INPUT}
           value={draft}
           maxLength={60}
-          placeholder="พิมพ์ตัวเลือกแล้วกด เพิ่ม"
-          aria-label={`ตัวเลือกใหม่ของคำถามข้อที่ ${index + 1}`}
+          placeholder={t("พิมพ์ตัวเลือกแล้วกด เพิ่ม")}
+          aria-label={t('ตัวเลือกใหม่ของคำถามข้อที่ {value1}', { value1: index + 1 })}
           disabled={options.length >= MAX_OPTIONS}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
           onBlur={commit}
         />
-        <button type="button" className={`${BTN_SECONDARY} shrink-0`} disabled={!draft.trim() || options.length >= MAX_OPTIONS} onClick={commit}>เพิ่ม</button>
+        <button type="button" className={`${BTN_SECONDARY} shrink-0`} disabled={!draft.trim() || options.length >= MAX_OPTIONS} onClick={commit}>{t('เพิ่ม')}</button>
       </div>
     </div>
   );
@@ -335,8 +336,8 @@ function OptionsEditor({ options, onChange, index }) {
 function RowTools({ index, count, onMove, onRemove, removeLabel }) {
   return (
     <div className="flex gap-1 ml-auto">
-      <button type="button" className={BTN_ICON} disabled={index === 0} aria-label="เลื่อนขึ้น" onClick={() => onMove(-1)}>▲</button>
-      <button type="button" className={BTN_ICON} disabled={index === count - 1} aria-label="เลื่อนลง" onClick={() => onMove(1)}>▼</button>
+      <button type="button" className={BTN_ICON} disabled={index === 0} aria-label={t("เลื่อนขึ้น")} onClick={() => onMove(-1)}>▲</button>
+      <button type="button" className={BTN_ICON} disabled={index === count - 1} aria-label={t("เลื่อนลง")} onClick={() => onMove(1)}>▼</button>
       <button type="button" className={`${BTN_ICON} text-red-700`} aria-label={removeLabel} onClick={onRemove}>✕</button>
     </div>
   );
@@ -351,23 +352,23 @@ function ClassFieldRow({ field, index, count, onChange, onMove, onRemove }) {
           className={INPUT}
           value={field.label}
           maxLength={120}
-          placeholder="เช่น ปัญหาที่พบในการสอน"
-          aria-label={`คำถามข้อที่ ${index + 1}`}
+          placeholder={t("เช่น ปัญหาที่พบในการสอน")}
+          aria-label={t('คำถามข้อที่ {value1}', { value1: index + 1 })}
           onChange={(e) => onChange({ label: e.target.value })}
         />
       </div>
       <div className="flex flex-wrap items-center gap-2 pl-8">
         <SmartComboBox
-          options={FIELD_TYPES}
+          options={FIELD_TYPES.map(field => ({ ...field, label: t(field.label) }))}
           value={field.type}
           onChange={(v) => v && onChange({ type: v })}
           valueKey="id"
           searchable={false}
           clearable={false}
-          ariaLabel={`ชนิดคำตอบของข้อที่ ${index + 1}`}
+          ariaLabel={t('ชนิดคำตอบของข้อที่ {value1}', { value1: index + 1 })}
           className="w-44"
         />
-        <RowTools index={index} count={count} onMove={onMove} onRemove={onRemove} removeLabel={`เอาคำถามข้อที่ ${index + 1} ออก`} />
+        <RowTools index={index} count={count} onMove={onMove} onRemove={onRemove} removeLabel={t('เอาคำถามข้อที่ {value1} ออก', { value1: index + 1 })} />
       </div>
       {hasChoices(field.type) && (
         <OptionsEditor options={field.options} index={index} onChange={(options) => onChange({ options })} />
@@ -383,26 +384,26 @@ const RESPONSE_HINT = {
   TEXT: 'เขียนข้อความสั้นๆ ของนักเรียนแต่ละคนในแต่ละหัวข้อ ไม่มีคะแนน',
 };
 
-const responseLabel = (id) => (RESPONSE_TYPES.find(r => r.id === id) || RESPONSE_TYPES[0]).label;
+const responseLabel = (id) => t((RESPONSE_TYPES.find(r => r.id === id) || RESPONSE_TYPES[0]).label);
 
 // ---- ขั้นที่ 1 (สร้างใหม่): เลือกแบบ ----
 
 function TypeStep({ form, onPick }) {
   return (
     <div>
-      <StepHead title="จะประเมินแบบไหน" sub="แตะเลือก 1 แบบ แล้วไปตั้งชื่อต่อ" />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="ทำแบบไหน">
+      <StepHead title={t("จะประเมินแบบไหน")} sub={t("แตะเลือก 1 แบบ แล้วไปตั้งชื่อต่อ")} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label={t("ทำแบบไหน")}>
         {SCOPE_OPTIONS.map(o => (
-          <RadioCard big key={o.value} checked={form.scope === o.value} onClick={() => onPick(o.value)} title={o.title} sub={o.sub} />
+          <RadioCard big key={o.value} checked={form.scope === o.value} onClick={() => onPick(o.value)} title={t(o.title)} sub={t(o.sub)} />
         ))}
       </div>
-      <p className="mt-4 mb-1 text-xs text-gray-500">แบบอื่น</p>
-      <div role="radiogroup" aria-label="แบบอื่น">
+      <p className="mt-4 mb-1 text-xs text-gray-500">{t('แบบอื่น')}</p>
+      <div role="radiogroup" aria-label={t("แบบอื่น")}>
         <RadioCard
           checked={form.scope === 'NOTE'}
           onClick={() => onPick('NOTE')}
-          title="บันทึกข้อความหลังสอน"
-          sub="เขียนบันทึกรวมของห้อง แบบเดิมที่มีช่องลงชื่อ"
+          title={t("บันทึกข้อความหลังสอน")}
+          sub={t("เขียนบันทึกรวมของห้อง แบบเดิมที่มีช่องลงชื่อ")}
         />
       </div>
     </div>
@@ -415,7 +416,7 @@ function BasicStep({ form, set, isEdit, pickScope, changeResponse, goType }) {
   const rt = form.responseType;
   const max = Number(form.maxScore) || 0;
   const canSwitchScope = isEdit && !form.isBuiltIn && (form.scope === 'STUDENT' || form.scope === 'BOTH');
-  const scopeTitle = form.scope === 'NOTE' ? 'บันทึกข้อความหลังสอน' : SCOPE_LABEL[form.scope];
+  const scopeTitle = form.scope === 'NOTE' ? t('บันทึกข้อความหลังสอน') : t(SCOPE_LABEL[form.scope]);
   const nameRef = useRef(null);
   const [advOpen] = useState(form.useAverage); // เปิดไว้ตั้งแต่แรกถ้าเคยตั้งค่าไว้
 
@@ -427,60 +428,60 @@ function BasicStep({ form, set, isEdit, pickScope, changeResponse, goType }) {
       {!isEdit && (
         <p className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
           <span className="rounded-full bg-brand-100 px-3 py-1 text-brand-800">{scopeTitle}</span>
-          <button type="button" className="min-h-[44px] px-1 text-brand-700 underline" onClick={goType}>เปลี่ยนแบบ</button>
+          <button type="button" className="min-h-[44px] px-1 text-brand-700 underline" onClick={goType}>{t('เปลี่ยนแบบ')}</button>
         </p>
       )}
 
-      <Field label="ชื่อแบบประเมิน">
+      <Field label={t("ชื่อแบบประเมิน")}>
         <input
           ref={nameRef}
           data-autofocus
           className={INPUT}
           value={form.name}
           maxLength={120}
-          placeholder="เช่น การทำงานกลุ่ม"
+          placeholder={t("เช่น การทำงานกลุ่ม")}
           onChange={(e) => set({ name: e.target.value })}
         />
       </Field>
 
       {canSwitchScope && (
-        <Field label="ทำแบบไหน">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="ทำแบบไหน">
+        <Field label={t("ทำแบบไหน")}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label={t("ทำแบบไหน")}>
             {SCOPE_OPTIONS.filter(o => o.value !== 'CLASS').map(o => (
-              <RadioCard key={o.value} checked={form.scope === o.value} onClick={() => pickScope(o.value)} title={o.title} sub={o.sub} />
+              <RadioCard key={o.value} checked={form.scope === o.value} onClick={() => pickScope(o.value)} title={t(o.title)} sub={t(o.sub)} />
             ))}
           </div>
         </Field>
       )}
 
       {hasStudents(form) && !form.isBuiltIn && (
-        <Field label="นักเรียนแต่ละคนตอบแบบไหน">
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="รูปแบบการตอบ">
+        <Field label={t("นักเรียนแต่ละคนตอบแบบไหน")}>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("รูปแบบการตอบ")}>
             {RESPONSE_TYPES.map(r => (
-              <RadioCard key={r.id} checked={rt === r.id} onClick={() => changeResponse(r.id)} title={r.label} sub={RESPONSE_HINT[r.id]} />
+              <RadioCard key={r.id} checked={rt === r.id} onClick={() => changeResponse(r.id)} title={t(r.label)} sub={t(RESPONSE_HINT[r.id])} />
             ))}
           </div>
         </Field>
       )}
       {hasStudents(form) && form.isBuiltIn && (
-        <p className="text-sm text-gray-600">รูปแบบการตอบ: <span className="text-gray-900">{responseLabel(rt)}</span> (แบบสำเร็จรูปเปลี่ยนไม่ได้)</p>
+        <p className="text-sm text-gray-600">{tx('รูปแบบการตอบ: {type} (แบบสำเร็จรูปเปลี่ยนไม่ได้)', { type: <span className="text-gray-900">{responseLabel(rt)}</span> })}</p>
       )}
 
       {hasStudents(form) && rt === 'SCORE' && (
         <div className="space-y-3">
-          <Field label="ระดับคะแนน" hint={`ให้คะแนนรายการละ 1–${max || '…'}`}>
+          <Field label={t("ระดับคะแนน")} hint={t('ให้คะแนนรายการละ 1–{value1}', { value1: max || '…' })}>
             <SmartComboBox
-              options={[2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => ({ value: v, label: `1–${v} (${v} ระดับ)` }))}
+              options={[2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => ({ value: v, label: t('1–{v} ({v} ระดับ)', { v }) }))}
               value={Number(form.maxScore)}
               onChange={(v) => v && set({ maxScore: Number(v) })}
-              placeholder="เลือกระดับคะแนน"
+              placeholder={t("เลือกระดับคะแนน")}
               searchable={false}
               clearable={false}
-              ariaLabel="ระดับคะแนน"
+              ariaLabel={t("ระดับคะแนน")}
             />
           </Field>
           <details className="rounded-lg border border-gray-200" open={advOpen}>
-            <summary className="flex items-center min-h-[44px] cursor-pointer px-3 text-sm text-gray-700">ตัวเลือกเพิ่มเติม</summary>
+            <summary className="flex items-center min-h-[44px] cursor-pointer px-3 text-sm text-gray-700">{t('ตัวเลือกเพิ่มเติม')}</summary>
             <label className="flex items-center gap-3 min-h-[44px] cursor-pointer px-3 pb-2">
               <input
                 type="checkbox"
@@ -488,7 +489,7 @@ function BasicStep({ form, set, isEdit, pickScope, changeResponse, goType }) {
                 checked={form.useAverage}
                 onChange={(e) => set({ useAverage: e.target.checked })}
               />
-              <span className="text-sm text-gray-800">แสดงเป็นค่าเฉลี่ย</span>
+              <span className="text-sm text-gray-800">{t('แสดงเป็นค่าเฉลี่ย')}</span>
             </label>
           </details>
         </div>
@@ -516,7 +517,7 @@ function ClassStep({ form, setForm }) {
 
   return (
     <section>
-      <StepHead title="คำถามระดับห้อง" sub="ตอบครั้งเดียวต่อหนึ่งบันทึก ไม่ต้องตอบทีละคน" />
+      <StepHead title={t("คำถามระดับห้อง")} sub={t("ตอบครั้งเดียวต่อหนึ่งบันทึก ไม่ต้องตอบทีละคน")} />
       <ul className="space-y-3">
         {form.classFields.map((f, i) => (
           <ClassFieldRow
@@ -531,8 +532,8 @@ function ClassStep({ form, setForm }) {
         ))}
       </ul>
       <div className="mt-2 flex items-center gap-3">
-        <button type="button" className={BTN_SECONDARY} disabled={form.classFields.length >= MAX_CLASS_FIELDS} onClick={addField}>+ เพิ่มคำถาม</button>
-        <span className="text-xs text-gray-500">{form.classFields.length}/{MAX_CLASS_FIELDS} ข้อ</span>
+        <button type="button" className={BTN_SECONDARY} disabled={form.classFields.length >= MAX_CLASS_FIELDS} onClick={addField}>{t('+ เพิ่มคำถาม')}</button>
+        <span className="text-xs text-gray-500">{t('{value1}/{MAX_CLASS_FIELDS} ข้อ', { value1: form.classFields.length, MAX_CLASS_FIELDS: MAX_CLASS_FIELDS })}</span>
       </div>
     </section>
   );
@@ -556,10 +557,10 @@ function ItemsStep({ form, setForm, showShort, setShowShort }) {
   const addCriterion = () => setForm(f => (f.criteria.length >= MAX_CRITERIA ? f
     : { ...f, criteria: [...f.criteria, { _k: nextKey(), label: '', short: '' }] }));
 
-  const title = rt === 'TEXT' ? 'หัวข้อที่ให้เขียน' : 'รายการประเมิน';
-  const placeholder = rt === 'TEXT' ? 'เช่น ข้อสังเกต' : 'เช่น มีความรับผิดชอบต่อหน้าที่';
-  const sub = rt === 'TEXT' ? 'นักเรียนแต่ละคนจะมีช่องเขียนตามหัวข้อเหล่านี้'
-    : rt === 'SCORE' ? `ให้คะแนนรายการละ 1–${Number(form.maxScore) || '…'}` : RESPONSE_HINT[rt];
+  const title = rt === 'TEXT' ? t('หัวข้อที่ให้เขียน') : t('รายการประเมิน');
+  const placeholder = rt === 'TEXT' ? t('เช่น ข้อสังเกต') : t('เช่น มีความรับผิดชอบต่อหน้าที่');
+  const sub = rt === 'TEXT' ? t('นักเรียนแต่ละคนจะมีช่องเขียนตามหัวข้อเหล่านี้')
+    : rt === 'SCORE' ? t('ให้คะแนนรายการละ 1–{value1}', { value1: Number(form.maxScore) || '…' }) : t(RESPONSE_HINT[rt]);
 
   return (
     <section>
@@ -574,7 +575,7 @@ function ItemsStep({ form, setForm, showShort, setShowShort }) {
                 value={c.label}
                 maxLength={120}
                 placeholder={placeholder}
-                aria-label={`รายการที่ ${i + 1}`}
+                aria-label={t('รายการที่ {value1}', { value1: i + 1 })}
                 onChange={(e) => setCriterion(i, { label: e.target.value })}
                 onBlur={() => { if (c.label.trim() && !c.short.trim()) setCriterion(i, { short: c.label.trim().slice(0, 10) }); }}
               />
@@ -583,18 +584,18 @@ function ItemsStep({ form, setForm, showShort, setShowShort }) {
                 count={form.criteria.length}
                 onMove={(d) => moveCriterion(i, d)}
                 onRemove={() => removeCriterion(i)}
-                removeLabel={`เอารายการที่ ${i + 1} ออก`}
+                removeLabel={t('เอารายการที่ {value1} ออก', { value1: i + 1 })}
               />
             </div>
             {showShort && (
               <div className="flex items-center gap-2 pl-8">
-                <span className="text-xs text-gray-500 whitespace-nowrap">ชื่อสั้น</span>
+                <span className="text-xs text-gray-500 whitespace-nowrap">{t('ชื่อสั้น')}</span>
                 <input
                   className={`${INPUT} !w-40`}
                   value={c.short}
                   maxLength={16}
-                  placeholder={c.label.trim().slice(0, 10) || 'ชื่อสั้น'}
-                  aria-label={`ชื่อสั้นของรายการที่ ${i + 1}`}
+                  placeholder={c.label.trim().slice(0, 10) || t('ชื่อสั้น')}
+                  aria-label={t('ชื่อสั้นของรายการที่ {value1}', { value1: i + 1 })}
                   onChange={(e) => setCriterion(i, { short: e.target.value })}
                 />
               </div>
@@ -603,8 +604,8 @@ function ItemsStep({ form, setForm, showShort, setShowShort }) {
         ))}
       </ul>
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <button type="button" className={BTN_SECONDARY} disabled={form.criteria.length >= MAX_CRITERIA} onClick={addCriterion}>+ เพิ่มรายการ</button>
-        <span className="text-xs text-gray-500">{form.criteria.length}/{MAX_CRITERIA} รายการ</span>
+        <button type="button" className={BTN_SECONDARY} disabled={form.criteria.length >= MAX_CRITERIA} onClick={addCriterion}>{t('+ เพิ่มรายการ')}</button>
+        <span className="text-xs text-gray-500">{t('{value1}/{MAX_CRITERIA} รายการ', { value1: form.criteria.length, MAX_CRITERIA: MAX_CRITERIA })}</span>
       </div>
       <label className="mt-3 flex items-center gap-3 min-h-[44px] cursor-pointer">
         <input
@@ -613,9 +614,9 @@ function ItemsStep({ form, setForm, showShort, setShowShort }) {
           checked={showShort}
           onChange={(e) => setShowShort(e.target.checked)}
         />
-        <span className="text-sm text-gray-800">แก้ชื่อสั้น (หัวคอลัมน์)</span>
+        <span className="text-sm text-gray-800">{t('แก้ชื่อสั้น (หัวคอลัมน์)')}</span>
       </label>
-      <p className="text-xs text-gray-500">ถ้าเว้นไว้จะตัดจาก 10 ตัวอักษรแรกของรายการ</p>
+      <p className="text-xs text-gray-500">{t('ถ้าเว้นไว้จะตัดจาก 10 ตัวอักษรแรกของรายการ')}</p>
     </section>
   );
 }
@@ -627,7 +628,7 @@ function LevelsStep({ form, setForm }) {
   const max = Number(form.maxScore) || 0;
   const rt = form.responseType;
   const total = totalPoints(form);
-  const unit = rt === 'SCORE' ? 'คะแนน' : 'ข้อ';
+  const unit = rt === 'SCORE' ? tc('unit', 'คะแนน') : tc('unit', 'ข้อ');
   const showLevels = levelsOn(form);
   const touch = (f, patch) => ({ ...f, ...patch, levelsTouched: true });
 
@@ -660,10 +661,10 @@ function LevelsStep({ form, setForm }) {
   return (
     <section>
       <StepHead
-        title="ระดับคุณภาพ"
-        sub={!n ? 'เพิ่มรายการประเมินก่อน จึงจะคำนวณช่วงคะแนนได้'
-          : rt === 'SCORE' ? `คะแนนรวมเต็ม ${total} (${n} รายการ × ${max})`
-            : `นับจำนวนรายการที่${rt === 'PASSFAIL' ? 'ผ่าน' : 'ติ๊ก ✓'} เต็ม ${total} ข้อ`}
+        title={t("ระดับคุณภาพ")}
+        sub={!n ? t('เพิ่มรายการประเมินก่อน จึงจะคำนวณช่วงคะแนนได้')
+          : rt === 'SCORE' ? t('คะแนนรวมเต็ม {total} ({n} รายการ × {max})', { total: total, n: n, max: max })
+            : t('นับจำนวนรายการที่{value1} เต็ม {total} ข้อ', { value1: rt === 'PASSFAIL' ? t('ผ่าน') : t('ติ๊ก ✓'), total: total })}
       />
 
       {(rt === 'PASSFAIL' || rt === 'CHECK') && !form.isBuiltIn && (
@@ -674,17 +675,17 @@ function LevelsStep({ form, setForm }) {
             checked={form.useLevels}
             onChange={(e) => toggleLevels(e.target.checked)}
           />
-          <span className="text-sm text-gray-800">แบ่งระดับคุณภาพ (ไม่บังคับ)</span>
+          <span className="text-sm text-gray-800">{t('แบ่งระดับคุณภาพ (ไม่บังคับ)')}</span>
         </label>
       )}
-      {!showLevels && <p className="text-sm text-gray-500">ไม่แบ่งระดับ ข้ามขั้นนี้แล้วกดบันทึกได้เลย</p>}
+      {!showLevels && <p className="text-sm text-gray-500">{t('ไม่แบ่งระดับ ข้ามขั้นนี้แล้วกดบันทึกได้เลย')}</p>}
 
       {showLevels && (
         <>
-          <p className="text-xs text-gray-500 mb-1">ใช้ชุดสำเร็จรูป</p>
+          <p className="text-xs text-gray-500 mb-1">{t('ใช้ชุดสำเร็จรูป')}</p>
           <div className="flex flex-wrap gap-2 mb-3">
             {PRESETS.map(p => (
-              <button key={p.name} type="button" className={CHIP} onClick={() => applyPreset(p)}>{p.name}</button>
+              <button key={p.name} type="button" className={CHIP} onClick={() => applyPreset(p)}>{t(p.name)}</button>
             ))}
           </div>
           <ul className="space-y-2">
@@ -696,20 +697,20 @@ function LevelsStep({ form, setForm }) {
                     className={`${INPUT} !w-auto flex-1 min-w-[8rem]`}
                     value={l.label}
                     maxLength={40}
-                    placeholder="ชื่อระดับ"
-                    aria-label={`ชื่อระดับที่ ${i + 1}`}
+                    placeholder={t("ชื่อระดับ")}
+                    aria-label={t('ชื่อระดับที่ {value1}', { value1: i + 1 })}
                     onChange={(e) => setLevel(i, { label: e.target.value })}
                   />
                   {isLast ? (
-                    <span className="text-sm text-gray-600 w-40">{unit}ที่เหลือ</span>
+                    <span className="text-sm text-gray-600 w-40">{t('{unit}ที่เหลือ', { unit: unit })}</span>
                   ) : (
                     <div className="flex items-center gap-2 w-40">
-                      <span className="text-sm text-gray-600 whitespace-nowrap">เริ่มที่</span>
+                      <span className="text-sm text-gray-600 whitespace-nowrap">{t('เริ่มที่')}</span>
                       <input
                         className={`${INPUT} !w-16 text-center`}
                         inputMode="numeric"
                         value={l.points}
-                        aria-label={`${unit}เริ่มต้นของระดับที่ ${i + 1}`}
+                        aria-label={t('{unit}เริ่มต้นของระดับที่ {value2}', { unit: unit, value2: i + 1 })}
                         onChange={(e) => setLevel(i, { points: e.target.value.replace(/[^0-9]/g, '') })}
                         onBlur={sortLevels}
                       />
@@ -720,14 +721,14 @@ function LevelsStep({ form, setForm }) {
                     type="button"
                     className={`${BTN_ICON} text-red-700`}
                     disabled={form.levels.length <= 1}
-                    aria-label={`เอาระดับที่ ${i + 1} ออก`}
+                    aria-label={t('เอาระดับที่ {value1} ออก', { value1: i + 1 })}
                     onClick={() => removeLevel(i)}
                   >✕</button>
                 </li>
               );
             })}
           </ul>
-          <button type="button" className={`${BTN_SECONDARY} mt-2`} disabled={form.levels.length >= MAX_LEVELS} onClick={addLevel}>+ เพิ่มระดับ</button>
+          <button type="button" className={`${BTN_SECONDARY} mt-2`} disabled={form.levels.length >= MAX_LEVELS} onClick={addLevel}>{t('+ เพิ่มระดับ')}</button>
           {preview && (
             <p className="mt-3 rounded-lg bg-brand-100 px-3 py-2 text-sm text-brand-800" aria-live="polite">{preview}</p>
           )}
@@ -832,7 +833,7 @@ export default function TemplateEditorModal({ template, onClose, onSaved }) {
       setSaving(false);
       await onSaved();
     } catch (err) {
-      setError(errMsg(err, 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'));
+      setError(errMsg(err, t('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')));
       setSaving(false);
     }
   };
@@ -843,15 +844,15 @@ export default function TemplateEditorModal({ template, onClose, onSaved }) {
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
       <div className="flex items-center gap-2">
         {!isEdit && at > 0 && (
-          <button type="button" className={`${BTN_SECONDARY} !px-3`} disabled={saving} onClick={() => goTo(steps[at - 1])}>‹ ย้อนกลับ</button>
+          <button type="button" className={`${BTN_SECONDARY} !px-3`} disabled={saving} onClick={() => goTo(steps[at - 1])}>{t('‹ ย้อนกลับ')}</button>
         )}
         <div className="ml-auto flex gap-2">
-          <button type="button" className={BTN_SECONDARY} disabled={saving} onClick={close}>ยกเลิก</button>
+          <button type="button" className={BTN_SECONDARY} disabled={saving} onClick={close}>{t('ยกเลิก')}</button>
           {!isEdit && !isLast && (
-            <button type="button" className={BTN_PRIMARY} onClick={next}>ถัดไป ›</button>
+            <button type="button" className={BTN_PRIMARY} onClick={next}>{t('ถัดไป ›')}</button>
           )}
           {(isEdit || isLast) && (
-            <button type="button" className={BTN_PRIMARY} disabled={saving} onClick={save}>{saving ? 'กำลังบันทึก…' : 'บันทึก'}</button>
+            <button type="button" className={BTN_PRIMARY} disabled={saving} onClick={save}>{saving ? t('กำลังบันทึก…') : t('บันทึก')}</button>
           )}
         </div>
       </div>
@@ -861,7 +862,7 @@ export default function TemplateEditorModal({ template, onClose, onSaved }) {
   return (
     <WindowModal
       open
-      title={isEdit ? `แก้ไข: ${template.name}` : 'สร้างแบบประเมินใหม่'}
+      title={isEdit ? t('แก้ไข: {value1}', { value1: t(template.name) }) : t('สร้างแบบประเมินใหม่')}
       onClose={close}
       id="lesson-log-template"
       initialWidth="max-w-3xl"

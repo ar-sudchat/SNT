@@ -1,3 +1,4 @@
+import { t, getLang } from '../../i18n';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -6,6 +7,15 @@ import { createPortal } from 'react-dom';
 const MONTH_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const MONTH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 const WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+// ภาษาต่างประเทศแสดงปี ค.ศ. บนปฏิทิน (ข้อความวันที่ที่บันทึกยังเป็น พ.ศ.)
+const yearOffset = () => (getLang() === 'th' || getLang() === 'qa' ? 543 : 0);
+// หัวสัปดาห์ตามภาษาที่เลือก (ตัวย่อไทยตัวเดียวชนกับคำอื่น จึงไม่ผ่านพจนานุกรม)
+const weekdays = () => {
+  const lang = getLang();
+  if (lang === 'th' || lang === 'qa') return WEEKDAYS;
+  const fmt = new Intl.DateTimeFormat(lang, { weekday: 'short' });
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 7 + i)));
+};
 
 const key = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 const sameDay = (a, b) => a && b && key(a) === key(b);
@@ -58,7 +68,7 @@ function monthGrid(year, month) {
   return Array.from({ length: 42 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
 }
 
-export default function ThaiDatePicker({ value, dates = [], onChange, placeholder = 'แตะเพื่อเลือกวันที่', id, inputClassName = '' }) {
+export default function ThaiDatePicker({ value, dates = [], onChange, placeholder = t('แตะเพื่อเลือกวันที่'), id, inputClassName = '' }) {
   const today = new Date();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState('multi'); // multi | range
@@ -152,7 +162,7 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
           type="button"
           onClick={() => (open ? setOpen(false) : openPicker())}
           aria-expanded={open}
-          aria-label={open ? 'ปิดปฏิทิน' : 'เลือกจากปฏิทิน'}
+          aria-label={open ? t('ปิดปฏิทิน') : t('เลือกจากปฏิทิน')}
           className={`flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg border ${open ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -166,12 +176,12 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
         <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} aria-hidden="true" />
         <div
           role="dialog"
-          aria-label="เลือกวันที่"
+          aria-label={t("เลือกวันที่")}
           className="fixed z-[9999] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
           style={pos}
         >
-          <div role="group" aria-label="แบบการเลือก" className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
-            {[['multi', 'หลายวัน'], ['range', 'ช่วงวันที่']].map(([m, label]) => (
+          <div role="group" aria-label={t("แบบการเลือก")} className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
+            {[['multi', t('หลายวัน')], ['range', t('ช่วงวันที่')]].map(([m, label]) => (
               <button key={m} type="button" aria-pressed={mode === m} onClick={() => switchMode(m)}
                 className={`min-h-[40px] rounded-md text-sm font-medium ${mode === m ? 'bg-white text-brand-700 shadow' : 'text-gray-600'}`}>
                 {label}
@@ -180,13 +190,13 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
           </div>
 
           <div className="mb-2 flex items-center justify-between">
-            <button type="button" onClick={() => shift(-1)} aria-label="เดือนก่อน" className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">‹</button>
-            <span className="font-medium text-gray-800">{MONTH_FULL[view.m]} {view.y + 543}</span>
-            <button type="button" onClick={() => shift(1)} aria-label="เดือนถัดไป" className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">›</button>
+            <button type="button" onClick={() => shift(-1)} aria-label={t("เดือนก่อน")} className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">‹</button>
+            <span className="font-medium text-gray-800">{t(MONTH_FULL[view.m])} {view.y + yearOffset()}</span>
+            <button type="button" onClick={() => shift(1)} aria-label={t("เดือนถัดไป")} className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">›</button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500">
-            {WEEKDAYS.map(w => <span key={w} className="py-1">{w}</span>)}
+            {weekdays().map(w => <span key={w} className="py-1">{w}</span>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {days.map(d => {
@@ -199,7 +209,7 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
                   type="button"
                   onClick={() => clickDay(d)}
                   aria-pressed={on}
-                  aria-label={`${d.getDate()} ${MONTH_FULL[d.getMonth()]} ${d.getFullYear() + 543}`}
+                  aria-label={`${d.getDate()} ${t(MONTH_FULL[d.getMonth()])} ${d.getFullYear() + yearOffset()}`}
                   className={`min-h-[40px] rounded-lg text-sm tabular-nums ${
                     on ? (mode === 'range' && !edge ? 'bg-brand-100 text-brand-800' : 'bg-brand-600 font-semibold text-white')
                       : other ? 'text-gray-300 hover:bg-gray-50' : 'text-gray-800 hover:bg-gray-100'
@@ -212,11 +222,11 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
           </div>
 
           <p className="mt-2 text-xs text-gray-500">
-            {mode === 'multi' ? 'แตะวันที่สอนได้หลายวัน แตะซ้ำเพื่อเอาออก' : 'แตะวันเริ่ม แล้วแตะวันสุดท้าย'}
+            {mode === 'multi' ? t('แตะวันที่สอนได้หลายวัน แตะซ้ำเพื่อเอาออก') : t('แตะวันเริ่ม แล้วแตะวันสุดท้าย')}
           </p>
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={clear} className="min-h-[44px] flex-1 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">ล้าง</button>
-            <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] flex-1 rounded-lg bg-brand-600 text-sm font-medium text-white hover:bg-brand-700">เสร็จ</button>
+            <button type="button" onClick={clear} className="min-h-[44px] flex-1 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">{t("ล้าง")}</button>
+            <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] flex-1 rounded-lg bg-brand-600 text-sm font-medium text-white hover:bg-brand-700">{t("เสร็จ")}</button>
           </div>
         </div>
         </>,

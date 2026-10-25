@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DialogProvider } from './components/ui/DialogProvider';
+import { I18nProvider } from './i18n';
 
 // Pages
 import Login from './pages/Login';
@@ -90,6 +91,7 @@ const RootGate = () => {
 
 function App() {
   return (
+    <I18nProvider>
     <AuthProvider>
       <DialogProvider>
       <BrowserRouter>
@@ -396,6 +398,7 @@ function App() {
       </BrowserRouter>
       </DialogProvider>
     </AuthProvider>
+    </I18nProvider>
   );
 }
 

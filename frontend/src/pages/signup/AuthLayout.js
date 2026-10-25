@@ -1,6 +1,8 @@
+import { t, tx } from '../../i18n';
 import React, { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../../components/brand/Logo';
+import LanguagePicker from '../../components/LanguagePicker';
 import Phone from '../landing/Phone';
 
 // โครงหน้าเข้าสู่ระบบ / สมัคร / เข้าร่วมกลุ่ม / ตอบรับคำเชิญ (ใช้ร่วมกัน)
@@ -37,27 +39,23 @@ const BrandPanel = () => (
     <span className="pointer-events-none absolute inset-y-0 left-8 w-1.5 border-x border-accent-400/30" aria-hidden="true" />
 
     <div className="relative flex h-full flex-col px-12 py-10 xl:px-16">
-      <Link to="/" className="self-start rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-4 focus-visible:ring-offset-brand-900" aria-label="KruScan หน้าแรก">
+      <Link to="/" className="self-start rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-4 focus-visible:ring-offset-brand-900" aria-label={t("KruScan หน้าแรก")}>
         <Logo tone="white" size={40} tagline={false} />
       </Link>
 
       <div className="grid flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-8 xl:gap-12">
         <div>
-          <p className="font-display text-[clamp(1.75rem,2.6vw,2.6rem)] font-semibold leading-[1.25] tracking-tight [text-wrap:balance]">
-            สแกนสมุด{' '}
-            <span className="relative inline-block whitespace-nowrap">
-              รู้ทันที
-              <Scribble className="absolute -bottom-2 left-0 h-3 w-full" />
-            </span>
-            <br />ใครส่งงานแล้ว
-          </p>
+          <p className="font-display text-[clamp(1.75rem,2.6vw,2.6rem)] font-semibold leading-[1.25] tracking-tight [text-wrap:balance]">{tx('สแกนสมุด <hl>รู้ทันที</hl><br/>ใครส่งงานแล้ว', {
+            hl: (c) => <span className="relative inline-block whitespace-nowrap">{c}<Scribble className="absolute -bottom-2 left-0 h-3 w-full" /></span>,
+            br: () => <br />,
+          })}</p>
           <ul className="mt-9 space-y-4">
             {BENEFITS.map(({ Icon, text }) => (
               <li key={text} className="flex items-start gap-3.5">
                 <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-inset ring-white/15">
                   <Icon className="size-5 text-accent-300" />
                 </span>
-                <span className="pt-1.5 text-[15px] leading-relaxed text-brand-100 [text-wrap:pretty]">{text}</span>
+                <span className="pt-1.5 text-[15px] leading-relaxed text-brand-100 [text-wrap:pretty]">{t(text)}</span>
               </li>
             ))}
           </ul>
@@ -65,11 +63,11 @@ const BrandPanel = () => (
 
         <div className="relative w-[clamp(176px,16vw,236px)]">
           <Phone src="/guide/img/phone-scan-grade.jpg" alt="" className="absolute left-[50%] -top-[6%] w-[88%] rotate-[9deg] brightness-[0.92]" />
-          <Phone src="/guide/img/phone-mon-all.jpg" alt="หน้าติดตามงานบนมือถือ แสดงจำนวนนักเรียนที่ส่งและยังไม่ส่งแต่ละห้อง" className="relative w-full rotate-2" />
+          <Phone src="/guide/img/phone-mon-all.jpg" alt={t("หน้าติดตามงานบนมือถือ แสดงจำนวนนักเรียนที่ส่งและยังไม่ส่งแต่ละห้อง")} className="relative w-full rotate-2" />
         </div>
       </div>
 
-      <p className="text-sm text-brand-200">ใช้ฟรีสำหรับครู · ชวนเพื่อนครูเข้ากลุ่มเดียวกันได้</p>
+      <p className="text-sm text-brand-200">{t('ใช้ฟรีสำหรับครู · ชวนเพื่อนครูเข้ากลุ่มเดียวกันได้')}</p>
     </div>
   </aside>
 );
@@ -78,7 +76,7 @@ const MobileHeader = () => (
   <header className="relative overflow-hidden text-white lg:hidden" style={PANEL_BG}>
     <div className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden="true" />
     <div className="relative mx-auto flex w-full max-w-[400px] items-center justify-between gap-3 px-4 py-4 sm:max-w-[432px]">
-      <Link to="/" className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300" aria-label="KruScan หน้าแรก">
+      <Link to="/" className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300" aria-label={t("KruScan หน้าแรก")}>
         <Logo tone="white" size={36} />
       </Link>
     </div>
@@ -93,6 +91,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
         <MobileHeader />
         <main className="flex flex-1 items-start justify-center px-4 pb-10 pt-7 sm:items-center sm:py-12">
           <div className="w-full max-w-[400px]">
+            <div className="mb-4 flex justify-end"><LanguagePicker /></div>
             {title && <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900 sm:text-[1.75rem]">{title}</h1>}
             {subtitle && <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{subtitle}</p>}
             <div className={title || subtitle ? 'mt-7' : ''}>{children}</div>
@@ -102,9 +101,9 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
           <div className="mx-auto flex w-full max-w-[400px] flex-wrap items-center justify-center gap-x-1 gap-y-1">
             {footer}
             {footer && <span aria-hidden="true">·</span>}
-            <a href="/privacy" className={footerLinkClass}>ความเป็นส่วนตัว</a>
+            <a href="/privacy" className={footerLinkClass}>{t('ความเป็นส่วนตัว')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/guide/" target="_blank" rel="noopener noreferrer" className={footerLinkClass}>คู่มือการใช้งาน</a>
+            <a href="/guide/" target="_blank" rel="noopener noreferrer" className={footerLinkClass}>{t('คู่มือการใช้งาน')}</a>
           </div>
         </footer>
       </div>
@@ -144,16 +143,16 @@ const EyeIcon = ({ off }) => (
 // ประเมินความแข็งแรงรหัสผ่านแบบหยาบ (แนะนำเท่านั้น เซิร์ฟเวอร์ตรวจแค่ความยาว ≥ 8)
 export function passwordStrength(pw) {
   if (!pw) return null;
-  if (pw.length < 8) return { level: 0, label: `สั้นไป อีก ${8 - pw.length} ตัว` };
+  if (pw.length < 8) return { level: 0, label: t('สั้นไป อีก {value1} ตัว', { value1: 8 - pw.length }) };
   const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
-  if (pw.length >= 12 && kinds >= 3) return { level: 3, label: 'แข็งแรง' };
-  if (kinds >= 2) return { level: 2, label: 'ดี — ยาวขึ้นอีกนิดจะปลอดภัยกว่า' };
-  return { level: 1, label: 'พอใช้ — ผสมตัวเลขหรือสัญลักษณ์จะดีขึ้น' };
+  if (pw.length >= 12 && kinds >= 3) return { level: 3, label: t('แข็งแรง') };
+  if (kinds >= 2) return { level: 2, label: t('ดี — ยาวขึ้นอีกนิดจะปลอดภัยกว่า') };
+  return { level: 1, label: t('พอใช้ — ผสมตัวเลขหรือสัญลักษณ์จะดีขึ้น') };
 }
 
 const BAR = ['bg-red-500', 'bg-accent-500', 'bg-brand-500', 'bg-pass'];
 
-export function PasswordField({ label = 'รหัสผ่าน', id, value, onChange, autoComplete = 'current-password', showStrength = false, hint, ...props }) {
+export function PasswordField({ label = t('รหัสผ่าน'), id, value, onChange, autoComplete = 'current-password', showStrength = false, hint, ...props }) {
   const auto = useId();
   const fid = id || auto;
   const [show, setShow] = useState(false);
@@ -167,7 +166,7 @@ export function PasswordField({ label = 'รหัสผ่าน', id, value, o
         <input id={fid} type={show ? 'text' : 'password'} value={value} onChange={onChange} autoComplete={autoComplete}
           aria-describedby={hintText ? hid : undefined} className={`${inputClass} pr-12`} {...props} />
         <button type="button" onClick={() => setShow((v) => !v)} aria-controls={fid} aria-pressed={show}
-          aria-label={show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'} title={show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+          aria-label={show ? t('ซ่อนรหัสผ่าน') : t('แสดงรหัสผ่าน')} title={show ? t('ซ่อนรหัสผ่าน') : t('แสดงรหัสผ่าน')}
           className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-gray-500 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500">
           <EyeIcon off={show} />
         </button>
@@ -185,8 +184,8 @@ export function PasswordField({ label = 'รหัสผ่าน', id, value, o
 }
 
 export const OrDivider = () => (
-  <div className="my-6 flex items-center gap-3 text-sm text-gray-500" role="separator" aria-label="หรือ">
-    <span className="h-px flex-1 bg-gray-200" /><span aria-hidden="true">หรือ</span><span className="h-px flex-1 bg-gray-200" />
+  <div className="my-6 flex items-center gap-3 text-sm text-gray-500" role="separator" aria-label={t("หรือ")}>
+    <span className="h-px flex-1 bg-gray-200" /><span aria-hidden="true">{t('หรือ')}</span><span className="h-px flex-1 bg-gray-200" />
   </div>
 );
 

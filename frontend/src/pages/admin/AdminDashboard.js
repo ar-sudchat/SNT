@@ -1,10 +1,11 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { reportAPI, academicYearAPI, subjectAPI, teacherAPI, classAPI } from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 
 // หน้าแรกแอดมิน: ภาพรวมกลุ่ม · ตัวเลขหลัก · วิชาที่ต้องติดตาม · ความพร้อมของระบบ
-const fmt = (n) => (Number(n) || 0).toLocaleString('th-TH');
+const fmt = (n) => (Number(n) || 0).toLocaleString(dateLocale());
 const pct = (a, b) => {
   if (!b) return 0;
   const p = (a / b) * 100;
@@ -35,7 +36,7 @@ const AdminDashboard = () => {
       settled(teacherAPI.getAll()),
       settled(classAPI.getAll())
     ]);
-    if (!overview && !statistics) setError('โหลดข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง');
+    if (!overview && !statistics) setError(t('โหลดข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง'));
     setData({ overview, statistics: statistics || [], year, subjects, teachers, classes });
     setLoading(false);
   }, []);
@@ -44,7 +45,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse" aria-busy="true" aria-label="กำลังโหลด">
+      <div className="space-y-4 animate-pulse" aria-busy="true" aria-label={t("กำลังโหลด")}>
         <div className="h-8 w-56 bg-gray-200 rounded" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-28 bg-gray-200 rounded-xl" />)}
@@ -94,53 +95,53 @@ const AdminDashboard = () => {
   const health = [
     {
       ok: !!year, path: '/admin/academic-years', label: 'ปีการศึกษาปัจจุบัน',
-      detail: year ? year.name : 'ยังไม่ได้ตั้งปีปัจจุบัน'
+      detail: year ? year.name : t('ยังไม่ได้ตั้งปีปัจจุบัน')
     },
     {
       ok: classCount > 0, path: '/admin/classes', label: 'ห้องเรียน',
-      detail: classCount === null ? 'ตรวจไม่ได้' : classCount > 0 ? `${fmt(classCount)} ห้อง` : 'ยังไม่มีห้องเรียน'
+      detail: classCount === null ? t('ตรวจไม่ได้') : classCount > 0 ? t("{value1} ห้อง", { value1: fmt(classCount) }) : t('ยังไม่มีห้องเรียน')
     },
     {
       ok: (counts.students || 0) > 0, path: '/admin/import', label: 'รายชื่อนักเรียน',
-      detail: counts.students ? `${fmt(counts.students)} คน` : 'ยังไม่ได้นำเข้า'
+      detail: counts.students ? t("{value1} คน", { value1: fmt(counts.students) }) : t('ยังไม่ได้นำเข้า')
     },
     {
       ok: teachersNoSubject === 0, path: '/admin/subjects', label: 'ครูมีวิชาสอน',
-      detail: teachersNoSubject === null ? 'ตรวจไม่ได้' : teachersNoSubject === 0 ? `ครบทั้ง ${fmt(counts.teachers)} คน` : `${fmt(teachersNoSubject)} คนยังไม่มีวิชา`
+      detail: teachersNoSubject === null ? t('ตรวจไม่ได้') : teachersNoSubject === 0 ? t("ครบทั้ง {value1} คน", { value1: fmt(counts.teachers) }) : t("{value1} คนยังไม่มีวิชา", { value1: fmt(teachersNoSubject) })
     },
     {
       ok: yearSubjects.length > 0 && subjectsNoTask === 0, path: '/admin/tasks', label: 'วิชามีงาน',
-      detail: yearSubjects.length === 0 ? 'ยังไม่มีวิชา' : subjectsNoTask === 0 ? `ครบทั้ง ${fmt(yearSubjects.length)} วิชา` : `${fmt(subjectsNoTask)} วิชายังไม่มีงาน`
+      detail: yearSubjects.length === 0 ? t('ยังไม่มีวิชา') : subjectsNoTask === 0 ? t("ครบทั้ง {value1} วิชา", { value1: fmt(yearSubjects.length) }) : t("{value1} วิชายังไม่มีงาน", { value1: fmt(subjectsNoTask) })
     },
     {
       ok: yearSubjects.length > 0 && subjectsNoQR === 0, path: '/admin/qrcode', label: 'QR Code',
-      detail: yearSubjects.length === 0 ? 'ยังไม่มีวิชา' : subjectsNoQR === 0 ? 'สร้างครบทุกวิชาที่มีงาน' : `${fmt(subjectsNoQR)} วิชายังไม่ได้สร้าง`
+      detail: yearSubjects.length === 0 ? t('ยังไม่มีวิชา') : subjectsNoQR === 0 ? t('สร้างครบทุกวิชาที่มีงาน') : t("{value1} วิชายังไม่ได้สร้าง", { value1: fmt(subjectsNoQR) })
     }
   ];
   const healthIssues = health.filter((h) => !h.ok).length;
 
   const numbers = [
-    { to: '/monitor', label: 'ส่งงานแล้ว', value: `${pct(submitted, expected)}%`, sub: `${fmt(submitted)}/${fmt(expected)} ชิ้น` },
-    { to: '/monitor', label: 'รอครูตรวจ', value: fmt(sub.pending), sub: `ผ่านแล้ว ${fmt(sub.approved)} · ให้แก้ ${fmt(sub.rejected)}` },
-    { to: '/admin/students', label: 'นักเรียน', value: fmt(counts.students), sub: classCount !== null ? `ใน ${fmt(classCount)} ห้อง` : 'คน' },
-    { to: '/admin/subjects', label: 'วิชา', value: fmt(yearSubjects.length || counts.subjects), sub: `ครู ${fmt(counts.teachers)} คน · งาน ${fmt(counts.tasks)} ชิ้น` }
+    { to: '/monitor', label: 'ส่งงานแล้ว', value: `${pct(submitted, expected)}%`, sub: t("{value1}/{value2} ชิ้น", { value1: fmt(submitted), value2: fmt(expected) }) },
+    { to: '/monitor', label: 'รอครูตรวจ', value: fmt(sub.pending), sub: t("ผ่านแล้ว {value1} · ให้แก้ {value2}", { value1: fmt(sub.approved), value2: fmt(sub.rejected) }) },
+    { to: '/admin/students', label: 'นักเรียน', value: fmt(counts.students), sub: classCount !== null ? t("ใน {value1} ห้อง", { value1: fmt(classCount) }) : t('คน') },
+    { to: '/admin/subjects', label: 'วิชา', value: fmt(yearSubjects.length || counts.subjects), sub: t("ครู {value1} คน · งาน {value2} ชิ้น", { value1: fmt(counts.teachers), value2: fmt(counts.tasks) }) }
   ];
 
   return (
     <div className="space-y-4">
-      <PageHeader title="ภาพรวมกลุ่ม" subtitle={year ? year.name : 'ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน'} />
+      <PageHeader title={t("ภาพรวมกลุ่ม")} subtitle={year ? year.name : t('ยังไม่ได้ตั้งปีการศึกษาปัจจุบัน')} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between gap-3">
           <span>{error}</span>
-          <button type="button" onClick={load} className="min-h-[44px] px-4 rounded-lg border border-red-300 text-sm font-medium hover:bg-red-100">ลองใหม่</button>
+          <button type="button" onClick={load} className="min-h-[44px] px-4 rounded-lg border border-red-300 text-sm font-medium hover:bg-red-100">{t("ลองใหม่")}</button>
         </div>
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {numbers.map((n) => (
           <Link key={n.label} to={n.to} className="bg-white rounded-xl shadow p-4 hover:ring-2 hover:ring-brand-300 focus-visible:ring-2 focus-visible:ring-brand-500 outline-none">
-            <div className="text-sm text-gray-600">{n.label}</div>
+            <div className="text-sm text-gray-600">{t(n.label)}</div>
             <div className="text-2xl sm:text-3xl font-bold text-gray-800 tabular-nums">{n.value}</div>
             <div className="text-xs text-gray-500 mt-1">{n.sub}</div>
           </Link>
@@ -151,15 +152,15 @@ const AdminDashboard = () => {
         <section className="bg-white rounded-xl shadow overflow-hidden lg:col-span-2">
           <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">วิชาที่ต้องติดตาม</h2>
-              <p className="text-xs text-gray-500">เรียงจากวิชาที่ส่งน้อยที่สุด</p>
+              <h2 className="text-lg font-semibold text-gray-800">{t("วิชาที่ต้องติดตาม")}</h2>
+              <p className="text-xs text-gray-500">{t("เรียงจากวิชาที่ส่งน้อยที่สุด")}</p>
             </div>
-            <Link to="/monitor" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">ดูทั้งหมด &rarr;</Link>
+            <Link to="/monitor" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">{t("ดูทั้งหมด →")}</Link>
           </div>
           {subjectRows.length === 0 ? (
             <div className="px-4 py-10 text-center">
-              <p className="text-gray-500">ยังไม่มีวิชาที่มีงาน</p>
-              <Link to="/admin/tasks" className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-600 hover:text-brand-800">เพิ่มงานให้วิชา &rarr;</Link>
+              <p className="text-gray-500">{t("ยังไม่มีวิชาที่มีงาน")}</p>
+              <Link to="/admin/tasks" className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-600 hover:text-brand-800">{t("เพิ่มงานให้วิชา →")}</Link>
             </div>
           ) : (
             <ul className="divide-y">
@@ -175,17 +176,15 @@ const AdminDashboard = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
                           <span className="font-medium text-gray-800 truncate">{r.name}</span>
-                          <span className="text-sm text-gray-600 shrink-0 tabular-nums">ส่ง {fmt(r.done)}/{fmt(r.total)}</span>
+                          <span className="text-sm text-gray-600 shrink-0 tabular-nums">{t("ส่ง {value1}/{value2}", { value1: fmt(r.done), value2: fmt(r.total) })}</span>
                         </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {r.subject?.teacher?.name || 'ยังไม่มีครูผู้สอน'} · {fmt(r.tasks)} งาน
-                        </div>
+                        <div className="text-xs text-gray-500 truncate">{t("{value1} · {value2} งาน", { value1: r.subject?.teacher?.name || t('ยังไม่มีครูผู้สอน'), value2: fmt(r.tasks) })}</div>
                         <div className="mt-1.5 flex items-center gap-2">
                           <div className="h-2 flex-1 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={p} aria-valuemin={0} aria-valuemax={100}>
                             <div className="h-full bg-brand-500 rounded-full" style={{ width: `${Math.min(100, p)}%` }} />
                           </div>
                           <span className={`text-xs shrink-0 tabular-nums ${missing > 0 ? 'text-red-600' : 'text-green-700'}`}>
-                            {missing > 0 ? `ขาด ${fmt(missing)}` : 'ครบ'}
+                            {missing > 0 ? t("ขาด {value1}", { value1: fmt(missing) }) : t('ครบ')}
                           </span>
                         </div>
                       </div>
@@ -201,10 +200,10 @@ const AdminDashboard = () => {
         <section className="bg-white rounded-xl shadow overflow-hidden">
           <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">ความพร้อมของระบบ</h2>
-              <p className="text-xs text-gray-500">{healthIssues === 0 ? 'พร้อมใช้งานครบทุกข้อ' : `ต้องแก้ ${healthIssues} ข้อ`}</p>
+              <h2 className="text-lg font-semibold text-gray-800">{t("ความพร้อมของระบบ")}</h2>
+              <p className="text-xs text-gray-500">{healthIssues === 0 ? t('พร้อมใช้งานครบทุกข้อ') : t("ต้องแก้ {healthIssues} ข้อ", { healthIssues: healthIssues })}</p>
             </div>
-            <Link to="/admin/settings" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">ตั้งค่า &rarr;</Link>
+            <Link to="/admin/settings" className="min-h-[44px] inline-flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">{t("ตั้งค่า →")}</Link>
           </div>
           <ul className="divide-y">
             {health.map((h) => (
@@ -212,12 +211,12 @@ const AdminDashboard = () => {
                 <Link to={h.path} className="flex items-center gap-3 px-4 sm:px-6 py-3 min-h-[44px] hover:bg-gray-50">
                   <span
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${h.ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                    aria-label={h.ok ? 'พร้อม' : 'ต้องแก้'}
+                    aria-label={h.ok ? t('พร้อม') : t('ต้องแก้')}
                   >
                     {h.ok ? '✓' : '!'}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-800">{h.label}</div>
+                    <div className="text-sm font-medium text-gray-800">{t(h.label)}</div>
                     <div className={`text-xs truncate ${h.ok ? 'text-gray-500' : 'text-amber-700'}`}>{h.detail}</div>
                   </div>
                   <Chevron />

@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { sfx } from './sfx';
 import { SPIN_MS } from './common';
@@ -71,7 +72,7 @@ const Gacha = ({ entries, spin, onDone, reduced }) => {
             </div>
           </div>
         )}
-        {phase === 'idle' && <p className="text-ink-500 font-medium" style={{ animation: reduced ? 'none' : 'kgFloat 2s ease-in-out infinite' }}>หมุนตู้ ลุ้นไข่ใบไหนจะออก 🥚</p>}
+        {phase === 'idle' && <p className="text-ink-500 font-medium" style={{ animation: reduced ? 'none' : 'kgFloat 2s ease-in-out infinite' }}>{t('หมุนตู้ ลุ้นไข่ใบไหนจะออก 🥚')}</p>}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { t, tx } from '../../i18n';
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Logo, { LogoMark } from '../../components/brand/Logo';
@@ -7,6 +8,7 @@ import Phone from './Phone';
 import TryScan from './TryScan';
 import { NotebookCover, StepArt, Icon, Scribble, CurlyArrow, TeacherGroup, QrPattern } from './art';
 import './landing.css';
+import LanguagePicker from '../../components/LanguagePicker';
 
 // หน้าแรกสาธารณะ (ผู้ที่ยังไม่ล็อกอิน) — เล่าเรื่อง: ปัญหา → ลองสแกน → เริ่มยังไง → หน้าจอจริง → ใช้เป็นกลุ่ม → ฟรี/คำถาม → ชวนเริ่ม
 
@@ -79,14 +81,15 @@ export default function Landing() {
       {/* แถบบน */}
       <header className="sticky top-0 z-40 bg-title text-title-fg shadow-[0_1px_0_rgb(255_255_255/0.08)]">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
-          <Link to="/" aria-label="KruScan หน้าแรก" className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <Link to="/" aria-label={t("KruScan หน้าแรก")} className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
             <Logo variant="horizontal" size={34} tone="white" tagline={false} />
           </Link>
-          <nav className="flex items-center gap-1 text-sm sm:gap-2" aria-label="เมนูหลัก">
-            <a href="/guide/" className="hidden min-h-[44px] items-center rounded-lg px-3 text-title-fg/80 hover:text-title-fg md:inline-flex">คู่มือ</a>
-            <a href="#faq" className="hidden min-h-[44px] items-center rounded-lg px-3 text-title-fg/80 hover:text-title-fg md:inline-flex">คำถามที่พบบ่อย</a>
-            <Link to="/login" className="inline-flex min-h-[44px] items-center rounded-lg px-3 font-medium text-title-fg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">เข้าสู่ระบบ</Link>
-            <Link to="/signup" className="inline-flex min-h-[44px] items-center rounded-lg bg-accent px-4 font-semibold text-accent-fg hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">สมัครใช้ฟรี</Link>
+          <nav className="flex items-center gap-1 text-sm sm:gap-2" aria-label={t("เมนูหลัก")}>
+            <LanguagePicker compact dark />
+            <a href="/guide/" className="hidden min-h-[44px] items-center rounded-lg px-3 text-title-fg/80 hover:text-title-fg md:inline-flex">{t('คู่มือ')}</a>
+            <a href="#faq" className="hidden min-h-[44px] items-center rounded-lg px-3 text-title-fg/80 hover:text-title-fg md:inline-flex">{t('คำถามที่พบบ่อย')}</a>
+            <Link to="/login" className="inline-flex min-h-[44px] items-center rounded-lg px-3 font-medium text-title-fg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">{t('เข้าสู่ระบบ')}</Link>
+            <Link to="/signup" className="inline-flex min-h-[44px] items-center rounded-lg bg-accent px-4 font-semibold text-accent-fg hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">{t('สมัครใช้ฟรี')}</Link>
           </nav>
         </div>
         <div className="ks-progress h-[3px] bg-accent" aria-hidden="true" />
@@ -98,25 +101,20 @@ export default function Landing() {
           <DotPattern className="text-white/[0.07] [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-8 lg:pb-24 lg:pt-16">
             <div className="pl-4 lg:pl-6">
-              <h1 id="hero" className="font-display text-[2.6rem] font-bold leading-[1.22] tracking-[-0.01em] sm:text-6xl sm:leading-[1.18] lg:text-[4.1rem]">
-                หยิบ สแกน วาง<br />
+              <h1 id="hero" className="font-display text-[2.6rem] font-bold leading-[1.22] tracking-[-0.01em] sm:text-6xl sm:leading-[1.18] lg:text-[4.1rem]">{t('หยิบ สแกน วาง')}<br />
                 <span className="ks-draw-now relative inline-block">
-                  <span className="ks-hl">รู้ทันที</span>ใครยังไม่ส่ง
-                  <Scribble className="absolute -bottom-2 left-0 h-3 w-[46%] sm:-bottom-3 sm:h-4" />
+                  {tx('<hl>รู้ทันที</hl>ใครยังไม่ส่ง', { hl: (c) => <span className="ks-hl">{c}</span> })}<Scribble className="absolute -bottom-2 left-0 h-3 w-[46%] sm:-bottom-3 sm:h-4" />
                 </span>
               </h1>
-              <p className="mt-7 max-w-[37rem] text-lg leading-relaxed text-title-fg/85" style={{ textWrap: 'pretty' }}>
-                แปะ QR ที่ปกสมุดนักเรียน รับสมุดมาทั้งกองแล้วสแกนด้วยมือถือ ระบบจดให้ว่าใครส่งแล้ว ใครยังค้าง พร้อมข้อความทวงงานให้คัดลอกไปวางใน LINE
-              </p>
+              <p className="mt-7 max-w-[37rem] text-lg leading-relaxed text-title-fg/85" style={{ textWrap: 'pretty' }}>{t('แปะ QR ที่ปกสมุดนักเรียน รับสมุดมาทั้งกองแล้วสแกนด้วยมือถือ ระบบจดให้ว่าใครส่งแล้ว ใครยังค้าง พร้อมข้อความทวงงานให้คัดลอกไปวางใน LINE')}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/signup" className={`${CTA} bg-accent text-accent-fg shadow-[0_14px_30px_-12px_rgb(var(--accent)/0.8)] hover:-translate-y-0.5 hover:brightness-105`}>
-                  สมัครใช้ฟรี <Icon.Arrow width={20} height={20} />
+                <Link to="/signup" className={`${CTA} bg-accent text-accent-fg shadow-[0_14px_30px_-12px_rgb(var(--accent)/0.8)] hover:-translate-y-0.5 hover:brightness-105`}>{t('สมัครใช้ฟรี ')}<Icon.Arrow width={20} height={20} />
                 </Link>
-                <a href="#try" className={`${CTA} text-title-fg ring-1 ring-white/30 hover:bg-white/10`}>ลองสแกนดูก่อน</a>
+                <a href="#try" className={`${CTA} text-title-fg ring-1 ring-white/30 hover:bg-white/10`}>{t('ลองสแกนดูก่อน')}</a>
               </div>
               <ul className="mt-7 grid gap-2 text-sm text-title-fg/80 sm:grid-cols-2">
-                {['สมัครด้วยอีเมลหรือ Google', 'นักเรียนไม่ต้องมีมือถือ ไม่ต้องล็อกอิน', 'สแกนได้แม้เน็ตหลุด', 'ไม่ต้องใช้บัตรเครดิต'].map(t => (
-                  <li key={t} className="flex items-center gap-2"><Icon.Check width={18} height={18} className="shrink-0 text-accent" />{t}</li>
+                {['สมัครด้วยอีเมลหรือ Google', 'นักเรียนไม่ต้องมีมือถือ ไม่ต้องล็อกอิน', 'สแกนได้แม้เน็ตหลุด', 'ไม่ต้องใช้บัตรเครดิต'].map(txt => (
+                  <li key={txt} className="flex items-center gap-2"><Icon.Check width={18} height={18} className="shrink-0 text-accent" />{t(txt)}</li>
                 ))}
               </ul>
             </div>
@@ -128,18 +126,17 @@ export default function Landing() {
         <section className="relative py-16 sm:py-24" aria-labelledby="pain">
           <div className="ks-dots pointer-events-none absolute inset-x-0 top-0 h-64 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden="true" />
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionTitle id="pain" sub="ลองนึกภาพสมุด 40 เล่มบนโต๊ะหลังคาบ งานตรวจยังไม่เริ่ม แต่ต้องรู้ก่อนว่าใครยังไม่ส่ง">
-              สมุดกองโตบนโต๊ะ แต่<span className="relative inline-block">ใครยังไม่ส่ง?<Scribble className="absolute -bottom-2 left-0 h-3 w-full" /></span>
+            <SectionTitle id="pain" sub={t("ลองนึกภาพสมุด 40 เล่มบนโต๊ะหลังคาบ งานตรวจยังไม่เริ่ม แต่ต้องรู้ก่อนว่าใครยังไม่ส่ง")}>{t('สมุดกองโตบนโต๊ะ แต่')}<span className="relative inline-block">{t('ใครยังไม่ส่ง?')}<Scribble className="absolute -bottom-2 left-0 h-3 w-full" /></span>
             </SectionTitle>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-2 lg:gap-10">
               {/* แบบเดิม: กระดาษสมุดเส้น */}
               <div data-reveal="left" className="relative">
                 <div className="ks-paper relative rounded-2xl px-6 pb-8 pl-[68px] pt-6 shadow-[0_20px_40px_-24px_rgb(8_14_30/0.4)] ring-1 ring-black/5" style={{ transform: 'rotate(-1deg)' }}>
-                  <div className="text-sm font-bold uppercase tracking-wide text-[#a33]">แบบเดิม</div>
+                  <div className="text-sm font-bold uppercase tracking-wide text-[#a33]">{t('แบบเดิม')}</div>
                   <ul className="mt-3 space-y-[12px] text-[15px] leading-[24px]">
-                    {['นับสมุดทีละเล่ม แล้วจดชื่อลงกระดาษ', 'ไล่เทียบรายชื่อว่าใครยังไม่ส่ง', 'จำไม่ได้ว่าใครค้างวิชาไหน ทวงซ้ำทวงพลาด', 'ให้ส่งรูปงานในแชท เด็กที่ไม่มี LINE ก็ตกหล่น'].map(t => (
-                      <li key={t} className="flex gap-2.5"><Icon.Cross width={20} height={20} className="mt-0.5 shrink-0 text-[#c0392b]" /><span>{t}</span></li>
+                    {['นับสมุดทีละเล่ม แล้วจดชื่อลงกระดาษ', 'ไล่เทียบรายชื่อว่าใครยังไม่ส่ง', 'จำไม่ได้ว่าใครค้างวิชาไหน ทวงซ้ำทวงพลาด', 'ให้ส่งรูปงานในแชท เด็กที่ไม่มี LINE ก็ตกหล่น'].map(txt => (
+                      <li key={txt} className="flex gap-2.5"><Icon.Cross width={20} height={20} className="mt-0.5 shrink-0 text-[#c0392b]" /><span>{t(txt)}</span></li>
                     ))}
                   </ul>
                   {/* รอยขีดนับแบบมือ */}
@@ -159,14 +156,14 @@ export default function Landing() {
               {/* ครูสแกน */}
               <div data-reveal="right" style={d(120)} className="relative overflow-hidden rounded-2xl bg-card p-6 ring-1 ring-ink/10 shadow-[0_24px_50px_-28px_rgb(12_24_51/0.45)]">
                 <div className="relative">
-                  <div className="text-sm font-bold tracking-wide text-pass">ครูสแกน</div>
+                  <div className="text-sm font-bold tracking-wide text-pass">{t('ครูสแกน')}</div>
                   <ul className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink">
-                    {['สแกน QR บนปกสมุดต่อเนื่องได้ทั้งกอง', 'รายชื่อคนที่ยังไม่ส่งขึ้นให้เอง ไม่ต้องเทียบ', 'กดคัดลอกข้อความทวงงาน วางในกลุ่ม LINE ห้อง', 'นักเรียนไม่ต้องมีมือถือ ใช้สมุดเล่มเดิม'].map(t => (
-                      <li key={t} className="flex gap-2.5"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-pass text-white"><Icon.Check width={13} height={13} /></span><span>{t}</span></li>
+                    {['สแกน QR บนปกสมุดต่อเนื่องได้ทั้งกอง', 'รายชื่อคนที่ยังไม่ส่งขึ้นให้เอง ไม่ต้องเทียบ', 'กดคัดลอกข้อความทวงงาน วางในกลุ่ม LINE ห้อง', 'นักเรียนไม่ต้องมีมือถือ ใช้สมุดเล่มเดิม'].map(txt => (
+                      <li key={txt} className="flex gap-2.5"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-pass text-white"><Icon.Check width={13} height={13} /></span><span>{t(txt)}</span></li>
                     ))}
                   </ul>
                   <div className="mt-5 flex items-end justify-between gap-4">
-                    <p className="max-w-[17rem] text-sm text-ink/70">หยิบ สแกน วาง ทีละเล่ม ที่เหลือระบบนับให้</p>
+                    <p className="max-w-[17rem] text-sm text-ink/70">{t('หยิบ สแกน วาง ทีละเล่ม ที่เหลือระบบนับให้')}</p>
                     <StackDone className="h-20 w-auto shrink-0 text-brand-600" />
                   </div>
                 </div>
@@ -180,9 +177,7 @@ export default function Landing() {
           <div className="ks-ruled-light pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]" aria-hidden="true" />
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
             <div className="flex items-start justify-between gap-6">
-              <SectionTitle id="try-title" sub="แตะสมุดบนโต๊ะทีละเล่มเหมือนครูสแกนจริง แล้วดูรายชื่อคนที่ยังไม่ส่งหดลงเรื่อยๆ">
-                ลองเป็นครูดูสักกอง
-              </SectionTitle>
+              <SectionTitle id="try-title" sub={t("แตะสมุดบนโต๊ะทีละเล่มเหมือนครูสแกนจริง แล้วดูรายชื่อคนที่ยังไม่ส่งหดลงเรื่อยๆ")}>{t('ลองเป็นครูดูสักกอง')}</SectionTitle>
               <CurlyArrow className="hidden h-20 w-auto shrink-0 lg:block" />
             </div>
             <div className="mt-10" data-reveal style={d(100)}><TryScan /></div>
@@ -192,12 +187,12 @@ export default function Landing() {
         {/* 4 · เริ่มยังไง */}
         <section className="relative py-16 sm:py-24" aria-labelledby="how">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionTitle id="how" center sub="ไม่ต้องติดตั้งอะไร ไม่ต้องรอแอดมินโรงเรียน เริ่มได้เองตั้งแต่วันนี้">จากสมัคร ถึงสแกนเล่มแรก</SectionTitle>
-            <p className="mx-auto mt-6 flex max-w-max flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-full bg-card px-4 py-2 text-sm font-semibold text-ink ring-1 ring-ink/10" data-reveal aria-label="สรุป 4 ขั้น: สมัคร แปะ QR สแกน ทวง">
+            <SectionTitle id="how" center sub={t("ไม่ต้องติดตั้งอะไร ไม่ต้องรอแอดมินโรงเรียน เริ่มได้เองตั้งแต่วันนี้")}>{t('จากสมัคร ถึงสแกนเล่มแรก')}</SectionTitle>
+            <p className="mx-auto mt-6 flex max-w-max flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-full bg-card px-4 py-2 text-sm font-semibold text-ink ring-1 ring-ink/10" data-reveal aria-label={t("สรุป 4 ขั้น: สมัคร แปะ QR สแกน ทวง")}>
               {STEPS.map((s, i) => (
                 <React.Fragment key={s.k}>
                   {i > 0 && <Icon.Arrow width={16} height={16} className="text-accent" />}
-                  <span>{s.k}</span>
+                  <span>{t(s.k)}</span>
                 </React.Fragment>
               ))}
             </p>
@@ -212,8 +207,8 @@ export default function Landing() {
                     <span className="absolute -left-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-accent font-display text-sm font-bold text-accent-fg ring-4 ring-page">{i + 1}</span>
                   </div>
                   <div className="sm:mt-5">
-                    <h3 className="font-display text-lg font-semibold leading-snug text-ink">{s.t}</h3>
-                    <p className="mt-1.5 text-[15px] leading-relaxed text-ink/75">{s.d}</p>
+                    <h3 className="font-display text-lg font-semibold leading-snug text-ink">{t(s.t)}</h3>
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-ink/75">{t(s.d)}</p>
                   </div>
                 </li>
               ))}
@@ -227,13 +222,13 @@ export default function Landing() {
             <QrPattern className="" id="ks-qr-proof" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionTitle id="proof" sub="ภาพจากแอปจริง ใช้บนมือถือตอนสแกน และเปิดบนคอมตอนดูภาพรวม">หน้าจอจริง ที่ครูจะได้ใช้</SectionTitle>
+            <SectionTitle id="proof" sub={t("ภาพจากแอปจริง ใช้บนมือถือตอนสแกน และเปิดบนคอมตอนดูภาพรวม")}>{t('หน้าจอจริง ที่ครูจะได้ใช้')}</SectionTitle>
 
             {/* แถว 1: ติดตาม + ภาพรวม */}
             <div className="mt-12 grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
               <div className="relative pb-16 pr-[18%] sm:pb-20 lg:col-span-7" data-reveal="left">
-                <BrowserFrame src="/guide/img/desktop-admin.jpg" alt="หน้าภาพรวมบนคอม แสดงสัดส่วนงานที่ส่งแล้ว วิชาที่ต้องติดตาม และความพร้อมของระบบ" label="ครูสแกน · ภาพรวม" />
-                <Phone src="/guide/img/phone-mon-class.jpg" alt="หน้าติดตามงานบนมือถือ แสดงรายชื่อนักเรียนที่ยังค้างงานพร้อมจำนวน และปุ่มคัดลอกข้อความทวงงาน"
+                <BrowserFrame src="/guide/img/desktop-admin.jpg" alt={t("หน้าภาพรวมบนคอม แสดงสัดส่วนงานที่ส่งแล้ว วิชาที่ต้องติดตาม และความพร้อมของระบบ")} label={t("ครูสแกน · ภาพรวม")} />
+                <Phone src="/guide/img/phone-mon-class.jpg" alt={t("หน้าติดตามงานบนมือถือ แสดงรายชื่อนักเรียนที่ยังค้างงานพร้อมจำนวน และปุ่มคัดลอกข้อความทวงงาน")}
                   className="absolute -bottom-6 right-0 w-[30%] max-w-[210px] rotate-[3deg]" />
               </div>
               <div className="space-y-7 lg:col-span-5">
@@ -241,12 +236,12 @@ export default function Landing() {
                   [Icon.Chart, 'เปิดมาเห็นเลยว่าใครค้าง', 'ดูได้ทั้งรายห้อง รายวิชา รายคน แตะชื่อนักเรียนเพื่อดูว่าค้างงานไหนบ้าง'],
                   [Icon.Megaphone, 'ทวงงานด้วยปุ่มเดียว', 'คัดลอกข้อความรายชื่อคนที่ยังไม่ส่ง ไปวางในกลุ่ม LINE ห้องหรือกลุ่มผู้ปกครองได้ทันที'],
                   [Icon.Table, 'รายงานพร้อมส่งออก', 'สรุปการส่งงานเป็นไฟล์ ใช้ประกอบการประเมินหรือรายงานผู้บริหารได้'],
-                ].map(([Ic, t, dd], i) => (
-                  <div key={t} className="flex gap-4" data-reveal style={d(i * 100)}>
+                ].map(([Ic, title, dd], i) => (
+                  <div key={title} className="flex gap-4" data-reveal style={d(i * 100)}>
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600"><Ic /></span>
                     <div>
-                      <h3 className="font-display text-lg font-semibold text-ink">{t}</h3>
-                      <p className="mt-1 text-[15px] leading-relaxed text-ink/75">{dd}</p>
+                      <h3 className="font-display text-lg font-semibold text-ink">{t(title)}</h3>
+                      <p className="mt-1 text-[15px] leading-relaxed text-ink/75">{t(dd)}</p>
                     </div>
                   </div>
                 ))}
@@ -257,30 +252,30 @@ export default function Landing() {
             <div className="mt-20 grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
               <div className="lg:order-2 lg:col-span-7" data-reveal="right">
                 <div className="relative mx-auto flex max-w-[560px] items-end justify-center pt-6">
-                  <Phone src="/guide/img/phone-student.jpg" alt="รายงานนักเรียนรายคน มีปุ่มคัดลอกข้อความถึงผู้ปกครองและลิงก์สำหรับผู้ปกครอง" className="relative z-0 -mr-[4%] w-[32%] max-w-[180px] -rotate-[5deg]" />
-                  <Phone src="/guide/img/phone-home.jpg" alt="หน้าแรกของครู มีปุ่มสแกนส่งงาน ตัวเลขงานค้าง และงานที่ต้องติดตาม" className="relative z-10 -mb-2 w-[36%] max-w-[205px] -translate-y-6" />
-                  <Phone src="/guide/img/phone-ai-draft.jpg" alt="ผู้ช่วย AI ช่วยร่างงานหรือข้อความให้ครู" className="relative z-0 -ml-[4%] w-[32%] max-w-[180px] rotate-[5deg]" />
+                  <Phone src="/guide/img/phone-student.jpg" alt={t("รายงานนักเรียนรายคน มีปุ่มคัดลอกข้อความถึงผู้ปกครองและลิงก์สำหรับผู้ปกครอง")} className="relative z-0 -mr-[4%] w-[32%] max-w-[180px] -rotate-[5deg]" />
+                  <Phone src="/guide/img/phone-home.jpg" alt={t("หน้าแรกของครู มีปุ่มสแกนส่งงาน ตัวเลขงานค้าง และงานที่ต้องติดตาม")} className="relative z-10 -mb-2 w-[36%] max-w-[205px] -translate-y-6" />
+                  <Phone src="/guide/img/phone-ai-draft.jpg" alt={t("ผู้ช่วย AI ช่วยร่างงานหรือข้อความให้ครู")} className="relative z-0 -ml-[4%] w-[32%] max-w-[180px] rotate-[5deg]" />
                 </div>
               </div>
               <div className="lg:order-1 lg:col-span-5">
                 <div className="flex gap-4" data-reveal>
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent/20 text-ink"><Icon.Link /></span>
                   <div>
-                    <h3 className="font-display text-lg font-semibold text-ink">ผู้ปกครองดูเองได้ ไม่ต้องสมัคร</h3>
-                    <p className="mt-1 text-[15px] leading-relaxed text-ink/75">ส่งลิงก์ให้ผู้ปกครอง เปิดดูได้ว่าลูกส่งงานไหนแล้ว อะไรยังค้าง โดยไม่ต้องสมัครหรือโหลดแอป</p>
+                    <h3 className="font-display text-lg font-semibold text-ink">{t('ผู้ปกครองดูเองได้ ไม่ต้องสมัคร')}</h3>
+                    <p className="mt-1 text-[15px] leading-relaxed text-ink/75">{t('ส่งลิงก์ให้ผู้ปกครอง เปิดดูได้ว่าลูกส่งงานไหนแล้ว อะไรยังค้าง โดยไม่ต้องสมัครหรือโหลดแอป')}</p>
                   </div>
                 </div>
-                <h3 className="mt-9 text-sm font-semibold text-ink/70" data-reveal>อีกนิดที่ครูชอบ</h3>
+                <h3 className="mt-9 text-sm font-semibold text-ink/70" data-reveal>{t('อีกนิดที่ครูชอบ')}</h3>
                 <ul className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2">
                   {[
                     [Icon.Offline, 'สแกนได้แม้เน็ตหลุด', 'เก็บไว้ในเครื่อง แล้วส่งขึ้นเองทีหลัง'],
                     [Icon.Ai, 'ผู้ช่วย AI', 'ช่วยสรุปห้อง ร่างข้อความถึงผู้ปกครอง'],
                     [Icon.Shuffle, 'สุ่มชื่อเรียกตอบ', 'สล็อต วงล้อ ไข่สุ่ม ใช้ในคาบได้เลย'],
                     [Icon.Table, 'นำเข้ารายชื่อจาก Excel', 'ไม่ต้องพิมพ์ทีละคน'],
-                  ].map(([Ic, t, dd], i) => (
-                    <li key={t} className="flex gap-3" data-reveal style={d(i * 80)}>
+                  ].map(([Ic, title, dd], i) => (
+                    <li key={title} className="flex gap-3" data-reveal style={d(i * 80)}>
                       <Ic className="mt-0.5 shrink-0 text-brand-600" />
-                      <div><div className="font-semibold text-ink">{t}</div><div className="text-sm text-ink/70">{dd}</div></div>
+                      <div><div className="font-semibold text-ink">{t(title)}</div><div className="text-sm text-ink/70">{t(dd)}</div></div>
                     </li>
                   ))}
                 </ul>
@@ -296,18 +291,18 @@ export default function Landing() {
               <div className="ks-dots pointer-events-none absolute inset-0 opacity-70 [mask-image:linear-gradient(to_left,black,transparent_65%)]" aria-hidden="true" />
               <div className="relative grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
                 <div>
-                  <SectionTitle id="group" sub="สมัครแล้วได้กลุ่มส่วนตัวทันที ใช้คนเดียวได้เต็มที่ พร้อมเมื่อไรค่อยชวนเพื่อนครูมาใช้ด้วยกัน">
-                    <span className="inline-block">ใช้คนเดียวก็ได้</span> <span className="relative inline-block">ชวนทั้งหมวดก็ดี<Scribble className="absolute -bottom-2 left-0 h-3 w-full" /></span>
+                  <SectionTitle id="group" sub={t("สมัครแล้วได้กลุ่มส่วนตัวทันที ใช้คนเดียวได้เต็มที่ พร้อมเมื่อไรค่อยชวนเพื่อนครูมาใช้ด้วยกัน")}>
+                    <span className="inline-block">{t('ใช้คนเดียวก็ได้')}</span> <span className="relative inline-block">{t('ชวนทั้งหมวดก็ดี')}<Scribble className="absolute -bottom-2 left-0 h-3 w-full" /></span>
                   </SectionTitle>
                   <ul className="mt-7 space-y-4">
                     {[
                       ['ชวนด้วยรหัสหรือลิงก์', 'ส่งรหัสเข้ากลุ่ม 6 ตัว หรือลิงก์เชิญ ให้เพื่อนครูในหมวดเข้ามาดูงานห้องเดียวกันได้'],
                       ['โรงเรียนเดียว มีได้หลายกลุ่ม', 'แยกตามกลุ่มสาระ ระดับชั้น หรือชุมนุม ข้อมูลของแต่ละกลุ่มไม่ปนกัน'],
                       ['นักเรียนไม่ต้องล็อกอิน', 'ครูสแกนสมุดอย่างเดียว ไม่ต้องสร้างบัญชีให้นักเรียนทีละคน'],
-                    ].map(([t, dd], i) => (
-                      <li key={t} className="flex gap-3" data-reveal style={d(i * 100)}>
+                    ].map(([title, dd], i) => (
+                      <li key={title} className="flex gap-3" data-reveal style={d(i * 100)}>
                         <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-accent-fg"><Icon.Check width={15} height={15} /></span>
-                        <div><div className="font-semibold text-ink">{t}</div><div className="text-[15px] leading-relaxed text-ink/75">{dd}</div></div>
+                        <div><div className="font-semibold text-ink">{t(title)}</div><div className="text-[15px] leading-relaxed text-ink/75">{t(dd)}</div></div>
                       </li>
                     ))}
                   </ul>
@@ -317,21 +312,21 @@ export default function Landing() {
                   <TeacherGroup className="mx-auto mb-[-6px] h-28 w-auto text-brand-600 sm:h-32" />
                   <div className="ks-ticket mx-auto max-w-sm rounded-2xl bg-card px-6 py-6 shadow-[0_24px_50px_-28px_rgb(12_24_51/0.55)] ring-1 ring-ink/10 sm:px-8">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-semibold text-ink">กลุ่มสาระคณิตศาสตร์</span>
-                      <span className="rounded-full bg-page px-2 py-0.5 text-xs text-ink/60">ตัวอย่าง</span>
+                      <span className="font-semibold text-ink">{t('กลุ่มสาระคณิตศาสตร์')}</span>
+                      <span className="rounded-full bg-page px-2 py-0.5 text-xs text-ink/60">{t('ตัวอย่าง')}</span>
                     </div>
-                    <div className="mt-4 text-xs text-ink/60">รหัสเข้ากลุ่ม</div>
+                    <div className="mt-4 text-xs text-ink/60">{t('รหัสเข้ากลุ่ม')}</div>
                     <div className="font-display text-[2.6rem] font-bold leading-tight tracking-[0.12em] tabular-nums text-brand-600">MTH-205</div>
                     <div className="my-4 border-t-2 border-dashed border-ink/15" />
-                    <div className="text-xs text-ink/60">หรือส่งลิงก์เชิญ</div>
+                    <div className="text-xs text-ink/60">{t('หรือส่งลิงก์เชิญ')}</div>
                     <div className="mt-1 flex items-center gap-2 truncate rounded-lg bg-page px-3 py-2 text-sm text-ink/80"><Icon.Link width={16} height={16} className="shrink-0 text-brand-600" />/join/MTH-205</div>
-                    <ul className="mt-5 flex flex-wrap items-center gap-2" aria-label="ตัวอย่างสมาชิกกลุ่ม">
+                    <ul className="mt-5 flex flex-wrap items-center gap-2" aria-label={t("ตัวอย่างสมาชิกกลุ่ม")}>
                       {['ครูมานี', 'ครูปิติ', 'ครูชูใจ'].map((n, i) => (
                         <li key={n} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 py-1 pl-1 pr-3 text-sm text-ink">
                           <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${['bg-accent text-accent-fg', 'bg-brand-600 text-white', 'bg-pass text-white'][i]}`}>{n.slice(3, 4)}</span>{n}
                         </li>
                       ))}
-                      <li className="text-xs text-pass">เข้ากลุ่มแล้ว</li>
+                      <li className="text-xs text-pass">{t('เข้ากลุ่มแล้ว')}</li>
                     </ul>
                   </div>
                 </div>
@@ -347,38 +342,38 @@ export default function Landing() {
               <div className="ks-ruled relative overflow-hidden rounded-3xl bg-title p-7 text-title-fg sm:p-9 lg:sticky lg:top-24" data-reveal>
                 <div className="relative">
                   <div className="flex items-start justify-between gap-4">
-                    <h2 className="font-display text-3xl font-bold leading-snug sm:text-4xl">เริ่มฟรี<span className="mt-1 block whitespace-nowrap text-lg font-semibold text-title-fg/85 sm:text-xl">ไม่ต้องใช้บัตรเครดิต</span></h2>
+                    <h2 className="font-display text-3xl font-bold leading-snug sm:text-4xl">{t('เริ่มฟรี')}<span className="mt-1 block whitespace-nowrap text-lg font-semibold text-title-fg/85 sm:text-xl">{t('ไม่ต้องใช้บัตรเครดิต')}</span></h2>
                     <TeacherWave className="h-20 w-auto shrink-0 text-white/90" />
                   </div>
                   <ul className="mt-5 space-y-2.5 text-title-fg/85">
-                    {['สแกน ติดตามงาน คัดลอกข้อความทวงงาน ครบทุกฟีเจอร์หลัก', 'ลิงก์ผู้ปกครองและรายงานรายคน', 'ข้อมูลอยู่ในกลุ่มของคุณเอง', 'ใช้ได้ตามโควตาของแพ็กเกจฟรี'].map(t => (
-                      <li key={t} className="flex gap-2.5"><Icon.Check width={20} height={20} className="mt-0.5 shrink-0 text-accent" />{t}</li>
+                    {['สแกน ติดตามงาน คัดลอกข้อความทวงงาน ครบทุกฟีเจอร์หลัก', 'ลิงก์ผู้ปกครองและรายงานรายคน', 'ข้อมูลอยู่ในกลุ่มของคุณเอง', 'ใช้ได้ตามโควตาของแพ็กเกจฟรี'].map(txt => (
+                      <li key={txt} className="flex gap-2.5"><Icon.Check width={20} height={20} className="mt-0.5 shrink-0 text-accent" />{t(txt)}</li>
                     ))}
                   </ul>
-                  <Link to="/signup" className={`${CTA} mt-7 w-full bg-accent text-accent-fg hover:brightness-105`}>สมัครใช้ฟรี</Link>
-                  <p className="mt-3 text-center text-sm text-title-fg/70">มีบัญชีแล้ว? <Link to="/login" className="font-semibold text-title-fg underline">เข้าสู่ระบบ</Link></p>
+                  <Link to="/signup" className={`${CTA} mt-7 w-full bg-accent text-accent-fg hover:brightness-105`}>{t('สมัครใช้ฟรี')}</Link>
+                  <p className="mt-3 text-center text-sm text-title-fg/70">{t('มีบัญชีแล้ว? ')}<Link to="/login" className="font-semibold text-title-fg underline">{t('เข้าสู่ระบบ')}</Link></p>
                 </div>
               </div>
             </div>
             <div className="lg:col-span-7">
               <div className="flex items-end justify-between gap-4" data-reveal>
-                <h2 id="faq-title" className="font-display text-[1.75rem] font-bold leading-[1.3] text-ink sm:text-[2.25rem]">ครูมักถามว่า…</h2>
+                <h2 id="faq-title" className="font-display text-[1.75rem] font-bold leading-[1.3] text-ink sm:text-[2.25rem]">{t('ครูมักถามว่า…')}</h2>
                 <ChatSpark className="h-16 w-auto shrink-0 text-brand-600" />
               </div>
               <div className="ks-faq mt-6 divide-y divide-ink/10 border-y border-ink/10">
                 {FAQ.map(([q, a], i) => (
                   <details key={q} className="group" open={i === 0}>
                     <summary className="flex min-h-[60px] cursor-pointer items-center justify-between gap-4 py-4 text-left font-semibold text-ink hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                      <span>{q}</span>
+                      <span>{t(q)}</span>
                       <span className="ks-chev grid h-8 w-8 shrink-0 place-items-center rounded-full bg-page text-brand-600"><Icon.Plus width={18} height={18} /></span>
                     </summary>
                     <p className="pb-5 pr-10 text-[15px] leading-relaxed text-ink/75">
-                      {a}{i === 4 && <> · <Link to="/privacy" className="font-medium text-brand-600 underline">นโยบายความเป็นส่วนตัว</Link></>}
+                      {t(a)}{i === 4 && <> · <Link to="/privacy" className="font-medium text-brand-600 underline">{t('นโยบายความเป็นส่วนตัว')}</Link></>}
                     </p>
                   </details>
                 ))}
               </div>
-              <p className="mt-5 text-sm text-ink/70">อยากเห็นทุกขั้นตอนก่อน? <a href="/guide/" className="font-semibold text-brand-600 underline">เปิดคู่มือการใช้งาน</a></p>
+              <p className="mt-5 text-sm text-ink/70">{t('อยากเห็นทุกขั้นตอนก่อน? ')}<a href="/guide/" className="font-semibold text-brand-600 underline">{t('เปิดคู่มือการใช้งาน')}</a></p>
             </div>
           </div>
         </section>
@@ -388,13 +383,12 @@ export default function Landing() {
           <DotPattern className="text-white/[0.06]" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.3fr_1fr]">
             <div data-reveal>
-              <h2 id="final" className="font-display text-[2rem] font-bold leading-[1.25] sm:text-5xl sm:leading-[1.2]" style={{ textWrap: 'balance' }}>
-                รับสมุดครั้งหน้า <span className="ks-hl inline-block">ลองสแกนดูสักกอง</span>
+              <h2 id="final" className="font-display text-[2rem] font-bold leading-[1.25] sm:text-5xl sm:leading-[1.2]" style={{ textWrap: 'balance' }}>{t('รับสมุดครั้งหน้า ')}<span className="ks-hl inline-block">{t('ลองสแกนดูสักกอง')}</span>
               </h2>
-              <p className="mt-4 max-w-xl text-lg text-title-fg/80">สมัครวันนี้ ได้กลุ่มพร้อมใช้ในไม่กี่นาที แล้วค่อยชวนเพื่อนครูตามมา</p>
+              <p className="mt-4 max-w-xl text-lg text-title-fg/80">{t('สมัครวันนี้ ได้กลุ่มพร้อมใช้ในไม่กี่นาที แล้วค่อยชวนเพื่อนครูตามมา')}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/signup" className={`${CTA} bg-accent text-accent-fg hover:-translate-y-0.5 hover:brightness-105`}>สมัครใช้ฟรี <Icon.Arrow width={20} height={20} /></Link>
-                <Link to="/login" className={`${CTA} text-title-fg ring-1 ring-white/30 hover:bg-white/10`}>เข้าสู่ระบบ</Link>
+                <Link to="/signup" className={`${CTA} bg-accent text-accent-fg hover:-translate-y-0.5 hover:brightness-105`}>{t('สมัครใช้ฟรี ')}<Icon.Arrow width={20} height={20} /></Link>
+                <Link to="/login" className={`${CTA} text-title-fg ring-1 ring-white/30 hover:bg-white/10`}>{t('เข้าสู่ระบบ')}</Link>
               </div>
             </div>
             <div className="relative mx-auto hidden h-[260px] w-[340px] sm:block" aria-hidden="true" data-reveal="rise" style={d(150)}>
@@ -411,12 +405,12 @@ export default function Landing() {
 
       <footer className="border-t border-ink/10 bg-card">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-9 text-sm text-ink/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span className="inline-flex items-center gap-2.5"><LogoMark size={28} tone="theme" /><span><b className="font-semibold text-ink">KruScan</b> · ครูสแกน — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</span></span>
-          <nav className="flex flex-wrap gap-x-6 gap-y-1" aria-label="ลิงก์ท้ายหน้า">
-            <a href="/guide/" className="inline-flex min-h-[44px] items-center hover:text-ink">คู่มือการใช้งาน</a>
-            <Link to="/privacy" className="inline-flex min-h-[44px] items-center hover:text-ink">นโยบายความเป็นส่วนตัว</Link>
-            <Link to="/login" className="inline-flex min-h-[44px] items-center hover:text-ink">เข้าสู่ระบบ</Link>
-            <Link to="/signup" className="inline-flex min-h-[44px] items-center hover:text-ink">สมัครใช้ฟรี</Link>
+          <span className="inline-flex items-center gap-2.5"><LogoMark size={28} tone="theme" /><span><b className="font-semibold text-ink">KruScan</b>{t(' · ครูสแกน — สแกนสมุด รู้ทันทีใครส่งงานแล้ว')}</span></span>
+          <nav className="flex flex-wrap gap-x-6 gap-y-1" aria-label={t("ลิงก์ท้ายหน้า")}>
+            <a href="/guide/" className="inline-flex min-h-[44px] items-center hover:text-ink">{t('คู่มือการใช้งาน')}</a>
+            <Link to="/privacy" className="inline-flex min-h-[44px] items-center hover:text-ink">{t('นโยบายความเป็นส่วนตัว')}</Link>
+            <Link to="/login" className="inline-flex min-h-[44px] items-center hover:text-ink">{t('เข้าสู่ระบบ')}</Link>
+            <Link to="/signup" className="inline-flex min-h-[44px] items-center hover:text-ink">{t('สมัครใช้ฟรี')}</Link>
           </nav>
         </div>
       </footer>

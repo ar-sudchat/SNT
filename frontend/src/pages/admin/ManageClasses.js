@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
@@ -112,7 +113,7 @@ const ManageClasses = () => {
         if (cur && !filterAcademicYear) setFilterAcademicYear(cur.id);
       }
     } catch (err) {
-      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+      setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ const ManageClasses = () => {
     e.preventDefault();
     if (bulk.on && !editingClass) {
       if (!toCreate.length) {
-        setErrorAlert({ show: true, message: plan.length ? 'ห้องที่ต้องการมีอยู่แล้วทั้งหมด' : 'กรุณาเลือกชั้นปีและจำนวนห้อง' });
+        setErrorAlert({ show: true, message: plan.length ? t('ห้องที่ต้องการมีอยู่แล้วทั้งหมด') : t('กรุณาเลือกชั้นปีและจำนวนห้อง') });
         return;
       }
       const yearId = toId(formData.academicYearId);
@@ -140,25 +141,25 @@ const ManageClasses = () => {
         fetchData();
         closeModal();
         await dialog.alert({
-          title: 'เพิ่มห้องเรียนเสร็จแล้ว',
+          title: t('เพิ่มห้องเรียนเสร็จแล้ว'),
           type: skipped.length ? 'warning' : 'success',
-          message: `สร้างแล้ว ${created} · ข้าม ${skipped.length}` +
+          message: t("สร้างแล้ว {created} · ข้าม {value2}", { created: created, value2: skipped.length }) +
             (skipped.length ? '\n\n' + skipped.map(s => `${s.className}: ${s.reason}`).join('\n') : ''),
         });
       } catch (err) {
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'สร้างห้องไม่สำเร็จ ลองใหม่อีกครั้ง' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || t('สร้างห้องไม่สำเร็จ ลองใหม่อีกครั้ง') });
       } finally {
         setCreating(false);
       }
       return;
     }
     if (!validate(e.currentTarget, [
-      { key: 'className', message: 'กรุณากรอกชื่อห้อง', missing: !String(formData.className ?? '').trim() },
-      { key: 'gradeId', message: 'กรุณาเลือกชั้นปี', missing: toId(formData.gradeId) === null },
+      { key: 'className', message: t('กรุณากรอกชื่อห้อง'), missing: !String(formData.className ?? '').trim() },
+      { key: 'gradeId', message: t('กรุณาเลือกชั้นปี'), missing: toId(formData.gradeId) === null },
     ])) return;
     const gradeId = toId(formData.gradeId);
     if (gradeId === null) {
-      setErrorAlert({ show: true, message: 'กรุณาเลือกชั้นปี' });
+      setErrorAlert({ show: true, message: t('กรุณาเลือกชั้นปี') });
       return;
     }
     const capacity = parseInt(formData.capacity);
@@ -178,7 +179,7 @@ const ManageClasses = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('เกิดข้อผิดพลาด') });
     }
   };
 
@@ -192,7 +193,7 @@ const ManageClasses = () => {
         await classAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || t('ไม่สามารถลบได้') });
       }
     }
   };
@@ -201,11 +202,11 @@ const ManageClasses = () => {
     if (!rows.length) return;
     const withStudents = rows.reduce((n, r) => n + (r._count?.students || 0), 0);
     const ok = await dialog.confirm({
-      title: `ลบห้องเรียน ${rows.length} ห้อง`,
-      message: `ต้องการลบห้องเรียนที่เลือก ${rows.length} ห้องหรือไม่?` +
-        (withStudents ? `\n\nห้องเหล่านี้มีนักเรียนรวม ${withStudents} คน ระบบอาจลบห้องที่ยังมีนักเรียนไม่ได้` : '') +
-        '\n\nลบแล้วกู้คืนไม่ได้',
-      confirmText: `ลบ ${rows.length} ห้อง`,
+      title: t("ลบห้องเรียน {value1} ห้อง", { value1: rows.length }),
+      message: t("ต้องการลบห้องเรียนที่เลือก {value1} ห้องหรือไม่?", { value1: rows.length }) +
+        (withStudents ? t("\n\nห้องเหล่านี้มีนักเรียนรวม {withStudents} คน ระบบอาจลบห้องที่ยังมีนักเรียนไม่ได้", { withStudents: withStudents }) : '') +
+        t('\n\nลบแล้วกู้คืนไม่ได้'),
+      confirmText: t("ลบ {value1} ห้อง", { value1: rows.length }),
       type: 'danger',
     });
     if (!ok) return;
@@ -215,14 +216,14 @@ const ManageClasses = () => {
       const failed = res.data?.failed || [];
       fetchData();
       await dialog.alert({
-        title: 'ลบห้องเรียนเสร็จแล้ว',
+        title: t('ลบห้องเรียนเสร็จแล้ว'),
         type: failed.length ? 'warning' : 'success',
-        message: `ลบแล้ว ${deleted} · ลบไม่ได้ ${failed.length}` +
+        message: t("ลบแล้ว {deleted} · ลบไม่ได้ {value2}", { deleted: deleted, value2: failed.length }) +
           (failed.length ? '\n\n' + failed.map(f => `${f.name || f.id}: ${f.reason}`).join('\n') : ''),
       });
     } catch (err) {
       fetchData();
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('ลบไม่สำเร็จ ลองใหม่อีกครั้ง') });
     }
   };
 
@@ -270,29 +271,29 @@ const ManageClasses = () => {
     {
       key: 'className',
       mobilePrimary: true,
-      label: 'ห้องเรียน',
+      label: t('ห้องเรียน'),
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'grade.gradeName',
       mobileSecondary: true,
-      label: 'ชั้นปี',
+      label: t('ชั้นปี'),
       sortable: true
     },
     {
       key: 'homeTeacher.name',
       mobileSecondary: true,
-      label: 'ครูประจำชั้น',
+      label: t('ครูประจำชั้น'),
       render: (value) => value || '-'
     },
     {
       key: '_count.students',
       mobileSecondary: true,
-      label: 'นักเรียน',
+      label: t('นักเรียน'),
       render: (value, row) => (
         <>
-          <span className="md:hidden">{value || 0} คน</span>
+          <span className="md:hidden">{t("{value1} คน", { value1: value || 0 })}</span>
           <span className="hidden md:inline px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">
             {value || 0}/{row.capacity}
           </span>
@@ -301,10 +302,10 @@ const ManageClasses = () => {
     },
     {
       key: 'status',
-      label: 'สถานะ',
+      label: t('สถานะ'),
       mobileBadge: true,
       render: (value) => value === 'INACTIVE' ? (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">{t("ไม่ใช้งาน")}</span>
       ) : null
     }
   ];
@@ -314,27 +315,27 @@ const ManageClasses = () => {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามปีการศึกษา</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("กรองตามปีการศึกษา")}</label>
           <SmartComboBox
             options={academicYears}
             value={filterAcademicYear}
             onChange={setFilterAcademicYear}
             labelKey="year"
             valueKey="id"
-            placeholder="ทุกปีการศึกษา"
+            placeholder={t("ทุกปีการศึกษา")}
             clearable
             searchable
           />
         </div>
         <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">กรองตามชั้นปี</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("กรองตามชั้นปี")}</label>
           <SmartComboBox
             options={grades}
             value={filterGrade}
             onChange={setFilterGrade}
             labelKey="gradeName"
             valueKey="id"
-            placeholder="ทุกชั้นปี"
+            placeholder={t("ทุกชั้นปี")}
             clearable
             searchable
           />
@@ -346,18 +347,16 @@ const ManageClasses = () => {
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <PageHeader title="ห้องเรียน">
+      <PageHeader title={t("ห้องเรียน")}>
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มห้องเรียน
-        </button>
+          </svg>{t("เพิ่มห้องเรียน")}</button>
       </PageHeader>
-      <AddFab onClick={() => openModal()} label="เพิ่มห้องเรียน" />
+      <AddFab onClick={() => openModal()} label={t("เพิ่มห้องเรียน")} />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -377,22 +376,22 @@ const ManageClasses = () => {
         pagination
         selectable
         getRowId={(row) => row.id}
-        bulkActions={[{ label: 'ลบที่เลือก', danger: true, onClick: handleBulkDelete }]}
+        bulkActions={[{ label: t('ลบที่เลือก'), danger: true, onClick: handleBulkDelete }]}
         onClearFilters={() => { setFilterGrade(null); setFilterAcademicYear(null); }}
         emptyAction={
           <>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มห้องเรียน</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มห้องเรียน")}</button>
             
           </>
         }
-        emptyMessage="ยังไม่มีห้องเรียน"
+        emptyMessage={t("ยังไม่มีห้องเรียน")}
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
       <WindowModal
         open={showModal}
-        title={editingClass ? 'แก้ไขห้องเรียน' : 'เพิ่มห้องเรียน'}
+        title={editingClass ? t('แก้ไขห้องเรียน') : t('เพิ่มห้องเรียน')}
         onClose={closeModal}
         id="class-form"
         initialWidth="max-w-md"
@@ -403,15 +402,11 @@ const ManageClasses = () => {
                 type="button"
                 onClick={() => { const target = editingClass; closeModal(); handleDeleteClick(target); }}
                 className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
-              >
-                ลบ…
-              </button>
+              >{t("ลบ…")}</button>
             )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
-                  ยกเลิก
-                </button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">{t("ยกเลิก")}</button>
                 <button type="submit" form="class-form" disabled={creating || (bulk.on && !editingClass && !toCreate.length)} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {bulk.on && !editingClass ? (creating ? 'กำลังสร้าง…' : `สร้าง ${toCreate.length} ห้อง`) : 'บันทึก'}
+                  {bulk.on && !editingClass ? (creating ? t('กำลังสร้าง…') : t("สร้าง {value1} ห้อง", { value1: toCreate.length })) : t('บันทึก')}
                 </button>
           </div>
         }
@@ -419,16 +414,14 @@ const ManageClasses = () => {
         <div className="p-4">
           <form id="class-form" onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ปีการศึกษา
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
                 <SmartComboBox
                   options={academicYears}
                   value={formData.academicYearId}
                   onChange={(val) => setFormData({ ...formData, academicYearId: val })}
                   labelKey="year"
                   valueKey="id"
-                  placeholder="เลือกปีการศึกษา"
+                  placeholder={t("เลือกปีการศึกษา")}
                   searchable
                   clearable
                 />
@@ -436,8 +429,7 @@ const ManageClasses = () => {
 
               {!(bulk.on && !editingClass) && (
               <div data-field="gradeId">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชั้นปี <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้นปี ")}<span className="text-red-500">*</span>
                 </label>
                 <SmartComboBox
                   options={grades}
@@ -445,7 +437,7 @@ const ManageClasses = () => {
                   onChange={onGradeChange}
                   labelKey="gradeName"
                   valueKey="id"
-                  placeholder="เลือกชั้น"
+                  placeholder={t("เลือกชั้น")}
                   searchable
                     error={errorFor('gradeId', toId(formData.gradeId) === null)}
                   />
@@ -454,8 +446,7 @@ const ManageClasses = () => {
 
               <div data-field="className">
                 {!(bulk.on && !editingClass) && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อห้องเรียน <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชื่อห้องเรียน ")}<span className="text-red-500">*</span>
                 </label>
                 )}
                 {!(bulk.on && !editingClass) && (
@@ -463,7 +454,7 @@ const ManageClasses = () => {
                   type="text"
                   value={formData.className}
                   onChange={(e) => onNameChange(e.target.value)}
-                  placeholder="เช่น ป.4/1 (เลือกชั้นปีแล้วระบบตั้งชื่อให้)"
+                  placeholder={t("เช่น ป.4/1 (เลือกชั้นปีแล้วระบบตั้งชื่อให้)")}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
                 />
                 )}
@@ -477,34 +468,32 @@ const ManageClasses = () => {
                 )}
                 {!editingClass && (
                   <label className="mt-3 flex min-h-[44px] items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" checked={bulk.on} onChange={(e) => setBulk(b => ({ ...b, on: e.target.checked, rows: b.rows.map((r, i) => (i === 0 && r.gradeId == null ? { ...r, gradeId: toId(formData.gradeId) } : r)) }))} className="h-5 w-5" />
-                    เพิ่มหลายห้องพร้อมกัน
-                  </label>
+                    <input type="checkbox" checked={bulk.on} onChange={(e) => setBulk(b => ({ ...b, on: e.target.checked, rows: b.rows.map((r, i) => (i === 0 && r.gradeId == null ? { ...r, gradeId: toId(formData.gradeId) } : r)) }))} className="h-5 w-5" />{t("เพิ่มหลายห้องพร้อมกัน")}</label>
                 )}
                 {bulk.on && !editingClass && (
                   <div className="mt-1 space-y-3 rounded-lg bg-gray-50 p-3 text-sm">
                     {bulk.rows.map((row, i) => (
                       <div key={i} className="flex items-end gap-2">
                         <div className="min-w-0 flex-1">
-                          <span className="mb-1 block text-gray-700">ชั้น</span>
+                          <span className="mb-1 block text-gray-700">{t("ชั้น")}</span>
                           <SmartComboBox
                             options={grades.filter(g => !usedGrades(i).has(g.id))}
                             value={row.gradeId}
                             onChange={(val) => setBulkRow(i, { gradeId: val })}
                             labelKey="gradeName"
                             valueKey="id"
-                            placeholder="เลือกชั้น"
+                            placeholder={t("เลือกชั้น")}
                             searchable
                           />
                         </div>
                         <label className="w-20 shrink-0">
-                          <span className="mb-1 block text-gray-700">จำนวนห้อง</span>
+                          <span className="mb-1 block text-gray-700">{t("จำนวนห้อง")}</span>
                           <input type="number" min="1" max="20" inputMode="numeric" value={row.count}
                             onChange={(e) => setBulkRow(i, { count: e.target.value })}
                             className="min-h-[44px] w-full rounded-lg border px-2 py-1 text-base" />
                         </label>
                         {bulk.rows.length > 1 && (
-                          <button type="button" aria-label="เอาชั้นนี้ออก"
+                          <button type="button" aria-label={t("เอาชั้นนี้ออก")}
                             onClick={() => setBulk(b => ({ ...b, rows: b.rows.filter((_, idx) => idx !== i) }))}
                             className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-gray-300 text-gray-600 hover:bg-white">✕</button>
                         )}
@@ -512,19 +501,19 @@ const ManageClasses = () => {
                     ))}
                     {usedGrades(-1).size < grades.length && (
                       <button type="button" onClick={() => setBulk(b => ({ ...b, rows: [...b.rows, { gradeId: nextFreeGrade(), count: 3 }] }))}
-                        className="min-h-[44px] rounded-lg border border-dashed border-brand-400 px-3 text-brand-700 hover:bg-white">+ เพิ่มชั้น</button>
+                        className="min-h-[44px] rounded-lg border border-dashed border-brand-400 px-3 text-brand-700 hover:bg-white">{t("+ เพิ่มชั้น")}</button>
                     )}
                     <div>
-                      <p className="mb-1 text-gray-700">จะสร้าง (สูงสุด 20 ห้องต่อชั้น)</p>
+                      <p className="mb-1 text-gray-700">{t("จะสร้าง (สูงสุด 20 ห้องต่อชั้น)")}</p>
                       {plan.length ? (
                         <div className="flex flex-wrap gap-2">
                           {plan.map(p => (
                             <span key={p.className} className={`rounded-full border px-3 py-1 ${p.exists ? 'border-gray-200 bg-gray-100 text-gray-400' : 'border-brand-300 bg-brand-50 text-brand-800'}`}>
-                              {p.className}{p.exists ? ' · มีแล้ว' : ''}
+                              {p.className}{p.exists ? t(' · มีแล้ว') : ''}
                             </span>
                           ))}
                         </div>
-                      ) : <p className="text-gray-500">เลือกชั้นปีและจำนวนห้องด้านบน</p>}
+                      ) : <p className="text-gray-500">{t("เลือกชั้นปีและจำนวนห้องด้านบน")}</p>}
                     </div>
                   </div>
                 )}
@@ -535,14 +524,14 @@ const ManageClasses = () => {
 
               {!(bulk.on && !editingClass) && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ครูประจำชั้น</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ครูประจำชั้น")}</label>
                 <SmartComboBox
                   options={teachers}
                   value={formData.teacherId}
                   onChange={(val) => setFormData({ ...formData, teacherId: val })}
                   labelKey="name"
                   valueKey="id"
-                  placeholder="เลือกครูประจำชั้น"
+                  placeholder={t("เลือกครูประจำชั้น")}
                   searchable
                   clearable
                 />
@@ -550,12 +539,10 @@ const ManageClasses = () => {
               )}
 
               <details className="border rounded-lg px-3 py-2">
-                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">{t("ข้อมูลเพิ่มเติม (ไม่บังคับ)")}</summary>
                 <div className="space-y-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ความจุ (คน)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("ความจุ (คน)")}</label>
                     <input
                       type="number"
                       min="1"
@@ -565,14 +552,14 @@ const ManageClasses = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
                     <SmartComboBox
-                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
+                      options={[{ value: 'ACTIVE', label: t('ใช้งาน') }, { value: 'INACTIVE', label: t('ไม่ใช้งาน') }]}
                       value={formData.status}
                       onChange={(v) => v && setFormData({ ...formData, status: v })}
                       searchable={false}
                       clearable={false}
-                      ariaLabel="สถานะ"
+                      ariaLabel={t("สถานะ")}
                     />
                   </div>
                 </div>
@@ -587,10 +574,10 @@ const ManageClasses = () => {
         isOpen={deleteConfirm.show}
         onClose={() => setDeleteConfirm({ show: false, item: null })}
         onConfirm={handleDeleteConfirm}
-        title="ยืนยันการลบ"
-        message={`ต้องการลบห้องเรียน "${deleteConfirm.item?.className}" หรือไม่?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
+        title={t("ยืนยันการลบ")}
+        message={t("ต้องการลบห้องเรียน \"{value1}\" หรือไม่?", { value1: deleteConfirm.item?.className })}
+        confirmText={t("ลบ")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
 
@@ -598,9 +585,9 @@ const ManageClasses = () => {
       <ConfirmDialog
         isOpen={errorAlert.show}
         onClose={() => setErrorAlert({ show: false, message: '' })}
-        title="เกิดข้อผิดพลาด"
+        title={t("เกิดข้อผิดพลาด")}
         message={errorAlert.message}
-        confirmText="ตกลง"
+        confirmText={t("ตกลง")}
         type="danger"
         mode="alert"
       />

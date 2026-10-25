@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useId } from 'react';
 
 // ปุ่ม Google ตามแนวทางแบรนด์ของ Google: พื้นขาว ขอบ #dadce0 โลโก้ "G" สี่สีของจริง
@@ -16,7 +17,7 @@ export const GoogleG = ({ className = 'size-[18px]' }) => (
 const base = 'relative flex h-12 w-full items-center justify-center gap-3 rounded-lg border px-4 text-[15px] font-medium transition-[background-color,box-shadow] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2';
 const look = { backgroundColor: '#ffffff', borderColor: '#dadce0', color: '#3c4043' };
 
-const GoogleButton = ({ href, label = 'ดำเนินการต่อด้วย Google', enabled = true }) => {
+const GoogleButton = ({ href, label = t('ดำเนินการต่อด้วย Google'), enabled = true }) => {
   const tipId = useId();
   if (enabled) {
     return (
@@ -33,10 +34,8 @@ const GoogleButton = ({ href, label = 'ดำเนินการต่อด�
         <GoogleG className="size-[18px] opacity-50" />
         <span className="opacity-60">{label}</span>
       </span>
-      <p id={tipId} className="mt-1.5 text-center text-xs text-gray-500">เปิดใช้เร็วๆ นี้ · ตอนนี้ใช้อีเมลไปก่อนได้</p>
-      <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        ระบบยังไม่เปิดให้เข้าด้วยบัญชี Google
-      </span>
+      <p id={tipId} className="mt-1.5 text-center text-xs text-gray-500">{t('เปิดใช้เร็วๆ นี้ · ตอนนี้ใช้อีเมลไปก่อนได้')}</p>
+      <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{t('ระบบยังไม่เปิดให้เข้าด้วยบัญชี Google')}</span>
     </div>
   );
 };

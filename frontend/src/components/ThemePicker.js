@@ -1,5 +1,8 @@
+import { t } from '../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import THEMES, { DEFAULT_THEME } from '../theme/themes';
+
+const themeName = (name) => t(name);
 
 const KEY = 'snt-color-theme';
 
@@ -36,9 +39,9 @@ export default function ThemePicker({ onChoose }) {
     <div className="relative shrink-0" ref={boxRef}>
       <button
         type="button"
-        aria-label="ธีมสี"
+        aria-label={t("ธีมสี")}
         aria-expanded={open}
-        title="ธีมสี"
+        title={t("ธีมสี")}
         onClick={() => setOpen((v) => !v)}
         className="flex h-11 w-11 items-center justify-center rounded-lg border border-ink-200 text-ink-600 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
       >
@@ -52,12 +55,12 @@ export default function ThemePicker({ onChoose }) {
           <div className="fixed inset-0 z-40 bg-black/40 sm:hidden" aria-hidden="true" />
           <div
             role="dialog"
-            aria-label="เลือกธีมสี"
+            aria-label={t("เลือกธีมสี")}
             className="fixed inset-x-0 bottom-0 z-50 max-h-[75vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:rounded-xl sm:border sm:border-gray-200"
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">ธีมสี</h2>
-              <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] px-3 text-sm text-gray-600 hover:text-gray-900">ปิด</button>
+              <h2 className="text-base font-semibold text-gray-900">{t("ธีมสี")}</h2>
+              <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] px-3 text-sm text-gray-600 hover:text-gray-900">{t("ปิด")}</button>
             </div>
             <ul className="grid gap-1">
               {THEMES.map((t) => {
@@ -73,7 +76,7 @@ export default function ThemePicker({ onChoose }) {
                       <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-black/10">
                         {t.swatches.map((c, i) => <span key={i} className="h-7 w-4" style={{ background: c }} />)}
                       </span>
-                      <span className="flex-1 text-gray-800">{t.name}</span>
+                      <span className="flex-1 text-gray-800">{themeName(t.name)}</span>
                       {on && <span className="text-brand-600" aria-hidden="true">✓</span>}
                     </button>
                   </li>
@@ -81,7 +84,7 @@ export default function ThemePicker({ onChoose }) {
               })}
             </ul>
             {current !== DEFAULT_THEME && (
-              <button type="button" onClick={() => choose(DEFAULT_THEME)} className="mt-2 min-h-[44px] w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50">กลับค่าเริ่มต้น</button>
+              <button type="button" onClick={() => choose(DEFAULT_THEME)} className="mt-2 min-h-[44px] w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50">{t("กลับค่าเริ่มต้น")}</button>
             )}
           </div>
         </>

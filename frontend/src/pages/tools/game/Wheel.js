@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 import React, { useEffect, useRef, useCallback } from 'react';
 import { sfx } from './sfx';
 import { easeOutQuart, SPIN_MS } from './common';
@@ -102,7 +103,7 @@ const Wheel = ({ entries, spin, onDone, reduced }) => {
   return (
     <div ref={wrapRef} className="relative mx-auto w-full max-w-[min(92vw,62vh)] lg:max-w-[min(560px,64vh)] aspect-square">
       <div aria-hidden="true" className="absolute left-1/2 -top-1 -translate-x-1/2 z-10 w-0 h-0 border-l-[18px] border-r-[18px] border-t-[34px] border-l-transparent border-r-transparent border-t-accent-600 drop-shadow" />
-      <canvas ref={cvRef} className="w-full h-full font-sans" aria-label={`วงล้อรายชื่อ ${entries.length} คน`} role="img" />
+      <canvas ref={cvRef} className="w-full h-full font-sans" aria-label={t('วงล้อรายชื่อ {value1} คน', { value1: entries.length })} role="img" />
     </div>
   );
 };

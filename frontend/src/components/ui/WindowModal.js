@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,7 +15,7 @@ function getTaskbar() {
   if (!el) {
     el = document.createElement('div');
     el.id = TASKBAR_ID;
-    el.setAttribute('aria-label', 'หน้าต่างที่ย่อไว้');
+    el.setAttribute('aria-label', t('หน้าต่างที่ย่อไว้'));
     el.className = 'fixed z-40 flex flex-col-reverse gap-2 pointer-events-none';
     el.style.left = 'calc(env(safe-area-inset-left, 0px) + 12px)';
     el.style.bottom = 'calc(env(safe-area-inset-bottom, 0px) + 12px)';
@@ -244,15 +245,15 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
           <h2 id={titleId} className="flex-1 truncate text-base font-semibold text-white select-none">
             {title}
           </h2>
-          <button type="button" className={btnBase} aria-label="ย่อหน้าต่าง" title="ย่อ" onClick={() => setMinimized(true)}>
+          <button type="button" className={btnBase} aria-label={t("ย่อหน้าต่าง")} title={t("ย่อ")} onClick={() => setMinimized(true)}>
             <Icon d={ICON_MIN} />
           </button>
           {isDesktop && (
             <button
               type="button"
               className={btnBase}
-              aria-label={maximized ? 'คืนขนาดหน้าต่าง' : 'ขยายหน้าต่าง'}
-              title={maximized ? 'คืนขนาด' : 'ขยาย'}
+              aria-label={maximized ? t('คืนขนาดหน้าต่าง') : t('ขยายหน้าต่าง')}
+              title={maximized ? t('คืนขนาด') : t('ขยาย')}
               onClick={toggleMax}
             >
               <Icon d={maximized ? ICON_RESTORE : ICON_MAX} />
@@ -261,8 +262,8 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
           <button
             type="button"
             className={`${btnBase} hover:!bg-red-500 hover:!text-white`}
-            aria-label="ปิดหน้าต่าง"
-            title="ปิด"
+            aria-label={t("ปิดหน้าต่าง")}
+            title={t("ปิด")}
             onClick={onClose}
           >
             <Icon d={ICON_CLOSE} />
@@ -277,7 +278,7 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
             <button
               type="button"
               className="min-h-[44px] sm:min-h-[36px] flex-1 truncate text-left text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 rounded"
-              aria-label={`เปิดหน้าต่าง ${typeof title === 'string' ? title : ''}`.trim()}
+              aria-label={t("เปิดหน้าต่าง {value1}", { value1: typeof title === 'string' ? title : '' }).trim()}
               onClick={() => setMinimized(false)}
             >
               {title}
@@ -285,8 +286,8 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
             <button
               type="button"
               className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] rounded-md hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-              aria-label="คืนหน้าต่าง"
-              title="คืนหน้าต่าง"
+              aria-label={t("คืนหน้าต่าง")}
+              title={t("คืนหน้าต่าง")}
               onClick={() => setMinimized(false)}
             >
               <Icon d={ICON_MAX} />
@@ -294,8 +295,8 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
             <button
               type="button"
               className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] rounded-md hover:bg-red-500/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-              aria-label="ปิดหน้าต่าง"
-              title="ปิด"
+              aria-label={t("ปิดหน้าต่าง")}
+              title={t("ปิด")}
               onClick={onClose}
             >
               <Icon d={ICON_CLOSE} />

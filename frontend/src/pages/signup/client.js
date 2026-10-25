@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import axios from 'axios';
 
 // Own axios instance: the shared `api` redirects to /login on any 401, which would
@@ -10,7 +11,7 @@ http.interceptors.request.use((c) => {
   return c;
 });
 
-export const errMsg = (e, fallback = 'ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง') => e?.response?.data?.error || fallback;
+export const errMsg = (e, fallback = t('ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง')) => e?.response?.data?.error || fallback;
 
 export const inviteAPI = {
   list: () => http.get('/invites'),

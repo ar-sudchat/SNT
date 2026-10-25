@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
@@ -5,6 +6,9 @@ import useLessonContext from './useLessonContext';
 import LessonContextBar from './LessonContextBar';
 import ThaiDatePicker, { toIso } from '../../components/ui/ThaiDatePicker';
 import { thaiShortDate, RESPONSE_TYPES, SCOPE_LABEL, scopeOf, responseOf } from './lessonLogCore';
+
+// Keep translation callable in scopes with a local variable named t.
+const i18n = { t };
 
 // /lesson-log/new — เลือกประเภทการประเมิน แล้วตั้งชื่อเอง
 const errText = (e, fallback) => e?.response?.data?.error || fallback;
@@ -27,11 +31,11 @@ function templateSub(t) {
   const nQ = (t.classFields || []).length;
   const nC = (t.criteria || []).length;
   const rt = RESPONSE_TYPES.find(x => x.id === responseOf(t));
-  const resp = rt ? rt.label.replace('1–N', `1–${t.maxScore || 'N'}`) : '';
-  if (t.kind === 'NOTE') return `${SCOPE_LABEL.CLASS} · ข้อความ มีช่องลงชื่อ`;
-  if (t.kind === 'CLASS') return `${SCOPE_LABEL.CLASS} · ${nQ} คำถาม`;
-  const students = `${nC} รายการ · ${resp}`;
-  return scope === 'BOTH' ? `${SCOPE_LABEL.BOTH} · ${nQ} คำถาม · ${students}` : `${SCOPE_LABEL.STUDENT} · ${students}`;
+  const resp = rt ? i18n.t(rt.label).replace('1–N', `1–${t.maxScore || 'N'}`) : '';
+  if (t.kind === 'NOTE') return i18n.t('{value1} · ข้อความ มีช่องลงชื่อ', { value1: i18n.t(SCOPE_LABEL.CLASS) });
+  if (t.kind === 'CLASS') return i18n.t('{value1} · {nQ} คำถาม', { value1: i18n.t(SCOPE_LABEL.CLASS), nQ: nQ });
+  const students = i18n.t('{nC} รายการ · {resp}', { nC: nC, resp: resp });
+  return scope === 'BOTH' ? i18n.t('{value1} · {nQ} คำถาม · {students}', { value1: i18n.t(SCOPE_LABEL.BOTH), nQ: nQ, students: students }) : `${i18n.t(SCOPE_LABEL.STUDENT)} · ${students}`;
 }
 
 // embedded = เปิดใน popup จากหน้าบันทึกหลังแผน (ใช้ ctx เดียวกับหน้านั้น)
@@ -81,7 +85,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
         setTemplates(list);
         setTemplateId(prev => (list.some(t => t.id === prev) ? prev : (list[0] ? list[0].id : null)));
       } catch (e) {
-        if (!cancelled) setTemplatesError(errText(e, 'โหลดแบบประเมินไม่สำเร็จ'));
+        if (!cancelled) setTemplatesError(errText(e, t('โหลดแบบประเมินไม่สำเร็จ')));
       } finally {
         if (!cancelled) setTemplatesLoading(false);
       }
@@ -130,8 +134,8 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
   const template = useMemo(() => templates.find(t => t.id === templateId) || null, [templates, templateId]);
   const isNote = template?.kind === 'NOTE';
   const isClass = template?.kind === 'CLASS';
-  const nameLabel = isNote ? 'ชื่อแผน' : isClass ? 'ชื่อเรื่อง' : (template?.key === 'work' ? 'ชื่อชิ้นงาน/ภาระงาน' : 'ชื่อกิจกรรม');
-  const namePlaceholder = isNote ? 'เช่น ศึกษากลุ่มพืชดอก' : isClass ? 'เช่น สรุปการสอนสัปดาห์นี้' : 'เช่น การจำแนกประเภทของพืช';
+  const nameLabel = isNote ? t('ชื่อแผน') : isClass ? t('ชื่อเรื่อง') : (template?.key === 'work' ? t('ชื่อชิ้นงาน/ภาระงาน') : t('ชื่อกิจกรรม'));
+  const namePlaceholder = isNote ? t('เช่น ศึกษากลุ่มพืชดอก') : isClass ? t('เช่น สรุปการสอนสัปดาห์นี้') : t('เช่น การจำแนกประเภทของพืช');
   const recentNames = useMemo(() => {
     const kind = isClass ? 'CLASS' : 'RUBRIC';
     const seen = new Set();
@@ -165,11 +169,11 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
     if (busy || !template) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError(isNote ? 'กรอกชื่อแผนก่อนเริ่มบันทึก' : isClass ? 'กรอกชื่อเรื่องก่อนเริ่มบันทึก' : `กรอก${nameLabel}ก่อนเริ่มประเมิน`);
+      setNameError(isNote ? t('กรอกชื่อแผนก่อนเริ่มบันทึก') : isClass ? t('กรอกชื่อเรื่องก่อนเริ่มบันทึก') : t('กรอก{nameLabel}ก่อนเริ่มประเมิน', { nameLabel: nameLabel }));
       if (nameRef.current) nameRef.current.focus();
       return;
     }
-    if (!roomIds.length) { setServerError('เลือกห้องเรียนอย่างน้อย 1 ห้อง'); return; }
+    if (!roomIds.length) { setServerError(t('เลือกห้องเรียนอย่างน้อย 1 ห้อง')); return; }
     setBusy(true);
     setServerError('');
     const created = [];
@@ -197,8 +201,8 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
       else if (onDone) onDone(created);
       else navigate('/lesson-log', { replace: true });
     } catch (err) {
-      const done = created.length ? `สร้างแล้ว ${created.length} ห้อง ` : '';
-      setServerError(done + errText(err, 'สร้างบันทึกไม่สำเร็จ ลองอีกครั้ง'));
+      const done = created.length ? t('สร้างแล้ว {value1} ห้อง ', { value1: created.length }) : '';
+      setServerError(done + errText(err, t('สร้างบันทึกไม่สำเร็จ ลองอีกครั้ง')));
       setBusy(false);
     }
   };
@@ -206,7 +210,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
   const box = embedded ? 'w-full p-4' : 'mx-auto w-full max-w-5xl';
 
   if (ctx.loading || templatesLoading) {
-    return <div className={`${box} py-10 text-center text-gray-500`} role="status">กำลังโหลด…</div>;
+    return <div className={`${box} py-10 text-center text-gray-500`} role="status">{t('กำลังโหลด…')}</div>;
   }
 
   if (ctx.error || templatesError) {
@@ -221,41 +225,38 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
     return (
       <div className={box}>
         <div className="rounded-lg border border-gray-200 bg-white p-5">
-          <h1 className="font-display text-lg font-semibold text-gray-900">ยังไม่ได้เลือกห้องเรียน</h1>
-          <p className="mt-1 text-gray-600">เลือกห้องก่อน แล้วค่อยสร้างบันทึกหลังแผน</p>
-          <Link to="/lesson-log" className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-gray-300 bg-white px-4 font-medium text-brand-700 hover:bg-gray-50">
-            ไปเลือกห้องเรียน
-          </Link>
+          <h1 className="font-display text-lg font-semibold text-gray-900">{t('ยังไม่ได้เลือกห้องเรียน')}</h1>
+          <p className="mt-1 text-gray-600">{t('เลือกห้องก่อน แล้วค่อยสร้างบันทึกหลังแผน')}</p>
+          <Link to="/lesson-log" className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-gray-300 bg-white px-4 font-medium text-brand-700 hover:bg-gray-50">{t('ไปเลือกห้องเรียน')}</Link>
         </div>
       </div>
     );
   }
 
   const primaryLabel = isNote
-    ? 'เริ่มบันทึกผลหลังการสอน'
-    : isClass ? 'เริ่มบันทึก'
-    : `เริ่มประเมิน${studentCount !== null && roomIds.length <= 1 ? ` · ${studentCount} คน` : ''}`;
-  const submitLabel = roomIds.length > 1 ? `${primaryLabel} · ${roomIds.length} ห้อง` : primaryLabel;
+    ? t('เริ่มบันทึกผลหลังการสอน')
+    : isClass ? t('เริ่มบันทึก')
+    : (studentCount !== null && roomIds.length <= 1 ? t('เริ่มประเมิน · {studentCount} คน', { studentCount }) : t('เริ่มประเมิน'));
+  const submitLabel = roomIds.length > 1 ? t('{primaryLabel} · {value2} ห้อง', { primaryLabel: primaryLabel, value2: roomIds.length }) : primaryLabel;
   const dateValue = isNote ? noteDate : rubricDate;
   const setDateValue = isNote ? setNoteDate : setRubricDate;
 
   return (
     <form onSubmit={submit} noValidate className={box}>
       <div className="mb-4">
-        {!embedded && <h1 className="mb-3 font-display text-xl font-semibold text-gray-900">สร้างบันทึก / แบบประเมิน</h1>}
-        <LessonContextBar ctx={ctx} allSubjectsLabel="ไม่ระบุวิชา" roomIds={roomIds} onRoomIdsChange={setRoomIds} />
+        {!embedded && <h1 className="mb-3 font-display text-xl font-semibold text-gray-900">{t('สร้างบันทึก / แบบประเมิน')}</h1>}
+        <LessonContextBar ctx={ctx} allSubjectsLabel={t("ไม่ระบุวิชา")} roomIds={roomIds} onRoomIdsChange={setRoomIds} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         {/* 1. ประเภท */}
         <section aria-labelledby="ll-step1">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 id="ll-step1" className="text-sm font-semibold text-gray-700">1. เลือกประเภทการประเมิน</h2>
-            <Link to="/lesson-log/templates" className="inline-flex min-h-[44px] items-center text-sm font-medium text-brand-700 hover:underline">จัดการแบบประเมิน</Link>
+            <h2 id="ll-step1" className="text-sm font-semibold text-gray-700">{t('1. เลือกประเภทการประเมิน')}</h2>
+            <Link to="/lesson-log/templates" className="inline-flex min-h-[44px] items-center text-sm font-medium text-brand-700 hover:underline">{t('จัดการแบบประเมิน')}</Link>
           </div>
           {templates.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-4 text-gray-600">
-              ยังไม่มีแบบประเมินที่ใช้งานได้ <Link to="/lesson-log/templates" className="font-medium text-brand-700 hover:underline">เพิ่มแบบประเมิน</Link>
+            <div className="rounded-lg border border-gray-200 bg-white p-4 text-gray-600">{t('ยังไม่มีแบบประเมินที่ใช้งานได้ ')}<Link to="/lesson-log/templates" className="font-medium text-brand-700 hover:underline">{t('เพิ่มแบบประเมิน')}</Link>
             </div>
           ) : (
             <div role="radiogroup" aria-labelledby="ll-step1" className="space-y-2">
@@ -276,7 +277,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
                       className="h-5 w-5 shrink-0 accent-brand-600"
                     />
                     <span className="min-w-0">
-                      <span className="block font-medium text-gray-900">{t.name}</span>
+                      <span className="block font-medium text-gray-900">{i18n.t(t.name)}</span>
                       <span className="block text-sm text-gray-600">{sub}</span>
                     </span>
                   </label>
@@ -288,13 +289,11 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
 
         {/* 2. ตั้งชื่อ */}
         <section aria-labelledby="ll-step2">
-          <h2 id="ll-step2" className="mb-2 text-sm font-semibold text-gray-700">2. ตั้งชื่อเอง</h2>
+          <h2 id="ll-step2" className="mb-2 text-sm font-semibold text-gray-700">{t('2. ตั้งชื่อเอง')}</h2>
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             {isNote ? (
               <div className="grid grid-cols-2 gap-3">
-                <label className={labelCls}>
-                  แผนที่
-                  <input
+                <label className={labelCls}>{t('แผนที่')}<input
                     className={inputCls}
                     value={head.planNo}
                     onChange={(e) => setHeadField('planNo', e.target.value)}
@@ -302,9 +301,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
                     placeholder="3"
                   />
                 </label>
-                <label className={labelCls}>
-                  หน่วยที่
-                  <input
+                <label className={labelCls}>{t('หน่วยที่')}<input
                     className={inputCls}
                     value={head.unitNo}
                     onChange={(e) => setHeadField('unitNo', e.target.value)}
@@ -325,17 +322,15 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
                   />
                   {nameError && <span id="ll-name-err" className="mt-1 block text-sm text-red-600">{nameError}</span>}
                 </label>
-                <label className={`${labelCls} col-span-2`}>
-                  ชื่อหน่วย
-                  <input
+                <label className={`${labelCls} col-span-2`}>{t('ชื่อหน่วย')}<input
                     className={inputCls}
                     value={head.unitName}
                     onChange={(e) => setHeadField('unitName', e.target.value)}
-                    placeholder="เช่น ความหลากหลายของสิ่งมีชีวิต"
+                    placeholder={t("เช่น ความหลากหลายของสิ่งมีชีวิต")}
                   />
                 </label>
                 <div className="col-span-2">
-                  <label htmlFor="ll-note-date" className={labelCls}>วัน/เดือน/ปีที่สอน</label>
+                  <label htmlFor="ll-note-date" className={labelCls}>{t('วัน/เดือน/ปีที่สอน')}</label>
                   <ThaiDatePicker id="ll-note-date" value={noteDate.text} dates={noteDate.dates} onChange={(text, dates) => setNoteDate({ text, dates })} />
                 </div>
               </div>
@@ -357,7 +352,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
 
                 {recentNames.length > 0 && (
                   <div>
-                    <p className={labelCls}>ใช้ชื่อที่เคยตั้ง</p>
+                    <p className={labelCls}>{t('ใช้ชื่อที่เคยตั้ง')}</p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       {recentNames.map(n => (
                         <button
@@ -375,17 +370,13 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
                 )}
 
                 <div>
-                  <p className={labelCls}>{isClass ? 'วันที่บันทึก' : 'วันที่ประเมิน'}</p>
+                  <p className={labelCls}>{isClass ? t('วันที่บันทึก') : t('วันที่ประเมิน')}</p>
                   <div className="mt-1 flex flex-wrap gap-2">
-                    <button type="button" aria-pressed={dateValue.text === today} onClick={() => setDateValue(todayV)} className={chipCls(dateValue.text === today)}>
-                      วันนี้ {today}
-                    </button>
-                    <button type="button" aria-pressed={dateValue.text === yesterday} onClick={() => setDateValue(yesterdayV)} className={chipCls(dateValue.text === yesterday)}>
-                      เมื่อวาน {yesterday}
-                    </button>
+                    <button type="button" aria-pressed={dateValue.text === today} onClick={() => setDateValue(todayV)} className={chipCls(dateValue.text === today)}>{t('วันนี้ {today}', { today: today })}</button>
+                    <button type="button" aria-pressed={dateValue.text === yesterday} onClick={() => setDateValue(yesterdayV)} className={chipCls(dateValue.text === yesterday)}>{t('เมื่อวาน {yesterday}', { yesterday: yesterday })}</button>
                   </div>
                   <div className="mt-3">
-                    <label htmlFor="ll-other-date" className="block text-sm text-gray-600">วันอื่น (เลือกได้หลายวันหรือเป็นช่วง)</label>
+                    <label htmlFor="ll-other-date" className="block text-sm text-gray-600">{t('วันอื่น (เลือกได้หลายวันหรือเป็นช่วง)')}</label>
                     <ThaiDatePicker id="ll-other-date" value={dateValue.text} dates={dateValue.dates} onChange={(text, dates) => setDateValue({ text, dates })} />
                   </div>
                 </div>
@@ -409,7 +400,7 @@ const CreateRecord = ({ ctx: outerCtx, embedded = false, onDone }) => {
               disabled={busy || !template || !roomIds.length}
               className="min-h-[48px] w-full rounded-lg bg-brand-600 px-4 font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
             >
-              {busy ? 'กำลังสร้าง…' : submitLabel}
+              {busy ? t('กำลังสร้าง…') : submitLabel}
             </button>
           </div>
         </section>

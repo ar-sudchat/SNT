@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { subjectAPI, teacherAPI, academicYearAPI, gradeAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
@@ -32,8 +33,8 @@ const parseSubjectLines = (text) => {
       else code = line;
     }
     let problem = '';
-    if (!name) problem = 'ไม่มีชื่อวิชา';
-    else if (seen.has(normCode(code))) problem = `รหัสซ้ำกับบรรทัด ${seen.get(normCode(code))}`;
+    if (!name) problem = t('ไม่มีชื่อวิชา');
+    else if (seen.has(normCode(code))) problem = t("รหัสซ้ำกับบรรทัด {value1}", { value1: seen.get(normCode(code)) });
     if (!seen.has(normCode(code))) seen.set(normCode(code), rows.length + 1);
     rows.push({ line: rows.length + 1, code, name, problem });
   });
@@ -95,7 +96,7 @@ const ManageSubjects = () => {
         }
         initialLoadDone.current = true;
       } catch (err) {
-        setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+        setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
         initialLoadDone.current = true;
       }
     };
@@ -114,7 +115,7 @@ const ManageSubjects = () => {
       const subjectRes = await subjectAPI.getAll(params);
       setSubjects(subjectRes.data);
     } catch (err) {
-      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+      setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
     } finally {
       setLoading(false);
     }
@@ -127,13 +128,13 @@ const ManageSubjects = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate(e.currentTarget, [
-      { key: 'subjectCode', message: 'กรุณากรอกรหัสวิชา', missing: !String(formData.subjectCode ?? '').trim() },
-      { key: 'subjectName', message: 'กรุณากรอกชื่อวิชา', missing: !String(formData.subjectName ?? '').trim() },
-      { key: 'teacherId', message: 'กรุณาเลือกครูผู้สอน', missing: toId(formData.teacherId) === null },
+      { key: 'subjectCode', message: t('กรุณากรอกรหัสวิชา'), missing: !String(formData.subjectCode ?? '').trim() },
+      { key: 'subjectName', message: t('กรุณากรอกชื่อวิชา'), missing: !String(formData.subjectName ?? '').trim() },
+      { key: 'teacherId', message: t('กรุณาเลือกครูผู้สอน'), missing: toId(formData.teacherId) === null },
     ])) return;
     const teacherId = toId(formData.teacherId);
     if (teacherId === null) {
-      setErrorAlert({ show: true, message: 'กรุณาเลือกครูผู้สอน' });
+      setErrorAlert({ show: true, message: t('กรุณาเลือกครูผู้สอน') });
       return;
     }
     try {
@@ -151,7 +152,7 @@ const ManageSubjects = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('เกิดข้อผิดพลาด') });
     }
   };
 
@@ -165,7 +166,7 @@ const ManageSubjects = () => {
         await subjectAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || t('ไม่สามารถลบได้') });
       }
     }
   };
@@ -256,17 +257,17 @@ const ManageSubjects = () => {
       const res = await subjectAPI.bulkCreate(items);
       const { created = 0, skipped = [] } = res.data || {};
       const createdN = Array.isArray(created) ? created.length : created;
-      let msg = `เพิ่มแล้ว ${createdN}`;
+      let msg = t("เพิ่มแล้ว {createdN}", { createdN: createdN });
       if (skipped.length) {
         const detail = skipped.slice(0, SKIP_DETAIL_MAX).map((x) => `${x.subjectCode}: ${x.reason}`).join(', ');
-        msg += ` · ข้าม ${skipped.length} (${detail}${skipped.length > SKIP_DETAIL_MAX ? ' ...' : ''})`;
+        msg = t("เพิ่มแล้ว {createdN} · ข้าม {n} ({detail}{suffix})", { createdN, n: skipped.length, detail, suffix: skipped.length > SKIP_DETAIL_MAX ? ' ...' : '' });
       }
       setNotice(msg);
       setShowBulk(false);
       setBulkText('');
       fetchData();
     } catch (err) {
-      setBulkError(err.response?.data?.error || 'เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง');
+      setBulkError(err.response?.data?.error || t('เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง'));
     } finally {
       setBulkBusy(false);
     }
@@ -277,28 +278,28 @@ const ManageSubjects = () => {
     if (!rows || !rows.length) return;
     const preview = rows.slice(0, 8).map((r) => `${r.subjectCode} ${r.subjectName}`).join('\n') + (rows.length > 8 ? '\n...' : '');
     const ok = await dialog.confirm({
-      title: 'ลบวิชาที่เลือก',
-      message: `ต้องการลบ ${rows.length} วิชา\n${preview}\nวิชาที่มีงานอยู่อาจลบไม่ได้`,
+      title: t('ลบวิชาที่เลือก'),
+      message: t("ต้องการลบ {value1} วิชา\n{preview}\nวิชาที่มีงานอยู่อาจลบไม่ได้", { value1: rows.length, preview: preview }),
       type: 'danger',
-      confirmText: `ลบ ${rows.length} รายการ`,
-      cancelText: 'ยกเลิก',
+      confirmText: t("ลบ {value1} รายการ", { value1: rows.length }),
+      cancelText: t('ยกเลิก'),
     });
     if (!ok) return;
     try {
       const res = await subjectAPI.bulkDelete(rows.map((r) => r.id));
       const { deleted = 0, failed = [] } = res.data || {};
       const deletedN = Array.isArray(deleted) ? deleted.length : deleted;
-      setNotice(`ลบแล้ว ${deletedN}${failed.length ? ` · ลบไม่ได้ ${failed.length}` : ''}`);
+      setNotice(failed.length ? t("ลบแล้ว {deletedN} · ลบไม่ได้ {n}", { deletedN, n: failed.length }) : t("ลบแล้ว {deletedN}", { deletedN }));
       await fetchData();
       if (failed.length) {
         await dialog.alert({
-          title: `ลบไม่ได้ ${failed.length} รายการ`,
+          title: t("ลบไม่ได้ {value1} รายการ", { value1: failed.length }),
           message: failed.map((f) => `${f.name}: ${f.reason}`).join('\n'),
           type: 'danger',
         });
       }
     } catch (err) {
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('ไม่สามารถลบได้') });
     }
   };
 
@@ -307,46 +308,44 @@ const ManageSubjects = () => {
     {
       key: 'subjectCode',
       mobileSecondary: true,
-      label: 'รหัสวิชา',
+      label: t('รหัสวิชา'),
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'subjectName',
       mobilePrimary: true,
-      label: 'ชื่อวิชา',
+      label: t('ชื่อวิชา'),
       sortable: true
     },
     {
       key: 'grade.gradeName',
       mobileSecondary: true,
-      label: 'ชั้นเรียน',
+      label: t('ชั้นเรียน'),
       sortable: true,
       render: (value) => value || '-'
     },
     {
       key: 'teacher.name',
       mobileSecondary: true,
-      label: 'ครูผู้สอน',
+      label: t('ครูผู้สอน'),
       sortable: true,
       render: (value) => value || '-'
     },
     {
       key: '_count.tasks',
       hideOnMobile: true,
-      label: 'จำนวนงาน',
+      label: t('จำนวนงาน'),
       render: (value) => (
-        <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">
-          {value || 0} งาน
-        </span>
+        <span className="px-2 py-1 bg-brand-100 text-brand-800 text-xs rounded-full">{t("{value1} งาน", { value1: value || 0 })}</span>
       )
     },
     {
       key: 'status',
-      label: 'สถานะ',
+      label: t('สถานะ'),
       mobileBadge: true,
       render: (value) => value === 'INACTIVE' ? (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">{t("ไม่ใช้งาน")}</span>
       ) : null
     }
   ];
@@ -356,7 +355,7 @@ const ManageSubjects = () => {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
         <div className="sm:w-52">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
           <SmartComboBox
             options={academicYears}
             value={filterAcademicYear}
@@ -366,20 +365,20 @@ const ManageSubjects = () => {
             }}
             labelKey="year"
             valueKey="id"
-            placeholder="ทุกปีการศึกษา"
+            placeholder={t("ทุกปีการศึกษา")}
             clearable
             searchable
           />
         </div>
         <div className="sm:w-52">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้นเรียน")}</label>
           <SmartComboBox
             options={grades}
             value={filterGrade}
             onChange={setFilterGrade}
             labelKey="gradeName"
             valueKey="id"
-            placeholder="ทุกชั้น"
+            placeholder={t("ทุกชั้น")}
             clearable
             searchable
           />
@@ -391,31 +390,27 @@ const ManageSubjects = () => {
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <PageHeader title="วิชา">
+      <PageHeader title={t("วิชา")}>
         <button
           type="button"
           onClick={openBulk}
           className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center"
-        >
-          เพิ่มหลายวิชา
-        </button>
+        >{t("เพิ่มหลายวิชา")}</button>
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มวิชา
-        </button>
+          </svg>{t("เพิ่มวิชา")}</button>
       </PageHeader>
-      <AddFab onClick={() => openModal()} label="เพิ่มวิชา" />
+      <AddFab onClick={() => openModal()} label={t("เพิ่มวิชา")} />
 
       {/* ผลลัพธ์ */}
       {notice && (
         <div role="status" className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start justify-between gap-3">
           <span className="break-words min-w-0">{notice}</span>
-          <button onClick={() => setNotice('')} aria-label="ปิด" className="min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-green-600 hover:text-green-800 shrink-0">
+          <button onClick={() => setNotice('')} aria-label={t("ปิด")} className="min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-green-600 hover:text-green-800 shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -441,22 +436,22 @@ const ManageSubjects = () => {
         pagination
         selectable
         getRowId={(row) => row.id}
-        bulkActions={[{ label: 'ลบที่เลือก', danger: true, onClick: handleBulkDelete }]}
+        bulkActions={[{ label: t('ลบที่เลือก'), danger: true, onClick: handleBulkDelete }]}
         onClearFilters={() => { setFilterAcademicYear(null); setFilterGrade(null); }}
         emptyAction={
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button type="button" onClick={openBulk} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มหลายวิชา</button>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">เพิ่มทีละวิชา</button>
+            <button type="button" onClick={openBulk} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มหลายวิชา")}</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">{t("เพิ่มทีละวิชา")}</button>
           </div>
         }
-        emptyMessage="ยังไม่มีวิชา"
+        emptyMessage={t("ยังไม่มีวิชา")}
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
       <WindowModal
         open={showModal}
-        title={editingSubject ? 'แก้ไขวิชา' : 'เพิ่มวิชา'}
+        title={editingSubject ? t('แก้ไขวิชา') : t('เพิ่มวิชา')}
         onClose={closeModal}
         id="subject-form"
         initialWidth="max-w-md"
@@ -467,52 +462,45 @@ const ManageSubjects = () => {
                 type="button"
                 onClick={() => { const target = editingSubject; closeModal(); handleDeleteClick(target); }}
                 className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
-              >
-                ลบ…
-              </button>
+              >{t("ลบ…")}</button>
             )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
-                  ยกเลิก
-                </button>
-                <button type="submit" form="subject-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                  บันทึก
-                </button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">{t("ยกเลิก")}</button>
+                <button type="submit" form="subject-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("บันทึก")}</button>
           </div>
         }
       >
         <div className="p-4">
           <form id="subject-form" onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
                 <SmartComboBox
                   options={academicYears}
                   value={formData.academicYearId}
                   onChange={(val) => setFormData({ ...formData, academicYearId: val })}
                   labelKey="year"
                   valueKey="id"
-                  placeholder="เลือกปีการศึกษา"
+                  placeholder={t("เลือกปีการศึกษา")}
                   searchable
                   clearable
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้นเรียน")}</label>
                 <SmartComboBox
                   options={grades}
                   value={formData.gradeId}
                   onChange={(val) => setFormData({ ...formData, gradeId: val })}
                   labelKey="gradeName"
                   valueKey="id"
-                  placeholder="เลือกชั้นเรียน"
+                  placeholder={t("เลือกชั้นเรียน")}
                   searchable
                   clearable
                 />
               </div>
 
               <div data-field="subjectCode">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  รหัสวิชา <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("รหัสวิชา ")}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -524,8 +512,7 @@ const ManageSubjects = () => {
               </div>
 
               <div data-field="subjectName">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อวิชา <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชื่อวิชา ")}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -537,8 +524,7 @@ const ManageSubjects = () => {
               </div>
 
               <div data-field="teacherId">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ครูผู้สอน <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ครูผู้สอน ")}<span className="text-red-500">*</span>
                 </label>
                 <SmartComboBox
                   options={teachers}
@@ -546,17 +532,17 @@ const ManageSubjects = () => {
                   onChange={(val) => setFormData({ ...formData, teacherId: val })}
                   labelKey="name"
                   valueKey="id"
-                  placeholder="เลือกครูผู้สอน"
+                  placeholder={t("เลือกครูผู้สอน")}
                   searchable
                     error={errorFor('teacherId', toId(formData.teacherId) === null)}
                   />
               </div>
 
               <details className="border rounded-lg px-3 py-2">
-                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">{t("ข้อมูลเพิ่มเติม (ไม่บังคับ)")}</summary>
                 <div className="space-y-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("คำอธิบาย")}</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -566,14 +552,14 @@ const ManageSubjects = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
                     <SmartComboBox
-                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
+                      options={[{ value: 'ACTIVE', label: t('ใช้งาน') }, { value: 'INACTIVE', label: t('ไม่ใช้งาน') }]}
                       value={formData.status}
                       onChange={(v) => v && setFormData({ ...formData, status: v })}
                       searchable={false}
                       clearable={false}
-                      ariaLabel="สถานะ"
+                      ariaLabel={t("สถานะ")}
                     />
                   </div>
                 </div>
@@ -586,22 +572,20 @@ const ManageSubjects = () => {
       {/* เพิ่มหลายวิชา */}
       <WindowModal
         open={showBulk}
-        title="เพิ่มหลายวิชา"
+        title={t("เพิ่มหลายวิชา")}
         onClose={closeBulk}
         id="subject-bulk"
         initialWidth="max-w-2xl"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" onClick={closeBulk} disabled={bulkBusy} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50 disabled:opacity-50">
-              ยกเลิก
-            </button>
+            <button type="button" onClick={closeBulk} disabled={bulkBusy} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50 disabled:opacity-50">{t("ยกเลิก")}</button>
             <button
               type="button"
               onClick={handleBulkCreate}
               disabled={!bulkValid.length || !bulkTeacherOk || bulkBusy}
               className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {bulkBusy ? 'กำลังเพิ่ม...' : bulkValid.length ? `เพิ่ม ${bulkValid.length} วิชา` : 'เพิ่มวิชา'}
+              {bulkBusy ? t('กำลังเพิ่ม...') : bulkValid.length ? t("เพิ่ม {value1} วิชา", { value1: bulkValid.length }) : t('เพิ่มวิชา')}
             </button>
           </div>
         }
@@ -609,34 +593,33 @@ const ManageSubjects = () => {
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
               <SmartComboBox
                 options={academicYears}
                 value={bulkDefaults.academicYearId}
                 onChange={(val) => setBulkDefaults((d) => ({ ...d, academicYearId: val }))}
                 labelKey="year"
                 valueKey="id"
-                placeholder="เลือกปีการศึกษา"
+                placeholder={t("เลือกปีการศึกษา")}
                 searchable
                 clearable
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้นเรียน")}</label>
               <SmartComboBox
                 options={grades}
                 value={bulkDefaults.gradeId}
                 onChange={(val) => setBulkDefaults((d) => ({ ...d, gradeId: val }))}
                 labelKey="gradeName"
                 valueKey="id"
-                placeholder="ไม่ระบุชั้น"
+                placeholder={t("ไม่ระบุชั้น")}
                 searchable
                 clearable
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                ครูผู้สอน <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("ครูผู้สอน ")}<span className="text-red-500">*</span>
               </label>
               <SmartComboBox
                 options={teachers}
@@ -644,20 +627,18 @@ const ManageSubjects = () => {
                 onChange={(val) => setBulkDefaults((d) => ({ ...d, teacherId: val }))}
                 labelKey="name"
                 valueKey="id"
-                placeholder="เลือกครูผู้สอน"
+                placeholder={t("เลือกครูผู้สอน")}
                 searchable
               />
             </div>
           </div>
-          {!bulkTeacherOk && <p className="text-sm text-amber-700">เลือกครูผู้สอนก่อนจึงจะเพิ่มได้</p>}
+          {!bulkTeacherOk && <p className="text-sm text-amber-700">{t("เลือกครูผู้สอนก่อนจึงจะเพิ่มได้")}</p>}
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label htmlFor="subject-bulk-text" className="block text-sm font-medium text-gray-700">รหัส ชื่อวิชา — หนึ่งบรรทัดต่อหนึ่งวิชา</label>
+              <label htmlFor="subject-bulk-text" className="block text-sm font-medium text-gray-700">{t("รหัส ชื่อวิชา — หนึ่งบรรทัดต่อหนึ่งวิชา")}</label>
               {bulkText && (
-                <button type="button" onClick={() => setBulkText('')} className="min-h-[44px] px-2 text-sm text-gray-500 hover:text-gray-700 underline shrink-0">
-                  ล้าง
-                </button>
+                <button type="button" onClick={() => setBulkText('')} className="min-h-[44px] px-2 text-sm text-gray-500 hover:text-gray-700 underline shrink-0">{t("ล้าง")}</button>
               )}
             </div>
             <textarea
@@ -666,17 +647,15 @@ const ManageSubjects = () => {
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
               rows={7}
-              placeholder={'ว14101 วิทยาศาสตร์ 4\nค14101 คณิตศาสตร์ 4\nท14101 ภาษาไทย 4'}
+              placeholder={t('ว14101 วิทยาศาสตร์ 4\nค14101 คณิตศาสตร์ 4\nท14101 ภาษาไทย 4')}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500"
             />
-            <p className="mt-1 text-xs text-gray-500">คั่นรหัสกับชื่อด้วยเว้นวรรคหรือจุลภาค · วางสองคอลัมน์ (รหัส, ชื่อ) จาก Excel ได้เลย</p>
+            <p className="mt-1 text-xs text-gray-500">{t("คั่นรหัสกับชื่อด้วยเว้นวรรคหรือจุลภาค · วางสองคอลัมน์ (รหัส, ชื่อ) จาก Excel ได้เลย")}</p>
           </div>
 
           {bulkRows.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                จะสร้าง {bulkValid.length} วิชา{bulkRows.length > bulkValid.length ? ` · มีปัญหา ${bulkRows.length - bulkValid.length} บรรทัด (จะไม่ถูกเพิ่ม)` : ''}
-              </p>
+              <p className="text-sm font-medium text-gray-700 mb-2">{bulkRows.length > bulkValid.length ? t("จะสร้าง {n} วิชา · มีปัญหา {bad} บรรทัด (จะไม่ถูกเพิ่ม)", { n: bulkValid.length, bad: bulkRows.length - bulkValid.length }) : t("จะสร้าง {n} วิชา", { n: bulkValid.length })}</p>
               <ul className="border rounded-lg divide-y max-h-72 overflow-y-auto">
                 {bulkRows.map((r) => {
                   const exists = !r.problem && existingCodes.has(normCode(r.code));
@@ -687,7 +666,7 @@ const ManageSubjects = () => {
                         <span className="font-medium text-gray-900 break-all">{r.code}</span>
                         {r.name && <span className="text-gray-700 break-words"> {r.name}</span>}
                         {r.problem && <p className="text-xs text-red-600 mt-0.5">{r.problem}</p>}
-                        {exists && <p className="text-xs text-amber-700 mt-0.5">มีรหัสนี้ในรายการแล้ว อาจถูกข้าม</p>}
+                        {exists && <p className="text-xs text-amber-700 mt-0.5">{t("มีรหัสนี้ในรายการแล้ว อาจถูกข้าม")}</p>}
                       </div>
                     </li>
                   );
@@ -705,10 +684,10 @@ const ManageSubjects = () => {
         isOpen={deleteConfirm.show}
         onClose={() => setDeleteConfirm({ show: false, item: null })}
         onConfirm={handleDeleteConfirm}
-        title="ยืนยันการลบ"
-        message={`ต้องการลบวิชา "${deleteConfirm.item?.subjectName}" หรือไม่?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
+        title={t("ยืนยันการลบ")}
+        message={t("ต้องการลบวิชา \"{value1}\" หรือไม่?", { value1: deleteConfirm.item?.subjectName })}
+        confirmText={t("ลบ")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
 
@@ -716,9 +695,9 @@ const ManageSubjects = () => {
       <ConfirmDialog
         isOpen={errorAlert.show}
         onClose={() => setErrorAlert({ show: false, message: '' })}
-        title="เกิดข้อผิดพลาด"
+        title={t("เกิดข้อผิดพลาด")}
         message={errorAlert.message}
-        confirmText="ตกลง"
+        confirmText={t("ตกลง")}
         type="danger"
         mode="alert"
       />

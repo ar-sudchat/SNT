@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import React from 'react';
 
 // รูปการ์ตูนทำมือ (inline SVG, viewBox 64) — key ต้องตรงกับ PRESETS ใน backend/services/profile.js
@@ -152,7 +153,7 @@ export function PresetArt({ preset, className = '' }) {
   );
 }
 
-export const displayNameOf = (u) => (u && (u.displayName || u.name || u.teacher?.name || u.student?.name || (u.role === 'ADMIN' ? 'ผู้ดูแลระบบ' : u.email))) || '';
+export const displayNameOf = (u) => (u && (u.displayName || u.name || u.teacher?.name || u.student?.name || (u.role === 'ADMIN' ? t('ผู้ดูแลระบบ') : u.email))) || '';
 
 const initialsOf = (name) => {
   const s = String(name || '?').replace(/^(ครู|นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.)\s*/, '').trim();

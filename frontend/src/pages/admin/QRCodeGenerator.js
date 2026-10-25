@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { qrcodeAPI, classAPI, subjectAPI, academicYearAPI } from '../../services/api';
@@ -35,7 +36,7 @@ const QRCodeGenerator = () => {
         const current = ayRes.data.find((y) => y.isCurrent) || ayRes.data[0];
         setSelectedAcademicYear(current ? current.id : null);
       } catch (err) {
-        setError('ไม่สามารถโหลดปีการศึกษาได้');
+        setError(t('ไม่สามารถโหลดปีการศึกษาได้'));
       } finally {
         setLoading(false);
       }
@@ -68,7 +69,7 @@ const QRCodeGenerator = () => {
         setClasses(classRes.data);
         setSubjects(subjectRes.data);
       } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลห้องเรียน/วิชาได้');
+        setError(t('ไม่สามารถโหลดข้อมูลห้องเรียน/วิชาได้'));
       }
     };
     loadForYear();
@@ -80,7 +81,7 @@ const QRCodeGenerator = () => {
         const response = await classAPI.getStudents(selectedClass);
         setStudents(response.data);
       } catch (err) {
-        setError('ไม่สามารถโหลดรายชื่อนักเรียนได้');
+        setError(t('ไม่สามารถโหลดรายชื่อนักเรียนได้'));
       }
     } else {
       setStudents([]);
@@ -94,7 +95,7 @@ const QRCodeGenerator = () => {
 
   const handleGenerate = async () => {
     if (!selectedSubject || selectedStudents.length === 0) {
-      setError('กรุณาเลือกวิชาและนักเรียน');
+      setError(t('กรุณาเลือกวิชาและนักเรียน'));
       return;
     }
 
@@ -126,7 +127,7 @@ const QRCodeGenerator = () => {
       setHistory(saveRun(newRun));
       setRun(newRun);
     } catch (err) {
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาดในการสร้าง QR Code');
+      setError(err.response?.data?.error || t('เกิดข้อผิดพลาดในการสร้าง QR Code'));
     } finally {
       setGenerating(false);
     }
@@ -137,7 +138,7 @@ const QRCodeGenerator = () => {
   };
 
   const printSheet = (items, subjectName) => {
-    setSheet({ title: `QR Code พร้อมพิมพ์ (${items.length} รายการ)`, subjectName, items });
+    setSheet({ title: t("QR Code พร้อมพิมพ์ ({value1} รายการ)", { value1: items.length }), subjectName, items });
     setTimeout(() => window.print(), 50);
   };
 
@@ -148,7 +149,7 @@ const QRCodeGenerator = () => {
 
   const handleLoadExisting = async () => {
     if (!selectedClass || !selectedSubject) {
-      setError('กรุณาเลือกห้องเรียนและวิชา');
+      setError(t('กรุณาเลือกห้องเรียนและวิชา'));
       return;
     }
 
@@ -160,15 +161,15 @@ const QRCodeGenerator = () => {
       const response = await qrcodeAPI.printForClass(selectedClass, selectedSubject);
       if (response.data.length > 0) {
         setSheet({
-          title: `QR Codes ที่มีอยู่ (${response.data.length} รายการ)`,
+          title: t("QR Codes ที่มีอยู่ ({value1} รายการ)", { value1: response.data.length }),
           subjectName: response.data[0].subjectName,
           items: response.data.map(qr => ({ studentId: qr.id, name: qr.studentName, studentCode: qr.studentCode, qrcodeImage: qr.qrcodeImage }))
         });
       } else {
-        setError('ไม่พบ QR Code สำหรับห้องและวิชานี้');
+        setError(t('ไม่พบ QR Code สำหรับห้องและวิชานี้'));
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถโหลด QR Code ได้');
+      setError(err.response?.data?.error || t('ไม่สามารถโหลด QR Code ได้'));
     } finally {
       setLoadingExisting(false);
     }
@@ -236,7 +237,7 @@ const QRCodeGenerator = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="สร้าง QR Code" className="print:hidden">
+      <PageHeader title={t("สร้าง QR Code")} className="print:hidden">
         <button
           type="button"
           onClick={() => { setHistory(readHistory()); setHistoryOpen(true); }}
@@ -244,9 +245,7 @@ const QRCodeGenerator = () => {
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          ประวัติการสร้าง{history.length > 0 ? ` (${history.length})` : ''}
-        </button>
+          </svg>{t("ประวัติการสร้าง")}{history.length > 0 ? ` (${history.length})` : ''}</button>
       </PageHeader>
 
       {/* Error */}
@@ -277,19 +276,19 @@ const QRCodeGenerator = () => {
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 print:hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
             <SmartComboBox
               options={academicYears}
               value={selectedAcademicYear}
               onChange={(val) => setSelectedAcademicYear(val)}
               labelKey="year"
               valueKey="id"
-              placeholder="เลือกปีการศึกษา"
+              placeholder={t("เลือกปีการศึกษา")}
               searchable
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้น")}</label>
             <SmartComboBox
               options={grades}
               value={selectedGrade}
@@ -302,13 +301,13 @@ const QRCodeGenerator = () => {
               }}
               labelKey="gradeName"
               valueKey="id"
-              placeholder="ทุกชั้น"
+              placeholder={t("ทุกชั้น")}
               searchable
               clearable
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องเรียน")}</label>
             <SmartComboBox
               options={gradeClasses}
               value={selectedClass}
@@ -318,13 +317,13 @@ const QRCodeGenerator = () => {
               }}
               labelKey="className"
               valueKey="id"
-              placeholder="เลือกห้องเรียน"
+              placeholder={t("เลือกห้องเรียน")}
               searchable
               clearable
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
             <SmartComboBox
               options={classSubjects}
               value={selectedSubject}
@@ -334,7 +333,7 @@ const QRCodeGenerator = () => {
               }}
               labelKey="subjectName"
               valueKey="id"
-              placeholder="เลือกวิชา"
+              placeholder={t("เลือกวิชา")}
               searchable
               clearable
             />
@@ -357,8 +356,7 @@ const QRCodeGenerator = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               )}
-              ดู QR Code ที่มีอยู่
-            </button>
+              {t("ดู QR Code ที่มีอยู่")}</button>
           </div>
         )}
 
@@ -366,36 +364,30 @@ const QRCodeGenerator = () => {
           <>
             <SmartTable
               data={students}
-              columns={studentColumns}
-              title="เลือกนักเรียน"
+              columns={studentColumns.map(column => ({ ...column, label: t(column.label) }))}
+              title={t("เลือกนักเรียน")}
               selectable
               onSelectionChange={(selected) => setSelectedStudents(selected.map(s => s.id))}
               searchable
               pagination
               pageSize={10}
-              emptyMessage="ไม่พบนักเรียนในห้องนี้"
+              emptyMessage={t("ไม่พบนักเรียนในห้องนี้")}
             />
 
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 pt-4 border-t">
-              <span className="text-sm text-gray-500">
-                เลือก {selectedStudents.length} จาก {students.length} คน
-              </span>
+              <span className="text-sm text-gray-500">{t("เลือก {value1} จาก {value2} คน", { value1: selectedStudents.length, value2: students.length })}</span>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 {!generating && generateDisabled && (
                   <p id="qr-generate-hint" className="text-sm text-amber-700" role="status">
                     {!selectedSubject ? (
                       noSubjectsForClass ? (
-                        <>
-                          ห้องนี้ยังไม่มีวิชา{' '}
-                          <Link to="/admin/subjects" className="inline-flex min-h-[44px] items-center font-medium text-brand-600 underline hover:text-brand-700">
-                            ไปเพิ่มวิชา
-                          </Link>
+                        <>{t("ห้องนี้ยังไม่มีวิชา")}{' '}<Link to="/admin/subjects" className="inline-flex min-h-[44px] items-center font-medium text-brand-600 underline hover:text-brand-700">{t("ไปเพิ่มวิชา")}</Link>
                         </>
                       ) : (
-                        'เลือกวิชาก่อนสร้าง QR Code'
+                        t('เลือกวิชาก่อนสร้าง QR Code')
                       )
                     ) : (
-                      'เลือกนักเรียนอย่างน้อย 1 คน'
+                      t('เลือกนักเรียนอย่างน้อย 1 คน')
                     )}
                   </p>
                 )}
@@ -407,16 +399,12 @@ const QRCodeGenerator = () => {
               >
                 {generating ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    กำลังสร้าง...
-                  </>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>{t("กำลังสร้าง...")}</>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                    </svg>
-                    สร้าง QR Code
-                  </>
+                    </svg>{t("สร้าง QR Code")}</>
                 )}
               </button>
               </div>
@@ -428,9 +416,7 @@ const QRCodeGenerator = () => {
           <div className="text-center py-8 text-gray-500">
             <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            ไม่พบนักเรียนในห้องนี้
-          </div>
+            </svg>{t("ไม่พบนักเรียนในห้องนี้")}</div>
         )}
       </div>
 
@@ -445,18 +431,14 @@ const QRCodeGenerator = () => {
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              พิมพ์ QR Code
-            </button>
+              </svg>{t("พิมพ์ QR Code")}</button>
           </div>
 
           {/* Print Header - Only visible when printing */}
           <div className="hidden print:block mb-6 text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-2xl font-bold">KruScan — ครูสแกน</h1>
-            <p className="text-lg mt-1">QR Code สำหรับวิชา: {sheet.subjectName}</p>
-            <p className="text-sm text-gray-600 mt-1">
-              พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            <h1 className="text-2xl font-bold">{t("KruScan — ครูสแกน")}</h1>
+            <p className="text-lg mt-1">{t("QR Code สำหรับวิชา: {value1}", { value1: sheet.subjectName })}</p>
+            <p className="text-sm text-gray-600 mt-1">{t("พิมพ์เมื่อ: {value1}", { value1: new Date().toLocaleDateString(dateLocale(), { year: 'numeric', month: 'long', day: 'numeric' }) })}</p>
           </div>
 
           {/* Screen view */}
@@ -487,7 +469,7 @@ const QRCodeGenerator = () => {
 
           {/* Print Footer */}
           <div className="hidden print:block mt-6 pt-4 border-t text-center text-xs text-gray-500">
-            <p>KruScan — สแกนสมุด รู้ทันทีใครส่งงานแล้ว</p>
+            <p>{t("KruScan — สแกนสมุด รู้ทันทีใครส่งงานแล้ว")}</p>
           </div>
         </div>
       )}

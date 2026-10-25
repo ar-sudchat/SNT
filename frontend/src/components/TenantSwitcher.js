@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { tenantAPI, groupAPI } from '../services/api';
@@ -16,7 +17,7 @@ const currentTid = () => {
 // Accept both flat ({tenantId, tenantName}) and nested ({tenant:{id,name}}) membership shapes.
 const norm = (m) => ({
   id: m.tenantId || m.tenant?.id || m.id,
-  name: m.tenantName || m.tenant?.name || m.name || 'กลุ่ม',
+  name: m.tenantName || m.tenant?.name || m.name || t('กลุ่ม'),
   role: m.role
 });
 
@@ -63,24 +64,26 @@ const TenantSwitcher = () => {
       const r = await tenantAPI.switchTenant(id);
       applyToken(r.data?.token);
     } catch (e) {
-      setErr(e.response?.data?.error || 'สลับกลุ่มไม่สำเร็จ');
+      setErr(e.response?.data?.error || t('สลับกลุ่มไม่สำเร็จ'));
       setBusy(false);
     }
   }, []);
 
-  const current = items.find(i => i.id === tid) || items[0] || { name: 'กลุ่ม' };
+  const current = items.find(i => i.id === tid) || items[0] || { name: t('กลุ่ม') };
 
   const createGroup = async () => {
+    const missingName = t('กรุณากรอกชื่อกลุ่ม');
+    const longName = t('ชื่อกลุ่มยาวเกิน 120 ตัวอักษร');
     setOpen(false);
     const raw = await dialog.prompt({
-      title: 'สร้างกลุ่มใหม่',
-      label: 'ชื่อกลุ่ม',
-      placeholder: 'ครูวิทย์ ม.ต้น',
-      confirmText: 'สร้างกลุ่ม',
+      title: t('สร้างกลุ่มใหม่'),
+      label: t('ชื่อกลุ่ม'),
+      placeholder: t('ครูวิทย์ ม.ต้น'),
+      confirmText: t('สร้างกลุ่ม'),
       validate: (v) => {
         const t = (v || '').trim();
-        if (!t) return 'กรุณากรอกชื่อกลุ่ม';
-        if (t.length > 120) return 'ชื่อกลุ่มยาวเกิน 120 ตัวอักษร';
+        if (!t) return missingName;
+        if (t.length > 120) return longName;
         return '';
       },
     });
@@ -91,7 +94,7 @@ const TenantSwitcher = () => {
       const r = await groupAPI.create(name);
       applyToken(r.data?.token);
     } catch (e) {
-      setErr(e.response?.data?.error || 'สร้างกลุ่มไม่สำเร็จ');
+      setErr(e.response?.data?.error || t('สร้างกลุ่มไม่สำเร็จ'));
       setBusy(false);
     }
   };
@@ -101,14 +104,14 @@ const TenantSwitcher = () => {
   return (
     <div ref={box} className="relative min-w-0">
       <button type="button" onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open}
-        title="สลับกลุ่ม"
+        title={t("สลับกลุ่ม")}
         className="flex min-h-[44px] min-w-0 max-w-[9rem] items-center gap-1 rounded-lg bg-brand-50 px-2.5 text-sm text-brand-800 ring-1 ring-brand-100 hover:bg-brand-100 sm:max-w-[14rem]">
         <span className="truncate font-medium">{current.name}</span>
         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true"><path d="M5 7l5 6 5-6H5z" /></svg>
       </button>
       {open && (
         <div className="absolute right-0 z-30 mt-1 max-h-80 w-64 max-w-[calc(100vw-1.5rem)] overflow-auto rounded-lg bg-white py-1 shadow-lg ring-1 ring-ink-200">
-          <p className="px-3 pt-1 text-xs text-gray-500">กลุ่มของฉัน</p>
+          <p className="px-3 pt-1 text-xs text-gray-500">{t("กลุ่มของฉัน")}</p>
           <ul role="listbox">
             {items.map(i => (
               <li key={i.id} role="option" aria-selected={i.id === current.id}>
@@ -121,9 +124,9 @@ const TenantSwitcher = () => {
             ))}
           </ul>
           <div className="mt-1 border-t border-gray-100 pt-1">
-            <Link to="/group" onClick={() => setOpen(false)} className={`${itemCls} text-gray-700`}>ตั้งค่ากลุ่ม / รหัสเชิญ</Link>
-            <button type="button" disabled={busy} onClick={createGroup} className={`${itemCls} text-brand-700`}>+ สร้างกลุ่มใหม่</button>
-            <Link to="/join" onClick={() => setOpen(false)} className={`${itemCls} text-brand-700`}>เข้าร่วมกลุ่มด้วยรหัส</Link>
+            <Link to="/group" onClick={() => setOpen(false)} className={`${itemCls} text-gray-700`}>{t("ตั้งค่ากลุ่ม / รหัสเชิญ")}</Link>
+            <button type="button" disabled={busy} onClick={createGroup} className={`${itemCls} text-brand-700`}>{t("+ สร้างกลุ่มใหม่")}</button>
+            <Link to="/join" onClick={() => setOpen(false)} className={`${itemCls} text-brand-700`}>{t("เข้าร่วมกลุ่มด้วยรหัส")}</Link>
           </div>
           {err && <p className="px-3 py-2 text-xs text-red-700" role="alert">{err}</p>}
         </div>

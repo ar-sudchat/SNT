@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -18,7 +19,7 @@ const InviteAccept = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    inviteAPI.preview(token).then((r) => setInfo(r.data)).catch((e) => setLoadError(errMsg(e, 'ไม่พบคำเชิญนี้')));
+    inviteAPI.preview(token).then((r) => setInfo(r.data)).catch((e) => setLoadError(errMsg(e, t('ไม่พบคำเชิญนี้'))));
   }, [token]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -43,34 +44,34 @@ const InviteAccept = () => {
   const groupName = info && (info.groupName || info.schoolName || info.tenantName);
 
   return (
-    <AuthLayout title={usable ? 'คุณได้รับเชิญเข้าร่วม' : 'คำเชิญเข้าร่วมกลุ่ม'}>
+    <AuthLayout title={usable ? t('คุณได้รับเชิญเข้าร่วม') : t('คำเชิญเข้าร่วมกลุ่ม')}>
       {loadError && <FormError message={loadError} />}
-      {!info && !loadError && <p className="flex items-center gap-2 text-gray-500" role="status"><Spinner />กำลังโหลดคำเชิญ...</p>}
-      {info && !usable && <FormError message={STATUS_MSG[info.status]} />}
+      {!info && !loadError && <p className="flex items-center gap-2 text-gray-500" role="status"><Spinner />{t('กำลังโหลดคำเชิญ...')}</p>}
+      {info && !usable && <FormError message={t(STATUS_MSG[info.status])} />}
       {usable && (
         <form onSubmit={accept} className="space-y-5">
           <div className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3.5">
             <p className="font-display text-lg font-semibold leading-snug text-brand-800">{groupName}</p>
-            <p className="mt-0.5 text-sm text-gray-600">ในฐานะ{ROLE[info.role] || info.role}</p>
+            <p className="mt-0.5 text-sm text-gray-600">{t('ในฐานะ')}{ROLE[info.role] ? t(ROLE[info.role]) : info.role}</p>
           </div>
           {user ? (
-            <p className="rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-3 text-[15px] text-gray-700">จะเข้าร่วมด้วยบัญชี {user.email || 'ที่เข้าสู่ระบบอยู่'}</p>
+            <p className="rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-3 text-[15px] text-gray-700">{t('จะเข้าร่วมด้วยบัญชี ')}{user.email || t('ที่เข้าสู่ระบบอยู่')}</p>
           ) : (
             <>
-              <Field id="invite-name" label="ชื่อ-นามสกุล" value={form.name} onChange={set('name')} maxLength={80} autoComplete="name" />
-              <Field id="invite-email" type="email" label="อีเมล" value={info.email || form.email} onChange={set('email')} required readOnly={!!info.email}
+              <Field id="invite-name" label={t("ชื่อ-นามสกุล")} value={form.name} onChange={set('name')} maxLength={80} autoComplete="name" />
+              <Field id="invite-email" type="email" label={t("อีเมล")} value={info.email || form.email} onChange={set('email')} required readOnly={!!info.email}
                 autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} />
-              <PasswordField id="invite-password" label="รหัสผ่าน" value={form.password} onChange={set('password')} required minLength={8}
-                autoComplete="current-password" hint="ตั้งใหม่อย่างน้อย 8 ตัว หรือใช้รหัสเดิมถ้ามีบัญชีแล้ว" />
+              <PasswordField id="invite-password" label={t("รหัสผ่าน")} value={form.password} onChange={set('password')} required minLength={8}
+                autoComplete="current-password" hint={t("ตั้งใหม่อย่างน้อย 8 ตัว หรือใช้รหัสเดิมถ้ามีบัญชีแล้ว")} />
             </>
           )}
           <FormError message={error} />
           <button type="submit" disabled={busy} className={primaryBtn}>
-            {busy && <Spinner />}{busy ? 'กำลังเข้าร่วม...' : 'ตอบรับคำเชิญ'}
+            {busy && <Spinner />}{busy ? t('กำลังเข้าร่วม...') : t('ตอบรับคำเชิญ')}
           </button>
         </form>
       )}
-      <p className="mt-7 border-t border-gray-100 pt-6 text-center text-[15px] text-gray-600"><Link to="/login" className={linkClass}>กลับหน้าเข้าสู่ระบบ</Link></p>
+      <p className="mt-7 border-t border-gray-100 pt-6 text-center text-[15px] text-gray-600"><Link to="/login" className={linkClass}>{t('กลับหน้าเข้าสู่ระบบ')}</Link></p>
     </AuthLayout>
   );
 };

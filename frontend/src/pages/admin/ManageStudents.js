@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { studentAPI, classAPI, gradeAPI, transferAPI } from '../../services/api';
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
@@ -54,7 +55,7 @@ const ManageStudents = () => {
       setClasses(classRes.data);
       setGrades(gradeRes.data);
     } catch (err) {
-      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+      setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
     } finally {
       setLoading(false);
     }
@@ -67,13 +68,13 @@ const ManageStudents = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate(e.currentTarget, [
-      { key: 'studentCode', message: 'กรุณากรอกรหัสนักเรียน', missing: !String(formData.studentCode ?? '').trim() },
-      { key: 'name', message: 'กรุณากรอกชื่อ-นามสกุล', missing: !String(formData.name ?? '').trim() },
-      { key: 'classId', message: 'กรุณาเลือกห้องเรียน', missing: toId(formData.classId) === null },
+      { key: 'studentCode', message: t('กรุณากรอกรหัสนักเรียน'), missing: !String(formData.studentCode ?? '').trim() },
+      { key: 'name', message: t('กรุณากรอกชื่อ-นามสกุล'), missing: !String(formData.name ?? '').trim() },
+      { key: 'classId', message: t('กรุณาเลือกห้องเรียน'), missing: toId(formData.classId) === null },
     ])) return;
     const classId = toId(formData.classId);
     if (classId === null) {
-      setErrorAlert({ show: true, message: 'กรุณาเลือกห้องเรียน' });
+      setErrorAlert({ show: true, message: t('กรุณาเลือกห้องเรียน') });
       return;
     }
     try {
@@ -90,7 +91,7 @@ const ManageStudents = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('เกิดข้อผิดพลาด') });
     }
   };
 
@@ -104,24 +105,24 @@ const ManageStudents = () => {
         await studentAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || t('ไม่สามารถลบได้') });
       }
     }
   };
 
-  const fmtCount = (n) => n.toLocaleString('th-TH');
+  const fmtCount = (n) => n.toLocaleString(dateLocale());
 
   // Shared by 'ลบที่เลือก' and 'ลบนักเรียนทั้งห้องนี้'.
   const deleteMany = async (rows, { wholeClass = null } = {}) => {
     if (!rows.length) return;
     const n = fmtCount(rows.length);
-    const warn = `\n\nรหัส QR ของนักเรียนเหล่านี้ และผลงาน/คะแนนที่ส่งแล้วทั้งหมดจะถูกลบไปด้วย\nลบแล้วกู้คืนไม่ได้`;
+    const warn = t("\n\nรหัส QR ของนักเรียนเหล่านี้ และผลงาน/คะแนนที่ส่งแล้วทั้งหมดจะถูกลบไปด้วย\nลบแล้วกู้คืนไม่ได้");
     const ok = await dialog.confirm({
-      title: wholeClass ? `ลบนักเรียนทั้งห้อง ${wholeClass}` : `ลบนักเรียน ${n} คน`,
+      title: wholeClass ? t("ลบนักเรียนทั้งห้อง {wholeClass}", { wholeClass: wholeClass }) : t("ลบนักเรียน {n} คน", { n: n }),
       message: wholeClass
-        ? `จะลบนักเรียนทุกคนในห้อง "${wholeClass}" รวม ${n} คน${warn}`
-        : `ต้องการลบนักเรียนที่เลือก ${n} คนหรือไม่?${warn}`,
-      confirmText: wholeClass ? `ลบทั้งห้อง ${n} คน` : `ลบ ${n} คน`,
+        ? t("จะลบนักเรียนทุกคนในห้อง \"{wholeClass}\" รวม {n} คน{warn}", { wholeClass: wholeClass, n: n, warn: warn })
+        : t("ต้องการลบนักเรียนที่เลือก {n} คนหรือไม่?{warn}", { n: n, warn: warn }),
+      confirmText: wholeClass ? t("ลบทั้งห้อง {n} คน", { n: n }) : t("ลบ {n} คน", { n: n }),
       type: 'danger',
     });
     if (!ok) return;
@@ -131,14 +132,14 @@ const ManageStudents = () => {
       const failed = res.data?.failed || [];
       fetchData();
       await dialog.alert({
-        title: 'ลบนักเรียนเสร็จแล้ว',
+        title: t('ลบนักเรียนเสร็จแล้ว'),
         type: failed.length ? 'warning' : 'success',
-        message: `ลบแล้ว ${deleted} คน · ลบไม่ได้ ${failed.length} คน` +
+        message: t("ลบแล้ว {deleted} คน · ลบไม่ได้ {value2} คน", { deleted: deleted, value2: failed.length }) +
           (failed.length ? '\n\n' + failed.map(f => `${f.name || f.id}: ${f.reason}`).join('\n') : ''),
       });
     } catch (err) {
       fetchData();
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('ลบไม่สำเร็จ ลองใหม่อีกครั้ง') });
     }
   };
 
@@ -158,7 +159,7 @@ const ManageStudents = () => {
   const handleMove = async () => {
     const toClassId = toId(move.toClassId);
     if (toClassId === null) {
-      setErrorAlert({ show: true, message: 'กรุณาเลือกห้องปลายทาง' });
+      setErrorAlert({ show: true, message: t('กรุณาเลือกห้องปลายทาง') });
       return;
     }
     setMove(m => ({ ...m, busy: true }));
@@ -168,10 +169,10 @@ const ManageStudents = () => {
       const target = allClasses.find(c => c.id === toClassId)?.className || '';
       closeMove();
       fetchData();
-      await dialog.alert({ title: 'ย้ายห้องเสร็จแล้ว', type: 'success', message: `ย้าย ${count} คน ไปห้อง ${target}` });
+      await dialog.alert({ title: t('ย้ายห้องเสร็จแล้ว'), type: 'success', message: t("ย้าย {count} คน ไปห้อง {target}", { count: count, target: target }) });
     } catch (err) {
       setMove(m => ({ ...m, busy: false }));
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'ย้ายห้องไม่สำเร็จ ลองใหม่อีกครั้ง' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('ย้ายห้องไม่สำเร็จ ลองใหม่อีกครั้ง') });
     }
   };
 
@@ -206,7 +207,7 @@ const ManageStudents = () => {
     {
       key: 'studentNumber',
       hideOnMobile: true,
-      label: 'เลขที่',
+      label: t('เลขที่'),
       sortable: true,
       width: '60px',
       render: (value) => <span className="text-center">{value || '-'}</span>
@@ -214,28 +215,28 @@ const ManageStudents = () => {
     {
       key: 'studentCode',
       mobileSecondary: true,
-      label: 'รหัส',
+      label: t('รหัส'),
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'name',
       mobilePrimary: true,
-      label: 'ชื่อ-นามสกุล',
+      label: t('ชื่อ-นามสกุล'),
       sortable: true
     },
     {
       key: 'class.className',
       mobileSecondary: true,
-      label: 'ห้องเรียน',
+      label: t('ห้องเรียน'),
       sortable: true
     },
     {
       key: 'status',
-      label: 'สถานะ',
+      label: t('สถานะ'),
       mobileBadge: true,
       render: (value) => value === 'INACTIVE' ? (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">{t("ไม่ใช้งาน")}</span>
       ) : null
     }
   ];
@@ -245,7 +246,7 @@ const ManageStudents = () => {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="sm:w-52">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ชั้นเรียน</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้นเรียน")}</label>
           <SmartComboBox
             options={grades}
             value={filterGrade}
@@ -255,20 +256,20 @@ const ManageStudents = () => {
             }}
             labelKey="gradeName"
             valueKey="id"
-            placeholder="ทุกชั้น"
+            placeholder={t("ทุกชั้น")}
             clearable
             searchable
           />
         </div>
         <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องเรียน")}</label>
           <SmartComboBox
             options={classes}
             value={filterClass}
             onChange={setFilterClass}
             labelKey="className"
             valueKey="id"
-            placeholder="ทุกห้องเรียน"
+            placeholder={t("ทุกห้องเรียน")}
             clearable
             searchable
           />
@@ -277,11 +278,9 @@ const ManageStudents = () => {
           <div className="sm:self-end">
             <button
               type="button"
-              onClick={() => deleteMany(students, { wholeClass: filteredClassName || 'ที่เลือก' })}
+              onClick={() => deleteMany(students, { wholeClass: filteredClassName || t('ที่เลือก') })}
               className="min-h-[44px] w-full rounded-lg border border-red-300 px-4 text-red-600 hover:bg-red-50 sm:w-auto"
-            >
-              ลบนักเรียนทั้งห้องนี้ ({students.length})
-            </button>
+            >{t("ลบนักเรียนทั้งห้องนี้ ({value1})", { value1: students.length })}</button>
           </div>
         )}
       </div>
@@ -291,18 +290,16 @@ const ManageStudents = () => {
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
       {/* Header */}
-      <PageHeader title="นักเรียน">
+      <PageHeader title={t("นักเรียน")}>
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มนักเรียน
-        </button>
+          </svg>{t("เพิ่มนักเรียน")}</button>
       </PageHeader>
-      <AddFab onClick={() => openModal()} label="เพิ่มนักเรียน" />
+      <AddFab onClick={() => openModal()} label={t("เพิ่มนักเรียน")} />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -324,24 +321,24 @@ const ManageStudents = () => {
         selectable
         getRowId={(row) => row.id}
         bulkActions={[
-          { label: 'ย้ายห้อง', onClick: openMove },
-          { label: 'ลบที่เลือก', danger: true, onClick: (rows) => deleteMany(rows) },
+          { label: t('ย้ายห้อง'), onClick: openMove },
+          { label: t('ลบที่เลือก'), danger: true, onClick: (rows) => deleteMany(rows) },
         ]}
         onClearFilters={() => { setFilterGrade(null); setFilterClass(null); }}
         emptyAction={
           <>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มนักเรียน</button>
-            <button type="button" onClick={() => navigate('/admin/import')} className="px-4 py-2 min-h-[44px] border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">นำเข้าจากไฟล์</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มนักเรียน")}</button>
+            <button type="button" onClick={() => navigate('/admin/import')} className="px-4 py-2 min-h-[44px] border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">{t("นำเข้าจากไฟล์")}</button>
           </>
         }
-        emptyMessage="ยังไม่มีนักเรียน"
+        emptyMessage={t("ยังไม่มีนักเรียน")}
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
       <WindowModal
         open={showModal}
-        title={editingStudent ? 'แก้ไขนักเรียน' : 'เพิ่มนักเรียน'}
+        title={editingStudent ? t('แก้ไขนักเรียน') : t('เพิ่มนักเรียน')}
         onClose={closeModal}
         id="student-form"
         initialWidth="max-w-md"
@@ -352,23 +349,17 @@ const ManageStudents = () => {
                 type="button"
                 onClick={() => { const target = editingStudent; closeModal(); handleDeleteClick(target); }}
                 className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
-              >
-                ลบ…
-              </button>
+              >{t("ลบ…")}</button>
             )}
                 <button
                   type="button"
                   onClick={closeModal}
                   className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50"
-                >
-                  ยกเลิก
-                </button>
+                >{t("ยกเลิก")}</button>
                 <button
                   type="submit" form="student-form"
                   className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700"
-                >
-                  บันทึก
-                </button>
+                >{t("บันทึก")}</button>
           </div>
         }
       >
@@ -376,8 +367,7 @@ const ManageStudents = () => {
           <form id="student-form" onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div data-field="studentCode">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    รหัสนักเรียน <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("รหัสนักเรียน ")}<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -388,23 +378,20 @@ const ManageStudents = () => {
                   {errorFor('studentCode', !String(formData.studentCode ?? '').trim()) && <p className="mt-1 text-sm text-red-500">{errorFor('studentCode', !String(formData.studentCode ?? '').trim())}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    เลขที่
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("เลขที่")}</label>
                   <input
                     type="number"
                     value={formData.studentNumber}
                     onChange={(e) => setFormData({ ...formData, studentNumber: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                     min="1"
-                    placeholder="เลขที่ในห้อง"
+                    placeholder={t("เลขที่ในห้อง")}
                   />
                 </div>
               </div>
 
               <div data-field="name">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชื่อ-นามสกุล ")}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -416,8 +403,7 @@ const ManageStudents = () => {
               </div>
 
               <div data-field="classId">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ห้องเรียน <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องเรียน ")}<span className="text-red-500">*</span>
                 </label>
                 <SmartComboBox
                   options={classes}
@@ -425,17 +411,17 @@ const ManageStudents = () => {
                   onChange={(val) => setFormData({ ...formData, classId: val })}
                   labelKey="className"
                   valueKey="id"
-                  placeholder="เลือกห้องเรียน"
+                  placeholder={t("เลือกห้องเรียน")}
                   searchable
                     error={errorFor('classId', toId(formData.classId) === null)}
                   />
               </div>
 
               <details className="border rounded-lg px-3 py-2">
-                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (ไม่บังคับ)</summary>
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">{t("ข้อมูลเพิ่มเติม (ไม่บังคับ)")}</summary>
                 <div className="space-y-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("อีเมล")}</label>
                     <input
                       type="email"
                       value={formData.email}
@@ -445,14 +431,14 @@ const ManageStudents = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
                     <SmartComboBox
-                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
+                      options={[{ value: 'ACTIVE', label: t('ใช้งาน') }, { value: 'INACTIVE', label: t('ไม่ใช้งาน') }]}
                       value={formData.status}
                       onChange={(v) => v && setFormData({ ...formData, status: v })}
                       searchable={false}
                       clearable={false}
-                      ariaLabel="สถานะ"
+                      ariaLabel={t("สถานะ")}
                     />
                   </div>
                 </div>
@@ -465,33 +451,33 @@ const ManageStudents = () => {
       {/* Move selected students to another class */}
       <WindowModal
         open={move.open}
-        title={`ย้ายห้อง ${move.rows.length} คน`}
+        title={t("ย้ายห้อง {value1} คน", { value1: move.rows.length })}
         onClose={closeMove}
         id="student-move"
         initialWidth="max-w-md"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" onClick={closeMove} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">ยกเลิก</button>
+            <button type="button" onClick={closeMove} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">{t("ยกเลิก")}</button>
             <button
               type="button"
               onClick={handleMove}
               disabled={move.busy || toId(move.toClassId) === null}
               className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {move.busy ? 'กำลังย้าย…' : `ย้าย ${move.rows.length} คน`}
+              {move.busy ? t('กำลังย้าย…') : t("ย้าย {value1} คน", { value1: move.rows.length })}
             </button>
           </div>
         }
       >
         <div className="p-4 space-y-3">
-          <p className="text-sm text-gray-600">เลือกห้องปลายทางที่จะย้ายนักเรียนไป (ที่นั่งในห้องต้องพอ)</p>
+          <p className="text-sm text-gray-600">{t("เลือกห้องปลายทางที่จะย้ายนักเรียนไป (ที่นั่งในห้องต้องพอ)")}</p>
           <SmartComboBox
             options={allClasses}
             value={move.toClassId}
             onChange={(val) => setMove(m => ({ ...m, toClassId: val }))}
             labelKey="className"
             valueKey="id"
-            placeholder="เลือกห้องปลายทาง"
+            placeholder={t("เลือกห้องปลายทาง")}
             searchable
           />
         </div>
@@ -502,10 +488,10 @@ const ManageStudents = () => {
         isOpen={deleteConfirm.show}
         onClose={() => setDeleteConfirm({ show: false, item: null })}
         onConfirm={handleDeleteConfirm}
-        title="ยืนยันการลบ"
-        message={`ต้องการลบนักเรียน "${deleteConfirm.item?.name}" หรือไม่?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
+        title={t("ยืนยันการลบ")}
+        message={t("ต้องการลบนักเรียน \"{value1}\" หรือไม่?", { value1: deleteConfirm.item?.name })}
+        confirmText={t("ลบ")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
 
@@ -513,9 +499,9 @@ const ManageStudents = () => {
       <ConfirmDialog
         isOpen={errorAlert.show}
         onClose={() => setErrorAlert({ show: false, message: '' })}
-        title="เกิดข้อผิดพลาด"
+        title={t("เกิดข้อผิดพลาด")}
         message={errorAlert.message}
-        confirmText="ตกลง"
+        confirmText={t("ตกลง")}
         type="danger"
         mode="alert"
       />

@@ -1,3 +1,4 @@
+import { t, tx } from '../../i18n';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, classAPI, subjectAPI } from '../../services/api';
@@ -36,9 +37,9 @@ const PROVIDER_LABELS = {
   openai: 'OpenAI'
 };
 
-const getErrorMessage = (err, fallback = 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง') => {
+const getErrorMessage = (err, fallback = t('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')) => {
   if (err.response?.data?.error) return err.response.data.error;
-  if (err.code === 'ECONNABORTED') return 'AI ใช้เวลาตอบนานเกินไป กรุณาลองใหม่อีกครั้ง';
+  if (err.code === 'ECONNABORTED') return t('AI ใช้เวลาตอบนานเกินไป กรุณาลองใหม่อีกครั้ง');
   return fallback;
 };
 
@@ -193,13 +194,13 @@ const ErrorBox = ({ message, onClose }) => (
   <div role="alert" className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-start justify-between gap-3 text-sm">
     <span className="break-words">{message}</span>
     {onClose && (
-      <button type="button" onClick={onClose} aria-label="ปิด" className="min-h-[44px] min-w-[44px] -my-3 -mr-3 text-red-500 hover:text-red-700">&times;</button>
+      <button type="button" onClick={onClose} aria-label={t("ปิด")} className="min-h-[44px] min-w-[44px] -my-3 -mr-3 text-red-500 hover:text-red-700">&times;</button>
     )}
   </div>
 );
 
 const Disclaimer = () => (
-  <p className="text-xs text-gray-500 mt-2">{DISCLAIMER}</p>
+  <p className="text-xs text-gray-500 mt-2">{t(DISCLAIMER)}</p>
 );
 
 const primaryBtn = 'px-5 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2';
@@ -260,7 +261,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
       writeLast(userId, id);
     } catch (err) {
       if (err.response?.status === 404) { writeLast(userId, null); setActiveId(null); setMessages([]); }
-      else setError(getErrorMessage(err, 'โหลดบทสนทนาไม่สำเร็จ'));
+      else setError(getErrorMessage(err, t('โหลดบทสนทนาไม่สำเร็จ')));
     } finally { setConvLoading(false); }
   };
 
@@ -287,7 +288,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
       setConversations(prev => prev.filter(x => x.id !== c.id));
       if (c.id === activeId) newChat();
     } catch (err) {
-      setError(getErrorMessage(err, 'ลบบทสนทนาไม่สำเร็จ'));
+      setError(getErrorMessage(err, t('ลบบทสนทนาไม่สำเร็จ')));
     }
   };
 
@@ -341,18 +342,16 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
       <aside className="hidden lg:block lg:border-r lg:border-gray-200 lg:pr-4 lg:max-h-[75vh]">{list}</aside>
     <div className="space-y-4 min-w-0">
       <div className="flex items-center gap-2 lg:hidden">
-        <button type="button" onClick={() => setHistoryOpen(true)} className={`${secondaryBtn} shrink-0`}>
-          ประวัติ{conversations.length ? ` (${conversations.length})` : ''}
-        </button>
-        <p className="flex-1 min-w-0 truncate text-sm text-gray-600">{activeTitle || 'แชทใหม่'}</p>
+        <button type="button" onClick={() => setHistoryOpen(true)} className={`${secondaryBtn} shrink-0`}>{t("ประวัติ{value1}", { value1: conversations.length ? ` (${conversations.length})` : '' })}</button>
+        <p className="flex-1 min-w-0 truncate text-sm text-gray-600">{activeTitle || t('แชทใหม่')}</p>
         {activeId && (
-          <button type="button" onClick={newChat} className="shrink-0 min-h-[44px] px-3 text-sm text-brand-600 hover:text-brand-700">+ แชทใหม่</button>
+          <button type="button" onClick={newChat} className="shrink-0 min-h-[44px] px-3 text-sm text-brand-600 hover:text-brand-700">{t("+ แชทใหม่")}</button>
         )}
       </div>
       {activeTitle && <h2 className="hidden lg:block text-base font-semibold text-gray-800 truncate">{activeTitle}</h2>}
       {messages.length === 0 && !loading && !convLoading && (
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">ลองถาม</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">{t("ลองถาม")}</p>
           <div className="flex flex-wrap gap-2">
             {EXAMPLE_QUESTIONS.map(q => (
               <button
@@ -362,7 +361,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
                 onClick={() => send(q)}
                 className="px-4 py-2 min-h-[44px] rounded-full border border-brand-200 bg-brand-50 text-brand-700 text-sm text-left hover:bg-brand-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {q}
+                {t(q)}
               </button>
             ))}
           </div>
@@ -370,32 +369,32 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
       )}
       <details className="text-sm" open={!!(classId || subjectId)}>
         <summary className="cursor-pointer min-h-[44px] inline-flex items-center text-brand-600">
-          {classId || subjectId ? 'ถามเฉพาะห้อง/วิชาที่เลือก' : 'ถามเฉพาะห้องหรือวิชา (ไม่บังคับ)'}
+          {classId || subjectId ? t('ถามเฉพาะห้อง/วิชาที่เลือก') : t('ถามเฉพาะห้องหรือวิชา (ไม่บังคับ)')}
         </summary>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องเรียน")}</label>
           <SmartComboBox
             options={classes}
             value={classId}
             onChange={setClassId}
             labelKey="className"
             valueKey="id"
-            placeholder="ทุกห้อง"
+            placeholder={t("ทุกห้อง")}
             disabled={disabled}
             clearable
             searchable
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
           <SmartComboBox
             options={subjects}
             value={subjectId}
             onChange={setSubjectId}
             labelKey="label"
             valueKey="id"
-            placeholder="ทุกวิชา"
+            placeholder={t("ทุกวิชา")}
             disabled={disabled}
             clearable
             searchable
@@ -406,12 +405,12 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
 
       <div className="border border-gray-200 rounded-lg bg-gray-50 p-3 sm:p-4 min-h-[240px] max-h-[55vh] overflow-y-auto space-y-3" aria-live="polite">
         {convLoading && (
-          <div className="text-center text-gray-500 text-sm py-6 flex items-center justify-center gap-2"><Spinner className="h-4 w-4" /> กำลังโหลดบทสนทนา...</div>
+          <div className="text-center text-gray-500 text-sm py-6 flex items-center justify-center gap-2"><Spinner className="h-4 w-4" />{t(" กำลังโหลดบทสนทนา...")}</div>
         )}
         {messages.length === 0 && !loading && !convLoading && (
           <div className="text-center text-gray-500 text-sm py-6">
             <ChatSpark className="mx-auto mb-3 h-16 sm:h-20 w-auto text-brand-500" />
-            <p>ถามเกี่ยวกับการส่งงานของนักเรียนได้เลย หรือพิมพ์คำถามด้านล่าง</p>
+            <p>{t("ถามเกี่ยวกับการส่งงานของนักเรียนได้เลย หรือพิมพ์คำถามด้านล่าง")}</p>
           </div>
         )}
         {messages.map((m, i) => (
@@ -426,8 +425,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
-              <Spinner className="h-4 w-4" /> AI กำลังคิดคำตอบ...
-            </div>
+              <Spinner className="h-4 w-4" />{t(" AI กำลังคิดคำตอบ...")}</div>
           </div>
         )}
         <div ref={endRef} />
@@ -443,22 +441,19 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
           disabled={disabled || loading}
           rows={2}
           maxLength={1000}
-          placeholder="พิมพ์คำถามของคุณ..."
+          placeholder={t("พิมพ์คำถามของคุณ...")}
           className={`${inputClass} resize-y flex-1`}
         />
-        <button type="button" onClick={() => send()} disabled={disabled || loading || !input.trim()} className={`${primaryBtn} sm:self-stretch`}>
-          {loading ? <Spinner /> : null}
-          ส่งคำถาม
-        </button>
+        <button type="button" onClick={() => send()} disabled={disabled || loading || !input.trim()} className={`${primaryBtn} sm:self-stretch`}>{loading ? <Spinner /> : null}{t("ส่งคำถาม")}</button>
       </div>
       <Disclaimer />
     </div>
       {historyOpen && (
         <div className="modal-backdrop lg:hidden" onClick={(e) => { if (e.target === e.currentTarget) setHistoryOpen(false); }}>
-          <div className="modal-panel rounded-b-none sm:rounded-lg p-4 h-[75vh] flex flex-col" role="dialog" aria-modal="true" aria-label="ประวัติการสนทนา">
+          <div className="modal-panel rounded-b-none sm:rounded-lg p-4 h-[75vh] flex flex-col" role="dialog" aria-modal="true" aria-label={t("ประวัติการสนทนา")}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-gray-800">ประวัติการสนทนา</h2>
-              <button type="button" onClick={() => setHistoryOpen(false)} aria-label="ปิด" className="min-h-[44px] min-w-[44px] text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+              <h2 className="text-base font-semibold text-gray-800">{t("ประวัติการสนทนา")}</h2>
+              <button type="button" onClick={() => setHistoryOpen(false)} aria-label={t("ปิด")} className="min-h-[44px] min-w-[44px] text-2xl text-gray-500 hover:text-gray-700">&times;</button>
             </div>
             <div className="flex-1 min-h-0">{list}</div>
           </div>
@@ -468,10 +463,10 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
         isOpen={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
         onConfirm={confirmDelete}
-        title="ลบบทสนทนา"
-        message={pendingDelete ? `ลบ "${pendingDelete.title}" ออกจากประวัติ? ย้อนกลับไม่ได้` : ''}
-        confirmText="ลบบทสนทนา"
-        cancelText="ยกเลิก"
+        title={t("ลบบทสนทนา")}
+        message={pendingDelete ? t("ลบ \"{value1}\" ออกจากประวัติ? ย้อนกลับไม่ได้", { value1: pendingDelete.title }) : ''}
+        confirmText={t("ลบบทสนทนา")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
     </div>
@@ -515,7 +510,7 @@ const ReportTab = ({ disabled, classes, subjects }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-      setError('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้วคัดลอกเอง');
+      setError(t('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้วคัดลอกเอง'));
     }
   };
 
@@ -540,12 +535,12 @@ const ReportTab = ({ disabled, classes, subjects }) => {
     } catch (e) {
       // สำรอง: เลือกข้อความในกล่องแล้วสั่งคัดลอก
       const ta = parentRef.current;
-      if (!ta) { setError('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้วคัดลอกเอง'); return; }
+      if (!ta) { setError(t('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความแล้วคัดลอกเอง')); return; }
       ta.focus();
       ta.select();
       let ok = false;
       try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
-      if (!ok) { setError('ไม่สามารถคัดลอกได้ เลือกข้อความในกล่องแล้วคัดลอกเอง'); return; }
+      if (!ok) { setError(t('ไม่สามารถคัดลอกได้ เลือกข้อความในกล่องแล้วคัดลอกเอง')); return; }
     }
     setCopiedParent(true);
     setTimeout(() => setCopiedParent(false), 2000);
@@ -557,13 +552,13 @@ const ReportTab = ({ disabled, classes, subjects }) => {
     // คัดลอก DOM ที่ React สร้างไว้แล้ว (escape แล้ว) ไปหน้าต่างพิมพ์
     const win = window.open('', '_blank');
     if (!win) { window.print(); return; }
-    win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>รายงานสรุป</title>' +
+    win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + t('รายงานสรุป') + '</title>' +
       '<style>body{font-family:"Bai Jamjuree",system-ui,sans-serif;padding:24px;line-height:1.6;color:#111}table{border-collapse:collapse}td{border:1px solid #ccc;padding:4px 8px}ul{padding-left:24px;list-style:disc}ol{padding-left:24px}.note{margin-top:24px;font-size:12px;color:#666}</style>' +
       '</head><body></body></html>');
     win.document.body.appendChild(win.document.importNode(node, true));
     const note = win.document.createElement('p');
     note.className = 'note';
-    note.textContent = DISCLAIMER;
+    note.textContent = t(DISCLAIMER);
     win.document.body.appendChild(note);
     win.document.close();
     win.focus();
@@ -572,8 +567,8 @@ const ReportTab = ({ disabled, classes, subjects }) => {
 
   return (
     <div className="space-y-4">
-      <div role="radiogroup" aria-label="เลือกประเภทรายงาน" className="grid grid-cols-2 gap-2 max-w-md">
-        {[{ id: 'class', label: 'รายห้องเรียน' }, { id: 'subject', label: 'รายวิชา' }].map(opt => (
+      <div role="radiogroup" aria-label={t("เลือกประเภทรายงาน")} className="grid grid-cols-2 gap-2 max-w-md">
+        {[{ id: 'class', label: t('รายห้องเรียน') }, { id: 'subject', label: t('รายวิชา') }].map(opt => (
           <button
             key={opt.id}
             type="button"
@@ -592,7 +587,7 @@ const ReportTab = ({ disabled, classes, subjects }) => {
 
       <div className="max-w-md">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          {mode === 'class' ? 'เลือกห้องเรียน' : 'เลือกวิชา'} <span className="text-red-500">*</span>
+          {mode === 'class' ? t('เลือกห้องเรียน') : t('เลือกวิชา')} <span className="text-red-500">*</span>
         </label>
         {mode === 'class' ? (
           <SmartComboBox
@@ -602,7 +597,7 @@ const ReportTab = ({ disabled, classes, subjects }) => {
             onChange={setClassId}
             labelKey="className"
             valueKey="id"
-            placeholder="เลือกห้องเรียน"
+            placeholder={t("เลือกห้องเรียน")}
             disabled={disabled}
             clearable
             searchable
@@ -615,7 +610,7 @@ const ReportTab = ({ disabled, classes, subjects }) => {
             onChange={setSubjectId}
             labelKey="label"
             valueKey="id"
-            placeholder="เลือกวิชา"
+            placeholder={t("เลือกวิชา")}
             disabled={disabled}
             clearable
             searchable
@@ -625,7 +620,7 @@ const ReportTab = ({ disabled, classes, subjects }) => {
 
       <button type="button" onClick={generate} disabled={disabled || loading || !selected} className={`${primaryBtn} w-full sm:w-auto`}>
         {loading && <Spinner />}
-        {loading ? 'AI กำลังสรุปรายงาน...' : 'สร้างรายงานสรุป'}
+        {loading ? t('AI กำลังสรุปรายงาน...') : t('สร้างรายงานสรุป')}
       </button>
 
       {error && <ErrorBox message={error} onClose={() => setError('')} />}
@@ -633,10 +628,10 @@ const ReportTab = ({ disabled, classes, subjects }) => {
       {report && (
         <div className="border border-gray-200 rounded-lg bg-white">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-800">รายงานสรุป</h2>
+            <h2 className="font-semibold text-gray-800">{t("รายงานสรุป")}</h2>
             <div className="grid grid-cols-2 sm:flex gap-2">
-              <button type="button" onClick={copy} className={secondaryBtn}>{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}</button>
-              <button type="button" onClick={print} className={secondaryBtn}>พิมพ์</button>
+              <button type="button" onClick={copy} className={secondaryBtn}>{copied ? t('คัดลอกแล้ว') : t('คัดลอก')}</button>
+              <button type="button" onClick={print} className={secondaryBtn}>{t("พิมพ์")}</button>
             </div>
           </div>
           <div className="p-4" ref={reportRef}>
@@ -645,9 +640,9 @@ const ReportTab = ({ disabled, classes, subjects }) => {
           {parentText && (
             <div className="p-3 border-t border-gray-200 space-y-2">
               <button type="button" onClick={copyParent} className={`${secondaryBtn} w-full sm:w-auto`}>
-                {copiedParent ? 'คัดลอกแล้ว' : 'คัดลอกข้อความถึงผู้ปกครอง'}
+                {copiedParent ? t('คัดลอกแล้ว') : t('คัดลอกข้อความถึงผู้ปกครอง')}
               </button>
-              <textarea ref={parentRef} readOnly value={parentText} aria-label="ข้อความถึงผู้ปกครอง" rows={1} className="sr-only" tabIndex={-1} />
+              <textarea ref={parentRef} readOnly value={parentText} aria-label={t("ข้อความถึงผู้ปกครอง")} rows={1} className="sr-only" tabIndex={-1} />
             </div>
           )}
         </div>
@@ -733,40 +728,40 @@ const DraftTab = ({ disabled, subjects }) => {
     <div className="space-y-4">
       <form onSubmit={generate} className="space-y-4 max-w-2xl">
         <div>
-          <label htmlFor="ai-subject" className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
-          <input id="ai-subject" type="text" list="ai-subject-list" value={subjectName} onChange={(e) => changeSubject(e.target.value)} disabled={disabled} required className={inputClass} placeholder="พิมพ์หรือเลือกวิชา เช่น คณิตศาสตร์" />
+          <label htmlFor="ai-subject" className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
+          <input id="ai-subject" type="text" list="ai-subject-list" value={subjectName} onChange={(e) => changeSubject(e.target.value)} disabled={disabled} required className={inputClass} placeholder={t("พิมพ์หรือเลือกวิชา เช่น คณิตศาสตร์")} />
           <datalist id="ai-subject-list">
             {subjects.map(x => <option key={x.id} value={x.subjectName}>{x.label}</option>)}
           </datalist>
         </div>
         <div>
-          <label htmlFor="ai-topic" className="block text-sm font-medium text-gray-700 mb-1">หัวข้อ</label>
-          <textarea id="ai-topic" rows={2} value={topic} onChange={(e) => setTopic(e.target.value)} disabled={disabled} required className={`${inputClass} resize-y`} placeholder="เช่น สมการเชิงเส้นตัวแปรเดียว" />
+          <label htmlFor="ai-topic" className="block text-sm font-medium text-gray-700 mb-1">{t("หัวข้อ")}</label>
+          <textarea id="ai-topic" rows={2} value={topic} onChange={(e) => setTopic(e.target.value)} disabled={disabled} required className={`${inputClass} resize-y`} placeholder={t("เช่น สมการเชิงเส้นตัวแปรเดียว")} />
         </div>
         <details className="text-sm">
-          <summary className="cursor-pointer min-h-[44px] inline-flex items-center text-brand-600">ตัวเลือกเพิ่มเติม</summary>
+          <summary className="cursor-pointer min-h-[44px] inline-flex items-center text-brand-600">{t("ตัวเลือกเพิ่มเติม")}</summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
             <div>
-              <label htmlFor="ai-grade" className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
-              <input id="ai-grade" type="text" value={gradeName} onChange={(e) => setGradeName(e.target.value)} disabled={disabled} className={inputClass} placeholder="เช่น ม.2" />
+              <label htmlFor="ai-grade" className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้น")}</label>
+              <input id="ai-grade" type="text" value={gradeName} onChange={(e) => setGradeName(e.target.value)} disabled={disabled} className={inputClass} placeholder={t("เช่น ม.2")} />
             </div>
             <div>
-              <span className="block text-sm font-medium text-gray-700 mb-1">การให้คะแนน</span>
+              <span className="block text-sm font-medium text-gray-700 mb-1">{t("การให้คะแนน")}</span>
               <SmartComboBox
-                options={[{ value: '', label: 'ให้ AI แนะนำ' }, ...Object.entries(SCORING_LABELS).map(([value, label]) => ({ value, label }))]}
+                options={[{ value: '', label: t('ให้ AI แนะนำ') }, ...Object.entries(SCORING_LABELS).map(([value, label]) => ({ value, label: t(label) }))]}
                 value={scoringType}
                 onChange={(v) => setScoringType(v ?? '')}
                 disabled={disabled}
                 searchable={false}
                 clearable={false}
-                ariaLabel="การให้คะแนน"
+                ariaLabel={t("การให้คะแนน")}
               />
             </div>
           </div>
         </details>
         <button type="submit" disabled={disabled || loading || !subjectName.trim() || !topic.trim()} className={`${primaryBtn} w-full sm:w-auto`}>
           {loading && <Spinner />}
-          {loading ? 'AI กำลังร่างงาน...' : 'ร่างงานด้วย AI'}
+          {loading ? t('AI กำลังร่างงาน...') : t('ร่างงานด้วย AI')}
         </button>
       </form>
 
@@ -774,36 +769,34 @@ const DraftTab = ({ disabled, subjects }) => {
 
       {draft && (
         <div className="border border-gray-200 rounded-lg bg-white p-4 space-y-3 max-w-2xl">
-          <h2 className="font-semibold text-gray-800">ร่างงานจาก AI</h2>
+          <h2 className="font-semibold text-gray-800">{t("ร่างงานจาก AI")}</h2>
           <dl className="space-y-3 text-sm">
             <div>
-              <dt className="text-gray-500">ชื่องาน</dt>
+              <dt className="text-gray-500">{t("ชื่องาน")}</dt>
               <dd className="font-medium text-gray-900 break-words">{draft.taskName}</dd>
             </div>
             <div>
-              <dt className="text-gray-500">รายละเอียด</dt>
+              <dt className="text-gray-500">{t("รายละเอียด")}</dt>
               <dd className="text-gray-800 whitespace-pre-wrap break-words">{draft.description}</dd>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <dt className="text-gray-500">รูปแบบการให้คะแนน</dt>
-                <dd className="text-gray-800">{SCORING_LABELS[draft.scoringType] || draft.scoringType || '-'}</dd>
+                <dt className="text-gray-500">{t("รูปแบบการให้คะแนน")}</dt>
+                <dd className="text-gray-800">{(SCORING_LABELS[draft.scoringType] ? t(SCORING_LABELS[draft.scoringType]) : draft.scoringType) || '-'}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">คะแนนเต็ม</dt>
+                <dt className="text-gray-500">{t("คะแนนเต็ม")}</dt>
                 <dd className="text-gray-800">{draft.scoringType === 'SCORED' && draft.maxScore ? draft.maxScore : '-'}</dd>
               </div>
             </div>
             {draft.rubric && (
               <div>
-                <dt className="text-gray-500 mb-1">เกณฑ์การให้คะแนน (Rubric)</dt>
+                <dt className="text-gray-500 mb-1">{t("เกณฑ์การให้คะแนน (Rubric)")}</dt>
                 <dd className="bg-gray-50 rounded-lg p-3">{rubricToNode(draft.rubric)}</dd>
               </div>
             )}
           </dl>
-          <button type="button" onClick={useDraft} className={`${primaryBtn} w-full sm:w-auto`}>
-            ใช้ร่างนี้สร้างงาน
-          </button>
+          <button type="button" onClick={useDraft} className={`${primaryBtn} w-full sm:w-auto`}>{t("ใช้ร่างนี้สร้างงาน")}</button>
         </div>
       )}
       <Disclaimer />
@@ -831,7 +824,7 @@ const AIAssistant = () => {
         const res = await aiAPI.status();
         if (!cancelled) setStatus(res.data);
       } catch (err) {
-        if (!cancelled) setStatusError(getErrorMessage(err, 'ไม่สามารถตรวจสอบสถานะผู้ช่วย AI ได้'));
+        if (!cancelled) setStatusError(getErrorMessage(err, t('ไม่สามารถตรวจสอบสถานะผู้ช่วย AI ได้')));
       } finally {
         if (!cancelled) setStatusLoading(false);
       }
@@ -860,17 +853,15 @@ const AIAssistant = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="ผู้ช่วย AI">
+      <PageHeader title={t("ผู้ช่วย AI")}>
         {enabled && (
           <span title={[PROVIDER_LABELS[status.provider] || status.provider, status.model].filter(Boolean).join(' · ')} className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            พร้อมใช้งาน
-          </span>
+            <span className="w-2 h-2 rounded-full bg-green-500" />{t("พร้อมใช้งาน")}</span>
         )}
       </PageHeader>
 
       {statusLoading && (
-        <div className="flex items-center gap-2 text-sm text-gray-500"><Spinner className="h-4 w-4" /> กำลังตรวจสอบสถานะ AI...</div>
+        <div className="flex items-center gap-2 text-sm text-gray-500"><Spinner className="h-4 w-4" />{t(" กำลังตรวจสอบสถานะ AI...")}</div>
       )}
 
       {statusError && <ErrorBox message={statusError} />}
@@ -880,11 +871,16 @@ const AIAssistant = () => {
           <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <p className="mt-3 font-semibold text-gray-800">{isAdmin ? 'ยังไม่ได้ตั้งค่า AI' : 'ผู้ช่วย AI ยังไม่เปิดใช้ แจ้งผู้ดูแลระบบ'}</p>
+          <p className="mt-3 font-semibold text-gray-800">{isAdmin ? t('ยังไม่ได้ตั้งค่า AI') : t('ผู้ช่วย AI ยังไม่เปิดใช้ แจ้งผู้ดูแลระบบ')}</p>
           {isAdmin && (
             <ol className="mt-3 mx-auto max-w-md list-decimal space-y-1 pl-5 text-left text-sm text-gray-600">
-              <li>ใส่ API key อย่างใดอย่างหนึ่งในไฟล์ <code className="bg-gray-100 px-1 rounded">.env</code> ของ backend: <code className="bg-gray-100 px-1 rounded break-all">ANTHROPIC_API_KEY</code>, <code className="bg-gray-100 px-1 rounded break-all">GEMINI_API_KEY</code> หรือ <code className="bg-gray-100 px-1 rounded break-all">OPENAI_API_KEY</code></li>
-              <li>รีสตาร์ทเซิร์ฟเวอร์ แล้วรีเฟรชหน้านี้</li>
+              <li>{tx('ใส่ API key อย่างใดอย่างหนึ่งในไฟล์ {env} ของ backend: {a}, {b} หรือ {c}', {
+                env: <code className="bg-gray-100 px-1 rounded">.env</code>,
+                a: <code className="bg-gray-100 px-1 rounded break-all">ANTHROPIC_API_KEY</code>,
+                b: <code className="bg-gray-100 px-1 rounded break-all">GEMINI_API_KEY</code>,
+                c: <code className="bg-gray-100 px-1 rounded break-all">OPENAI_API_KEY</code>,
+              })}</li>
+              <li>{t("รีสตาร์ทเซิร์ฟเวอร์ แล้วรีเฟรชหน้านี้")}</li>
             </ol>
           )}
         </div>
@@ -892,7 +888,7 @@ const AIAssistant = () => {
 
       {(statusLoading || enabled || canManage) && (
       <div className="bg-white rounded-lg shadow">
-        <div role="tablist" aria-label="ฟังก์ชันผู้ช่วย AI" className="flex overflow-x-auto border-b border-gray-200">
+        <div role="tablist" aria-label={t("ฟังก์ชันผู้ช่วย AI")} className="flex overflow-x-auto border-b border-gray-200">
           {TABS.filter(tab => tab.id !== 'import' || canManage).map(tab => (
             <button
               key={tab.id}
@@ -907,7 +903,7 @@ const AIAssistant = () => {
                 activeTab === tab.id ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           ))}
         </div>

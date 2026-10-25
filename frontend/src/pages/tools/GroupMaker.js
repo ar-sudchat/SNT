@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useMemo } from 'react';
 import { shuffle, btnPrimary, btnSecondary } from './toolsUtils';
 
@@ -23,22 +24,22 @@ const GroupMaker = ({ students, className = '' }) => {
   };
 
   const asText = () =>
-    groups.map((g, i) => `กลุ่ม ${i + 1}\n${g.map((s) => `- ${s.name}`).join('\n')}`).join('\n\n');
+    groups.map((g, i) => t('กลุ่ม {value1}\n{value2}', { value1: i + 1, value2: g.map((s) => `- ${s.name}`).join('\n') })).join('\n\n');
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(asText());
-      setCopied('คัดลอกแล้ว');
+      setCopied(t('คัดลอกแล้ว'));
     } catch (e) {
-      setCopied('คัดลอกไม่ได้ ลองเลือกข้อความเอง');
+      setCopied(t('คัดลอกไม่ได้ ลองเลือกข้อความเอง'));
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-ink-200 bg-white p-4 flex flex-wrap items-end gap-3 print:hidden">
-        <div role="group" aria-label="วิธีแบ่ง" className="flex rounded-lg border border-ink-200 overflow-hidden">
-          {[['count', 'ตามจำนวนกลุ่ม'], ['size', 'ตามคนต่อกลุ่ม']].map(([k, label]) => (
+        <div role="group" aria-label={t("วิธีแบ่ง")} className="flex rounded-lg border border-ink-200 overflow-hidden">
+          {[['count', t('ตามจำนวนกลุ่ม')], ['size', t('ตามคนต่อกลุ่ม')]].map(([k, label]) => (
             <button
               key={k}
               type="button"
@@ -51,7 +52,7 @@ const GroupMaker = ({ students, className = '' }) => {
           ))}
         </div>
         <label className="flex flex-col text-sm text-ink-600">
-          {mode === 'count' ? 'จำนวนกลุ่ม' : 'คนต่อกลุ่ม'}
+          {mode === 'count' ? t('จำนวนกลุ่ม') : t('คนต่อกลุ่ม')}
           <input
             type="number" min="1" max={Math.max(total, 1)} inputMode="numeric" value={n}
             onChange={(e) => setN(e.target.value)}
@@ -59,23 +60,23 @@ const GroupMaker = ({ students, className = '' }) => {
           />
         </label>
         <button type="button" onClick={make} disabled={total === 0} className={btnPrimary}>
-          {groups.length ? 'สุ่มใหม่' : 'แบ่งกลุ่ม'}
+          {groups.length ? t('สุ่มใหม่') : t('แบ่งกลุ่ม')}
         </button>
-        <span className="text-sm text-ink-500">จะได้ {groupCount} กลุ่ม จาก {total} คน</span>
+        <span className="text-sm text-ink-500">{t('จะได้ {value1} กลุ่ม จาก {value2} คน', { value1: groupCount, value2: total })}</span>
       </div>
 
       {groups.length > 0 && (
         <>
           <div className="flex flex-wrap gap-2 print:hidden">
-            <button type="button" onClick={copy} className={btnSecondary}>คัดลอกเป็นข้อความ</button>
-            <button type="button" onClick={() => window.print()} className={btnSecondary}>พิมพ์</button>
+            <button type="button" onClick={copy} className={btnSecondary}>{t('คัดลอกเป็นข้อความ')}</button>
+            <button type="button" onClick={() => window.print()} className={btnSecondary}>{t('พิมพ์')}</button>
             {copied && <span className="self-center text-sm text-ink-600" role="status">{copied}</span>}
           </div>
-          <h2 className="hidden print:block text-xl font-bold">แบ่งกลุ่ม {className}</h2>
+          <h2 className="hidden print:block text-xl font-bold">{t('แบ่งกลุ่ม {value1}', { value1: className })}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {groups.map((g, i) => (
               <section key={i} className="rounded-xl border border-ink-200 bg-white p-4 break-inside-avoid">
-                <h3 className="font-bold text-brand-800 mb-2 text-lg">กลุ่ม {i + 1} <span className="text-sm font-normal text-ink-500">({g.length} คน)</span></h3>
+                <h3 className="font-bold text-brand-800 mb-2 text-lg">{t('กลุ่ม {value1} ', { value1: i + 1 })}<span className="text-sm font-normal text-ink-500">{t('({value1} คน)', { value1: g.length })}</span></h3>
                 <ul className="space-y-1 text-ink-800 text-base lg:text-lg">
                   {g.map((s) => <li key={s.id}>{s.name}</li>)}
                 </ul>

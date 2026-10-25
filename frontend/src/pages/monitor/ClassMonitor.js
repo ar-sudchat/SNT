@@ -1,3 +1,4 @@
+import { t, tx } from '../../i18n';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, classAPI, academicYearAPI, gradeAPI } from '../../services/api';
@@ -75,7 +76,7 @@ const ClassMonitor = ({ embedded = false }) => {
         }
         setInitialLoadDone(true);
       } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลได้');
+        setError(t('ไม่สามารถโหลดข้อมูลได้'));
         setInitialLoadDone(true);
       }
     };
@@ -127,7 +128,7 @@ const ClassMonitor = ({ embedded = false }) => {
       const response = await monitorAPI.getClassMonitor(selectedClass, params);
       setData(response.data);
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถโหลดข้อมูลได้');
+      setError(err.response?.data?.error || t('ไม่สามารถโหลดข้อมูลได้'));
     } finally {
       setLoading(false);
     }
@@ -224,21 +225,21 @@ const ClassMonitor = ({ embedded = false }) => {
       {!embedded && <div className="flex items-center gap-2">
         <button
           onClick={() => navigate(-1)}
-          aria-label="ย้อนกลับ"
+          aria-label={t("ย้อนกลับ")}
           className="w-11 h-11 -ml-2 flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ติดตามงานรายห้อง</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงานรายห้อง')}</h1>
       </div>}
 
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600" aria-label="ปิด">
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600" aria-label={t("ปิด")}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -249,7 +250,7 @@ const ClassMonitor = ({ embedded = false }) => {
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
       <MonitorFilterBar>
         <MonitorFilterField
-          label="ปีการศึกษา"
+          label={t("ปีการศึกษา")}
           options={academicYears}
           value={filterAcademicYear}
           onChange={(val) => {
@@ -262,11 +263,11 @@ const ClassMonitor = ({ embedded = false }) => {
           }}
           labelKey="year"
           valueKey="id"
-          placeholder="เลือกปีการศึกษา"
+          placeholder={t("เลือกปีการศึกษา")}
           clearable={false}
         />
         <MonitorFilterField
-          label="ชั้น"
+          label={t("ชั้น")}
           options={grades}
           value={filterGrade}
           onChange={(val) => {
@@ -278,10 +279,10 @@ const ClassMonitor = ({ embedded = false }) => {
           }}
           labelKey="gradeName"
           valueKey="id"
-          placeholder="ทุกชั้น"
+          placeholder={t("ทุกชั้น")}
         />
         <MonitorFilterField
-          label="ห้องเรียน"
+          label={t("ห้องเรียน")}
           options={classes}
           value={selectedClass}
           onChange={(val) => {
@@ -291,10 +292,10 @@ const ClassMonitor = ({ embedded = false }) => {
           }}
           labelKey="className"
           valueKey="id"
-          placeholder="เลือกห้องเรียน"
+          placeholder={t("เลือกห้องเรียน")}
         />
         <MonitorFilterField
-          label="วิชา"
+          label={t("วิชา")}
           options={data?.summary?.subjects || []}
           value={selectedSubject}
           onChange={(val) => {
@@ -303,7 +304,7 @@ const ClassMonitor = ({ embedded = false }) => {
           }}
           labelKey="subjectName"
           valueKey="id"
-          placeholder="ทุกวิชา"
+          placeholder={t("ทุกวิชา")}
         />
       </MonitorFilterBar>
 
@@ -312,7 +313,7 @@ const ClassMonitor = ({ embedded = false }) => {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+            <p className="text-gray-500">{t('กำลังโหลดข้อมูล...')}</p>
           </div>
         </div>
       )}
@@ -322,15 +323,15 @@ const ClassMonitor = ({ embedded = false }) => {
           {/* Summary strip */}
           <div className="bg-white rounded-lg shadow px-3 sm:px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-              <span className="text-sm text-gray-600 whitespace-nowrap">ส่งครบ <b className="text-gray-900">{counts.complete}/{counts.all}</b> คน</span>
+              <span className="text-sm text-gray-600 whitespace-nowrap">{tx('ส่งครบ <b>{done}/{all}</b> คน', { done: counts.complete, all: counts.all, b: (c) => <b className="text-gray-900">{c}</b> })}</span>
               <div className="flex-1 bg-gray-200 rounded-full h-2">
                 <div className={`h-2 rounded-full ${getProgressColor(data.summary.avgProgress)}`} style={{ width: `${data.summary.avgProgress}%` }} />
               </div>
             </div>
-            <span className="text-sm text-gray-600 whitespace-nowrap">ค้าง <b className="text-red-600">{counts.missing}</b> คน</span>
-            <span className="text-xs text-gray-400 whitespace-nowrap">งานส่งแล้ว {data.summary.avgProgress}%</span>
-            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">นักเรียน {data.class.totalStudents} คน</span>
-            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">ตรวจผ่านแล้ว {data.summary.avgApproved}%</span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">{tx('ค้าง <b>{n}</b> คน', { n: counts.missing, b: (c) => <b className="text-red-600">{c}</b> })}</span>
+            <span className="text-xs text-gray-400 whitespace-nowrap">{t('งานส่งแล้ว {value1}%', { value1: data.summary.avgProgress })}</span>
+            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">{t('นักเรียน {value1} คน', { value1: data.class.totalStudents })}</span>
+            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">{t('ตรวจผ่านแล้ว {value1}%', { value1: data.summary.avgApproved })}</span>
           </div>
 
           {/* Quick filter + search */}
@@ -338,8 +339,8 @@ const ClassMonitor = ({ embedded = false }) => {
             <div className="flex items-center gap-2">
             <div className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1 md:w-auto">
               {[
-                { key: 'missing', label: 'ยังไม่ส่ง' },
-                { key: 'all', label: 'ทั้งหมด' }
+                { key: 'missing', label: t('ยังไม่ส่ง') },
+                { key: 'all', label: t('ทั้งหมด') }
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -360,9 +361,7 @@ const ClassMonitor = ({ embedded = false }) => {
                 className={`min-h-[44px] px-3 rounded-full text-xs font-medium whitespace-nowrap border ${
                   quickFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-800 border-amber-200'
                 }`}
-              >
-                รอตรวจ {counts.pendingTasks} งาน
-              </button>
+              >{t('รอตรวจ {value1} งาน', { value1: counts.pendingTasks })}</button>
             )}
             </div>
             <div className="flex items-center gap-2 md:ml-auto">
@@ -370,7 +369,7 @@ const ClassMonitor = ({ embedded = false }) => {
             <div className="relative flex-1 md:flex-none">
               <input
                 type="text"
-                placeholder="ค้นหา ชื่อ/เลขที่/รหัส..."
+                placeholder={t("ค้นหา ชื่อ/เลขที่/รหัส...")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm w-full md:w-60 min-h-[44px]"
@@ -393,11 +392,11 @@ const ClassMonitor = ({ embedded = false }) => {
                   <span className="w-7 shrink-0 text-right text-sm text-gray-400">{student.studentNumber || '-'}</span>
                   <span className="flex-1 min-w-0 truncate text-gray-900">{student.name}</span>
                   {student.missing > 0 ? (
-                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">ค้าง {student.missing}</span>
+                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">{t('ค้าง {value1}', { value1: student.missing })}</span>
                   ) : student.pending > 0 ? (
-                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">รอตรวจ {student.pending}</span>
+                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">{t('รอตรวจ {value1}', { value1: student.pending })}</span>
                   ) : (
-                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">ครบ</span>
+                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">{t('ครบ')}</span>
                   )}
                   <svg className="w-4 h-4 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -407,7 +406,7 @@ const ClassMonitor = ({ embedded = false }) => {
             ))}
             {sortedByNumber.length === 0 && (
               <li className="text-center py-10 text-gray-500">
-                {data.students.length === 0 ? 'ไม่พบนักเรียนในห้องนี้' : 'ไม่มีนักเรียนตามที่เลือก'}
+                {data.students.length === 0 ? t('ไม่พบนักเรียนในห้องนี้') : t('ไม่มีนักเรียนตามที่เลือก')}
               </li>
             )}
           </ul>
@@ -418,21 +417,11 @@ const ClassMonitor = ({ embedded = false }) => {
               <table className="min-w-full border-collapse border border-gray-300">
                 <thead className="bg-th print:bg-transparent sticky top-0 z-20">
                   <tr>
-                    <th className="px-2 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 w-12 bg-th print:bg-transparent">
-                      เลขที่
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">
-                      รหัสนักเรียน
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black border border-brand-100 sticky left-0 z-30 bg-th print:bg-transparent min-w-[140px]">
-                      ชื่อ-นามสกุล
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">
-                      ความคืบหน้า
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">
-                      ตรวจผ่านแล้ว
-                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 w-12 bg-th print:bg-transparent">{t('เลขที่')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">{t('รหัสนักเรียน')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black border border-brand-100 sticky left-0 z-30 bg-th print:bg-transparent min-w-[140px]">{t('ชื่อ-นามสกุล')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">{t('ความคืบหน้า')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">{t('ตรวจผ่านแล้ว')}</th>
                     {data.summary.subjects.slice(0, 5).map(subject => (
                       <th
                         key={subject.id}
@@ -490,7 +479,7 @@ const ClassMonitor = ({ embedded = false }) => {
             </div>
             {visibleStudents.length === 0 && (
               <div className="text-center py-12 text-gray-500">
-                {data.students.length === 0 ? 'ไม่พบนักเรียนในห้องนี้' : 'ไม่มีนักเรียนตามที่เลือก'}
+                {data.students.length === 0 ? t('ไม่พบนักเรียนในห้องนี้') : t('ไม่มีนักเรียนตามที่เลือก')}
               </div>
             )}
           </div>
@@ -500,7 +489,7 @@ const ClassMonitor = ({ embedded = false }) => {
       {/* No class selected */}
       {!loading && !selectedClass && (
         <div className="bg-white rounded-lg shadow p-10 text-center">
-          <p className="text-gray-500 text-lg">เลือกห้องเรียนด้านบนเพื่อดูผล</p>
+          <p className="text-gray-500 text-lg">{t('เลือกห้องเรียนด้านบนเพื่อดูผล')}</p>
         </div>
       )}
     </div>

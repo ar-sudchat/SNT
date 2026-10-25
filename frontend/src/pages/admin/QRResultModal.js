@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import { qrcodeAPI } from '../../services/api';
 import { WindowModal } from '../../components/ui';
@@ -27,15 +28,15 @@ export const clearHistory = () => {
 };
 
 const EXISTS = 'QR code already exists';
-export const reasonText = (reason) => (reason === EXISTS ? 'มี QR Code อยู่แล้ว' : reason || 'สร้างไม่สำเร็จ');
-export const formatWhen = (at) => new Date(at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+export const reasonText = (reason) => (reason === EXISTS ? t('มี QR Code อยู่แล้ว') : reason || t('สร้างไม่สำเร็จ'));
+export const formatWhen = (at) => new Date(at).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 const Thumb = ({ item, subjectName }) => (
   <div className="border rounded-lg p-3 text-center min-w-0">
     {item.qrcodeImage ? (
       <img src={item.qrcodeImage} alt={`QR Code ${item.name}`} className="mx-auto mb-2" style={{ width: 120, height: 120 }} />
     ) : (
-      <div className="mx-auto mb-2 flex items-center justify-center rounded bg-gray-100 text-xs text-gray-400" style={{ width: 120, height: 120 }}>ยังไม่โหลดรูป</div>
+      <div className="mx-auto mb-2 flex items-center justify-center rounded bg-gray-100 text-xs text-gray-400" style={{ width: 120, height: 120 }}>{t("ยังไม่โหลดรูป")}</div>
     )}
     <p className="text-sm font-medium truncate">{item.studentNumber ? `${item.studentNumber}. ` : ''}{item.name}</p>
     <p className="text-xs text-gray-500 truncate">{item.studentCode}</p>
@@ -66,10 +67,10 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
       const withImage = (p) => ({ ...p, qrcodeImage: byCode.get(p.studentCode)?.qrcodeImage || null });
       const next = { ...target, success: target.success.map(withImage), failed: target.failed.map(withImage) };
       const missing = next.success.filter((p) => !p.qrcodeImage).length;
-      if (missing) setMessage(`ไม่พบ QR ในระบบ ${missing} คน (อาจถูกลบหรือย้ายห้องแล้ว)`);
+      if (missing) setMessage(t("ไม่พบ QR ในระบบ {missing} คน (อาจถูกลบหรือย้ายห้องแล้ว)", { missing: missing }));
       onChange(next, { save: false });
     } catch (err) {
-      setMessage(err.response?.data?.error || 'โหลด QR ไม่สำเร็จ ลองใหม่อีกครั้ง');
+      setMessage(err.response?.data?.error || t('โหลด QR ไม่สำเร็จ ลองใหม่อีกครั้ง'));
     } finally {
       setReloading(false);
     }
@@ -98,10 +99,10 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
         success: [...run.success, ...retryable.filter((p) => ok.has(p.studentId)).map((p) => ({ ...p, reason: undefined, qrcodeImage: ok.get(p.studentId).qrcodeImage }))],
         failed: run.failed.filter((p) => !ok.has(p.studentId)).map((p) => (stillFailed.has(p.studentId) ? { ...p, reason: stillFailed.get(p.studentId) } : p)),
       };
-      setMessage(`สร้างเพิ่มสำเร็จ ${success.length} คน${failed.length ? ` · ยังไม่สำเร็จ ${failed.length} คน` : ''}`);
+      setMessage(failed.length ? t("สร้างเพิ่มสำเร็จ {success} คน · ยังไม่สำเร็จ {failed} คน", { success: success.length, failed: failed.length }) : t("สร้างเพิ่มสำเร็จ {success} คน", { success: success.length }));
       onChange(next, { save: true });
     } catch (err) {
-      setMessage(err.response?.data?.error || 'ลองสร้างใหม่ไม่สำเร็จ');
+      setMessage(err.response?.data?.error || t('ลองสร้างใหม่ไม่สำเร็จ'));
     } finally {
       setRetrying(false);
     }
@@ -110,8 +111,8 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
   const printable = (list) => list.filter((p) => p.qrcodeImage);
   const list = tab === 'success' ? run.success : run.failed;
   const tabs = [
-    { key: 'success', label: 'สำเร็จ', count: run.success.length, active: 'bg-white text-green-700 shadow' },
-    { key: 'failed', label: 'ไม่สำเร็จ', count: run.failed.length, active: 'bg-white text-amber-700 shadow' },
+    { key: 'success', label: t('สำเร็จ'), count: run.success.length, active: 'bg-white text-green-700 shadow' },
+    { key: 'failed', label: t('ไม่สำเร็จ'), count: run.failed.length, active: 'bg-white text-amber-700 shadow' },
   ];
   const busy = reloading || retrying;
 
@@ -119,7 +120,7 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
     <WindowModal
       open
       id="qr-result"
-      title={`ผลการสร้าง QR · ${run.className} · ${run.subjectName}`}
+      title={t("ผลการสร้าง QR · {value1} · {value2}", { value1: run.className, value2: run.subjectName })}
       onClose={onClose}
       initialWidth="max-w-3xl"
       footer={
@@ -129,13 +130,10 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
             onClick={() => reload()}
             disabled={busy}
             className="min-h-[44px] px-4 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {reloading && <span className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent" />}
-            โหลดใหม่
-          </button>
+          >{reloading && <span className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent" />}{t("โหลดใหม่")}</button>
           {tab === 'failed' && retryable.length > 0 && (
             <button type="button" onClick={retry} disabled={busy} className="min-h-[44px] px-4 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50">
-              {retrying ? 'กำลังลองใหม่...' : `ลองสร้างใหม่ ${retryable.length} คน`}
+              {retrying ? t('กำลังลองใหม่...') : t("ลองสร้างใหม่ {value1} คน", { value1: retryable.length })}
             </button>
           )}
           <button
@@ -145,15 +143,15 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
             className="sm:ml-auto min-h-[44px] px-4 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
           >
             {tab === 'success'
-              ? `พิมพ์ QR ที่สำเร็จ (${printable(run.success).length})`
-              : `พิมพ์ QR เดิมที่มีอยู่ (${printable(existing).length})`}
+              ? t("พิมพ์ QR ที่สำเร็จ ({value1})", { value1: printable(run.success).length })
+              : t("พิมพ์ QR เดิมที่มีอยู่ ({value1})", { value1: printable(existing).length })}
           </button>
         </div>
       }
     >
       <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-500">สร้างเมื่อ {formatWhen(run.at)}</p>
-        <div role="tablist" aria-label="ผลการสร้าง" className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
+        <p className="text-sm text-gray-500">{t("สร้างเมื่อ {value1}", { value1: formatWhen(run.at) })}</p>
+        <div role="tablist" aria-label={t("ผลการสร้าง")} className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -172,7 +170,7 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
         {message && <p role="status" className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-700">{message}</p>}
         <div id="qr-tab-panel" role="tabpanel" aria-labelledby={`qr-tab-${tab}`}>
           {list.length === 0 ? (
-            <p className="py-8 text-center text-gray-500">{tab === 'success' ? 'ยังไม่มีคนที่สร้างสำเร็จ' : 'ไม่มีรายการที่ไม่สำเร็จ'}</p>
+            <p className="py-8 text-center text-gray-500">{tab === 'success' ? t('ยังไม่มีคนที่สร้างสำเร็จ') : t('ไม่มีรายการที่ไม่สำเร็จ')}</p>
           ) : tab === 'success' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {list.map((p) => <Thumb key={p.studentId} item={p} />)}
@@ -180,7 +178,7 @@ export default function QRResultModal({ run, onClose, onPrint, onChange }) {
           ) : (
             <div className="space-y-2">
               {existing.length > 0 && (
-                <p className="text-sm text-gray-600">คนที่มี QR อยู่แล้วไม่ต้องสร้างใหม่ ใช้ QR เดิมพิมพ์ได้เลย</p>
+                <p className="text-sm text-gray-600">{t("คนที่มี QR อยู่แล้วไม่ต้องสร้างใหม่ ใช้ QR เดิมพิมพ์ได้เลย")}</p>
               )}
               <ul className="divide-y rounded-lg border">
                 {list.map((p) => (
@@ -214,16 +212,16 @@ export function QRHistoryModal({ open, runs, onClose, onOpenRun, onClear }) {
     <WindowModal
       open
       id="qr-history"
-      title="ประวัติการสร้าง QR Code"
+      title={t("ประวัติการสร้าง QR Code")}
       onClose={onClose}
       initialWidth="max-w-lg"
       footer={runs.length > 0 && (
-        <button type="button" onClick={onClear} className="min-h-[44px] px-4 rounded-lg text-red-600 hover:bg-red-50">ล้างประวัติในเครื่องนี้</button>
+        <button type="button" onClick={onClear} className="min-h-[44px] px-4 rounded-lg text-red-600 hover:bg-red-50">{t("ล้างประวัติในเครื่องนี้")}</button>
       )}
     >
       <div className="p-4">
         {runs.length === 0 ? (
-          <p className="py-8 text-center text-gray-500">ยังไม่มีประวัติการสร้างในเครื่องนี้</p>
+          <p className="py-8 text-center text-gray-500">{t("ยังไม่มีประวัติการสร้างในเครื่องนี้")}</p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {runs.map((r) => (
@@ -233,14 +231,14 @@ export function QRHistoryModal({ open, runs, onClose, onOpenRun, onClear }) {
                     <span className="block truncate font-medium text-gray-800">{r.className} · {r.subjectName}</span>
                     <span className="block text-xs text-gray-500">{formatWhen(r.at)}</span>
                   </span>
-                  <span className="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">สำเร็จ {r.success.length}</span>
-                  {r.failed.length > 0 && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-700">ไม่สำเร็จ {r.failed.length}</span>}
+                  <span className="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">{t("สำเร็จ {value1}", { value1: r.success.length })}</span>
+                  {r.failed.length > 0 && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-700">{t("ไม่สำเร็จ {value1}", { value1: r.failed.length })}</span>}
                 </button>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-gray-500">เก็บ {MAX_RUNS} ครั้งล่าสุดไว้ในเครื่องนี้ เปิดแล้วระบบโหลดรูป QR ใหม่จากเซิร์ฟเวอร์</p>
+        <p className="mt-3 text-xs text-gray-500">{t("เก็บ {MAX_RUNS} ครั้งล่าสุดไว้ในเครื่องนี้ เปิดแล้วระบบโหลดรูป QR ใหม่จากเซิร์ฟเวอร์", { MAX_RUNS: MAX_RUNS })}</p>
       </div>
     </WindowModal>
   );

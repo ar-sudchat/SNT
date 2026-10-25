@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { WindowModal } from '../../components/ui';
+import { t } from '../../i18n';
 
 // ข้อความทวงงานสำหรับวางในกลุ่ม LINE ห้องเรียน (ไม่ใช้ LINE API)
 // ใช้เฉพาะชื่อจริง + เลขที่ (ไม่ใส่รหัสนักเรียน)
@@ -81,7 +82,7 @@ export function ReminderButton({ title, deadline, items }) {
   useEffect(() => {
     try { localStorage.setItem(PARTICLE_KEY, particle); } catch { /* ignore */ }
   }, [particle]);
-  useEffect(() => { if (!copied) return undefined; const t = setTimeout(() => setCopied(false), 2000); return () => clearTimeout(t); }, [copied]);
+  useEffect(() => { if (!copied) return undefined; const timer = setTimeout(() => setCopied(false), 2000); return () => clearTimeout(timer); }, [copied]);
 
   const text = useMemo(
     () => buildReminderText({ title, deadline, items, closing, particle }),
@@ -96,15 +97,15 @@ export function ReminderButton({ title, deadline, items }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        title="คัดลอกข้อความทวงงานไปวางในกลุ่ม LINE"
+        title={t("คัดลอกข้อความทวงงานไปวางในกลุ่ม LINE")}
         className="shrink-0 min-h-[44px] px-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap bg-amber-100 text-amber-800 hover:bg-amber-200"
       >
         <span aria-hidden="true">📣</span>
-        <span>คัดลอกข้อความทวงงาน</span>
+        <span>{t('คัดลอกข้อความทวงงาน')}</span>
       </button>
       <WindowModal
         open={open}
-        title="ข้อความทวงงาน"
+        title={t("ข้อความทวงงาน")}
         onClose={() => setOpen(false)}
         id="monitor-reminder"
         initialWidth="max-w-lg"
@@ -114,7 +115,7 @@ export function ReminderButton({ title, deadline, items }) {
               onClick={doCopy}
               className="flex-1 min-h-[44px] rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700"
             >
-              {copied ? 'คัดลอกแล้ว ✓' : 'คัดลอก'}
+              {copied ? t('คัดลอกแล้ว ✓') : t('คัดลอก')}
             </button>
             <a
               href={`https://line.me/R/share?text=${encodeURIComponent(text)}`}
@@ -122,14 +123,14 @@ export function ReminderButton({ title, deadline, items }) {
               rel="noopener noreferrer"
               className="flex-1 min-h-[44px] rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 flex items-center justify-center"
             >
-              เปิด LINE
+              {t('เปิด LINE')}
             </a>
           </div>
         }
       >
         <div className="p-4 space-y-3">
           <div>
-            <label htmlFor="reminder-closing" className="block text-sm font-medium text-gray-700 mb-1">ประโยคปิดท้าย</label>
+            <label htmlFor="reminder-closing" className="block text-sm font-medium text-gray-700 mb-1">{t('ประโยคปิดท้าย')}</label>
             <input
               id="reminder-closing"
               type="text"
@@ -138,7 +139,7 @@ export function ReminderButton({ title, deadline, items }) {
               className="w-full min-h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             />
           </div>
-          <div role="group" aria-label="คำลงท้าย" className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
+          <div role="group" aria-label={t("คำลงท้าย")} className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
             {['ค่ะ', 'ครับ'].map(p => (
               <button
                 key={p}

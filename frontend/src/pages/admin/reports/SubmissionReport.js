@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../../i18n';
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import PageHeader from '../../../components/ui/PageHeader';
@@ -44,10 +45,10 @@ const SubmissionReport = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'NOT_SUBMITTED': { label: 'ยังไม่ส่ง', class: 'bg-gray-100 text-gray-800' },
-      'PENDING': { label: 'รอตรวจ', class: 'bg-yellow-100 text-yellow-800' },
-      'APPROVED': { label: 'ผ่าน', class: 'bg-green-100 text-green-800' },
-      'REJECTED': { label: 'ไม่ผ่าน', class: 'bg-red-100 text-red-800' }
+      'NOT_SUBMITTED': { label: t('ยังไม่ส่ง'), class: 'bg-gray-100 text-gray-800' },
+      'PENDING': { label: t('รอตรวจ'), class: 'bg-yellow-100 text-yellow-800' },
+      'APPROVED': { label: t('ผ่าน'), class: 'bg-green-100 text-green-800' },
+      'REJECTED': { label: t('ไม่ผ่าน'), class: 'bg-red-100 text-red-800' }
     };
     const config = statusConfig[status] || statusConfig['NOT_SUBMITTED'];
     return <span className={`px-2 py-1 text-xs rounded-full ${config.class}`}>{config.label}</span>;
@@ -77,39 +78,37 @@ const SubmissionReport = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <PageHeader title="สรุปการส่งงาน">
+      <PageHeader title={t("สรุปการส่งงาน")}>
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          พิมพ์รายงาน
-        </button>
+          </svg>{t("พิมพ์รายงาน")}</button>
       </PageHeader>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-gray-800">{summary.total}</div>
-          <div className="text-sm text-gray-500">ทั้งหมด</div>
+          <div className="text-sm text-gray-500">{t("ทั้งหมด")}</div>
         </div>
         <div className="bg-green-50 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-green-600">{summary.approved}</div>
-          <div className="text-sm text-green-600">ผ่าน</div>
+          <div className="text-sm text-green-600">{t("ผ่าน")}</div>
         </div>
         <div className="bg-yellow-50 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-yellow-600">{summary.pending}</div>
-          <div className="text-sm text-yellow-600">รอตรวจ</div>
+          <div className="text-sm text-yellow-600">{t("รอตรวจ")}</div>
         </div>
         <div className="bg-red-50 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-red-600">{summary.rejected}</div>
-          <div className="text-sm text-red-600">ไม่ผ่าน</div>
+          <div className="text-sm text-red-600">{t("ไม่ผ่าน")}</div>
         </div>
         <div className="bg-gray-50 rounded-lg shadow p-4 col-span-2 md:col-span-1">
           <div className="text-2xl font-bold text-gray-600">{summary.notSubmitted}</div>
-          <div className="text-sm text-gray-500">ยังไม่ส่ง</div>
+          <div className="text-sm text-gray-500">{t("ยังไม่ส่ง")}</div>
         </div>
       </div>
 
@@ -117,34 +116,34 @@ const SubmissionReport = () => {
       <div className="bg-white rounded-lg shadow p-4 print:hidden">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
             <SmartComboBox
-              options={[{ value: '', label: 'ทั้งหมด' }, ...subjects.map(s => ({ value: String(s.id), label: s.subjectName }))]}
+              options={[{ value: '', label: t('ทั้งหมด') }, ...subjects.map(s => ({ value: String(s.id), label: s.subjectName }))]}
               value={filters.subjectId}
               onChange={(v) => setFilters({...filters, subjectId: v ?? ''})}
               clearable={false}
-              ariaLabel="วิชา"
+              ariaLabel={t("วิชา")}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ห้องเรียน</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องเรียน")}</label>
             <SmartComboBox
-              options={[{ value: '', label: 'ทั้งหมด' }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
+              options={[{ value: '', label: t('ทั้งหมด') }, ...classes.map(c => ({ value: String(c.id), label: c.className }))]}
               value={filters.classId}
               onChange={(v) => setFilters({...filters, classId: v ?? ''})}
               clearable={false}
-              ariaLabel="ห้องเรียน"
+              ariaLabel={t("ห้องเรียน")}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
             <SmartComboBox
-              options={[{ value: '', label: 'ทั้งหมด' }, { value: 'APPROVED', label: 'ผ่าน' }, { value: 'PENDING', label: 'รอตรวจ' }, { value: 'REJECTED', label: 'ไม่ผ่าน' }, { value: 'NOT_SUBMITTED', label: 'ยังไม่ส่ง' }]}
+              options={[{ value: '', label: t('ทั้งหมด') }, { value: 'APPROVED', label: t('ผ่าน') }, { value: 'PENDING', label: t('รอตรวจ') }, { value: 'REJECTED', label: t('ไม่ผ่าน') }, { value: 'NOT_SUBMITTED', label: t('ยังไม่ส่ง') }]}
               value={filters.status}
               onChange={(v) => setFilters({...filters, status: v ?? ''})}
               clearable={false}
               searchable={false}
-              ariaLabel="สถานะ"
+              ariaLabel={t("สถานะ")}
             />
           </div>
         </div>
@@ -156,12 +155,12 @@ const SubmissionReport = () => {
           <table className="min-w-[640px] w-full divide-y divide-gray-200">
             <thead className="bg-th print:bg-transparent">
               <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">นักเรียน</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ห้อง</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">วิชา</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">งาน</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">วันที่ส่ง</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">สถานะ</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("นักเรียน")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ห้อง")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("วิชา")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("งาน")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("วันที่ส่ง")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("สถานะ")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -175,7 +174,7 @@ const SubmissionReport = () => {
                   <td className="px-3 sm:px-4 py-3 text-sm text-gray-900">{sub.task?.subject?.subjectName}</td>
                   <td className="px-3 sm:px-4 py-3 text-sm text-gray-900">{sub.task?.taskName}</td>
                   <td className="px-3 sm:px-4 py-3 text-sm text-gray-500">
-                    {sub.submitDate ? new Date(sub.submitDate).toLocaleDateString('th-TH') : '-'}
+                    {sub.submitDate ? new Date(sub.submitDate).toLocaleDateString(dateLocale()) : '-'}
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(sub.status)}</td>
                 </tr>

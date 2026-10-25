@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import PageHeader from '../../../components/ui/PageHeader';
@@ -36,34 +37,32 @@ const TeacherListReport = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <PageHeader title="รายชื่อครู">
+      <PageHeader title={t("รายชื่อครู")}>
         <button
           onClick={handlePrint}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 flex items-center justify-center gap-2 print:hidden"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          พิมพ์รายงาน
-        </button>
+          </svg>{t("พิมพ์รายงาน")}</button>
       </PageHeader>
 
       {/* Report Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden print:overflow-visible">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">รายชื่อครูทั้งหมด</h2>
-          <p className="text-sm text-gray-500">จำนวน {teachers.length} คน</p>
+          <h2 className="text-lg font-semibold">{t("รายชื่อครูทั้งหมด")}</h2>
+          <p className="text-sm text-gray-500">{t("จำนวน {value1} คน", { value1: teachers.length })}</p>
         </div>
         <div className="overflow-x-auto print:overflow-visible">
           <table className="min-w-[560px] w-full divide-y divide-gray-200">
             <thead className="bg-th print:bg-transparent">
               <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ลำดับ</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">รหัสครู</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">ชื่อ-นามสกุล</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">อีเมล</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">วิชาที่สอน</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">สถานะ</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ลำดับ")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("รหัสครู")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("ชื่อ-นามสกุล")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("อีเมล")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("วิชาที่สอน")}</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-white print:text-black uppercase">{t("สถานะ")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -82,7 +81,7 @@ const TeacherListReport = () => {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {teacher.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                      {teacher.status === 'ACTIVE' ? t('ใช้งาน') : t('ไม่ใช้งาน')}
                     </span>
                   </td>
                 </tr>

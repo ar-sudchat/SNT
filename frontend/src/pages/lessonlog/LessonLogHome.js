@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
@@ -7,7 +8,7 @@ import useLessonContext from './useLessonContext';
 import LessonContextBar from './LessonContextBar';
 import { SmartTable, WindowModal } from '../../components/ui';
 import CreateRecord from './CreateRecord';
-import { shortName } from './lessonLogCore';
+import { shortName, SHORT_NAME } from './lessonLogCore';
 
 const PATH = {
   check: 'M5 13l4 4L19 7',
@@ -36,8 +37,8 @@ const LessonLogHome = () => {
   // ส่งออก Word จากแถวที่ติ๊กหรือคลิกขวา (เฉพาะที่บันทึกเสร็จแล้ว)
   const exportWord = async (rows) => {
     const ids = rows.filter(r => r.status === 'DONE').map(r => r.id);
-    if (!ids.length) { setExportMsg('ส่งออกได้เฉพาะบันทึกที่เสร็จแล้ว'); return; }
-    setExportMsg('กำลังสร้างไฟล์ Word…');
+    if (!ids.length) { setExportMsg(t('ส่งออกได้เฉพาะบันทึกที่เสร็จแล้ว')); return; }
+    setExportMsg(t('กำลังสร้างไฟล์ Word…'));
     try {
       const r = await assessmentAPI.exportDocx(ids);
       const a = document.createElement('a');
@@ -45,9 +46,9 @@ const LessonLogHome = () => {
       a.download = `บันทึกหลังแผน-${classes.find(c => c.id === classId)?.className || 'ห้องเรียน'}.docx`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      setExportMsg(ids.length < rows.length ? `ส่งออก ${ids.length} รายการ (ข้ามที่ยังไม่เสร็จ ${rows.length - ids.length})` : '');
+      setExportMsg(ids.length < rows.length ? t('ส่งออก {value1} รายการ (ข้ามที่ยังไม่เสร็จ {value2})', { value1: ids.length, value2: rows.length - ids.length }) : '');
     } catch (e) {
-      setExportMsg('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง');
+      setExportMsg(t('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง'));
     }
   };
 
@@ -70,7 +71,7 @@ const LessonLogHome = () => {
     setError('');
     assessmentAPI.records(subjectId ? { classId, subjectId } : { classId })
       .then(res => { if (!cancelled) setRecords(res.data || []); })
-      .catch(e => { if (!cancelled) setError(e.response?.data?.error || 'โหลดบันทึกไม่สำเร็จ'); })
+      .catch(e => { if (!cancelled) setError(e.response?.data?.error || t('โหลดบันทึกไม่สำเร็จ')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [ctx.loading, classId, subjectId, reloadKey]);
@@ -81,13 +82,18 @@ const LessonLogHome = () => {
     return shortName(t || { key: r.templateKey, name: r.templateName });
   };
 
+  const displayTypeLabel = (r) => {
+    const key = templates.find(x => x.id === r.templateId)?.key || r.templateKey;
+    return SHORT_NAME[key] ? t(SHORT_NAME[key]) : t(typeLabel(r)); // ชื่อแบบสำเร็จรูปแปลได้ · ที่ครูตั้งเองคงเดิม
+  };
+
   // One chip per template that actually has records here.
   const typeChips = useMemo(() => {
     const seen = new Map();
     records.forEach(r => {
       const cur = seen.get(r.templateId);
       if (cur) cur.count += 1;
-      else seen.set(r.templateId, { id: r.templateId, count: 1, label: typeLabel(r) });
+      else seen.set(r.templateId, { id: r.templateId, count: 1, templateKey: templates.find(x => x.id === r.templateId)?.key || r.templateKey, label: typeLabel(r) });
     });
     return Array.from(seen.values());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,27 +104,27 @@ const LessonLogHome = () => {
   const visible = activeFilter === 'all' ? records : records.filter(r => r.templateId === activeFilter);
 
   const subjectName = (id) => subjects.find(x => x.id === id)?.subjectName || '-';
-  const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
+  const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
 
   // ตารางบนคอม: ดูรายละเอียดได้มากกว่ารายการบนมือถือ
   const tableColumns = [
-    { key: 'name', label: 'ชื่อเรื่อง / แผน', sortable: true, render: (v) => <span className="font-medium text-gray-900">{v}</span> },
-    { key: 'templateId', label: 'ประเภท', sortable: true, render: (_, r) => typeLabel(r), exportValue: (r) => typeLabel(r) },
-    { key: 'subjectId', label: 'วิชา', sortable: true, render: (v) => (v ? subjectName(v) : '-'), exportValue: (r) => (r.subjectId ? subjectName(r.subjectId) : '') },
-    { key: 'dateText', label: 'วันที่สอน', render: (v) => v || '-' },
-    { key: 'teacherName', label: 'ครู', sortable: true, render: (v) => v || '-' },
-    { key: 'updatedAt', label: 'แก้ไขล่าสุด', sortable: true, render: (v) => fmtDate(v), exportValue: (r) => fmtDate(r.updatedAt) },
+    { key: 'name', label: t('ชื่อเรื่อง / แผน'), sortable: true, render: (v) => <span className="font-medium text-gray-900">{v}</span> },
+    { key: 'templateId', label: t('ประเภท'), sortable: true, render: (_, r) => displayTypeLabel(r), exportValue: (r) => typeLabel(r) },
+    { key: 'subjectId', label: t('วิชา'), sortable: true, render: (v) => (v ? subjectName(v) : '-'), exportValue: (r) => (r.subjectId ? subjectName(r.subjectId) : '') },
+    { key: 'dateText', label: t('วันที่สอน'), render: (v) => v || '-' },
+    { key: 'teacherName', label: t('ครู'), sortable: true, render: (v) => v || '-' },
+    { key: 'updatedAt', label: t('แก้ไขล่าสุด'), sortable: true, render: (v) => fmtDate(v), exportValue: (r) => fmtDate(r.updatedAt) },
     {
-      key: 'status', label: 'สถานะ', sortable: true, exportValue: (r) => (r.status === 'DONE' ? 'เสร็จแล้ว' : 'ยังไม่เสร็จ'),
+      key: 'status', label: t('สถานะ'), sortable: true, exportValue: (r) => (r.status === 'DONE' ? 'เสร็จแล้ว' : 'ยังไม่เสร็จ'),
       render: (v) => (v === 'DONE'
-        ? <span className="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">เสร็จแล้ว</span>
-        : <span className="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">ยังไม่เสร็จ</span>)
+        ? <span className="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">{t('เสร็จแล้ว')}</span>
+        : <span className="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">{t('ยังไม่เสร็จ')}</span>)
     }
   ];
 
   const chips = (
-    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0" role="group" aria-label="กรองตามประเภท">
-      {[{ id: 'all', label: 'ทั้งหมด', count: records.length }, ...typeChips].map(c => (
+    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0" role="group" aria-label={t("กรองตามประเภท")}>
+      {[{ id: 'all', label: t('ทั้งหมด'), count: records.length }, ...typeChips].map(c => (
         <button
           key={c.id}
           type="button"
@@ -130,7 +136,7 @@ const LessonLogHome = () => {
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          {c.label} {c.count}
+          {SHORT_NAME[c.templateKey] ? t(SHORT_NAME[c.templateKey]) : t(c.label)} {c.count}
         </button>
       ))}
     </div>
@@ -140,7 +146,7 @@ const LessonLogHome = () => {
   if (ctx.loading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label="กำลังโหลด" />
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label={t("กำลังโหลด")} />
       </div>
     );
   }
@@ -150,19 +156,19 @@ const LessonLogHome = () => {
   if (!classes.length) {
     return (
       <div className="mx-auto max-w-2xl space-y-3">
-        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">บันทึกหลังแผน</h1>
+        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">{t('บันทึกหลังแผน')}</h1>
         <div className="rounded-lg bg-white p-5 shadow">
-          <h2 className="font-semibold text-gray-800">ยังไม่มีห้องเรียนในกลุ่มนี้</h2>
+          <h2 className="font-semibold text-gray-800">{t('ยังไม่มีห้องเรียนในกลุ่มนี้')}</h2>
           {canManage ? (
             <>
-              <p className="mt-1 text-sm text-gray-600">ตั้งค่าห้องเรียนและนำเข้ารายชื่อนักเรียนก่อน แล้วจึงเริ่มบันทึกได้</p>
+              <p className="mt-1 text-sm text-gray-600">{t('ตั้งค่าห้องเรียนและนำเข้ารายชื่อนักเรียนก่อน แล้วจึงเริ่มบันทึกได้')}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link to="/admin/classes" className={linkBtn}>ตั้งค่าห้องเรียน</Link>
-                <Link to="/admin/import" className={linkBtn}>นำเข้ารายชื่อนักเรียน</Link>
+                <Link to="/admin/classes" className={linkBtn}>{t('ตั้งค่าห้องเรียน')}</Link>
+                <Link to="/admin/import" className={linkBtn}>{t('นำเข้ารายชื่อนักเรียน')}</Link>
               </div>
             </>
           ) : (
-            <p className="mt-1 text-sm text-gray-600">แจ้งผู้ดูแลกลุ่มให้ตั้งค่าห้องเรียนและนำเข้ารายชื่อนักเรียน</p>
+            <p className="mt-1 text-sm text-gray-600">{t('แจ้งผู้ดูแลกลุ่มให้ตั้งค่าห้องเรียนและนำเข้ารายชื่อนักเรียน')}</p>
           )}
         </div>
       </div>
@@ -172,14 +178,13 @@ const LessonLogHome = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-3 pb-24 sm:pb-0 lg:max-w-6xl">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">บันทึกหลังแผน</h1>
+        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">{t('บันทึกหลังแผน')}</h1>
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
           className="hidden min-h-[44px] items-center gap-2 rounded-lg bg-brand-600 px-4 font-medium text-white hover:bg-brand-700 sm:inline-flex"
         >
-          <Icon d={PATH.plus} className="h-5 w-5" /> สร้างบันทึก / แบบประเมิน
-        </button>
+          <Icon d={PATH.plus} className="h-5 w-5" />{t(' สร้างบันทึก / แบบประเมิน')}</button>
       </div>
 
       {error && (
@@ -193,14 +198,12 @@ const LessonLogHome = () => {
       {/* Records */}
       {loading ? (
         <div className="flex justify-center py-10">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label="กำลังโหลด" />
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600" role="status" aria-label={t("กำลังโหลด")} />
         </div>
       ) : records.length === 0 ? (
         <div className="rounded-lg bg-white p-5 shadow">
-          <h2 className="font-semibold text-gray-800">ยังไม่มีบันทึกของห้องนี้</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            กด "สร้างบันทึก / แบบประเมิน" เลือกประเภท ตั้งชื่อเอง แล้วเริ่มบันทึกได้เลย
-          </p>
+          <h2 className="font-semibold text-gray-800">{t('ยังไม่มีบันทึกของห้องนี้')}</h2>
+          <p className="mt-1 text-sm text-gray-600">{t('กด "สร้างบันทึก / แบบประเมิน" เลือกประเภท ตั้งชื่อเอง แล้วเริ่มบันทึกได้เลย')}</p>
         </div>
       ) : (
         <>
@@ -212,15 +215,15 @@ const LessonLogHome = () => {
               searchable
               pagination
               pageSize={25}
-              emptyMessage="ไม่มีบันทึก"
+              emptyMessage={t("ไม่มีบันทึก")}
               toolbarStart={chips}
               selectable
-              bulkActions={[{ label: 'ส่งออกเป็น Word', onClick: exportWord }]}
+              bulkActions={[{ label: t('ส่งออกเป็น Word'), onClick: exportWord }]}
               rowActions={[
-                { label: 'ส่งออกเป็น Word', onClick: (r) => exportWord([r]), show: (r) => r.status === 'DONE' },
-                { label: 'สรุปผลรายคน', onClick: () => navigate('/lesson-log/summary') },
-                { label: 'จัดการแบบประเมิน', onClick: () => navigate('/lesson-log/templates') },
-                { label: 'ส่งออก Word หลายรายการ…', onClick: () => navigate('/lesson-log/export') }
+                { label: t('ส่งออกเป็น Word'), onClick: (r) => exportWord([r]), show: (r) => r.status === 'DONE' },
+                { label: t('สรุปผลรายคน'), onClick: () => navigate('/lesson-log/summary') },
+                { label: t('จัดการแบบประเมิน'), onClick: () => navigate('/lesson-log/templates') },
+                { label: t('ส่งออก Word หลายรายการ…'), onClick: () => navigate('/lesson-log/export') }
               ]}
               exportFileName="บันทึกหลังแผน"
             />
@@ -245,14 +248,14 @@ const LessonLogHome = () => {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-gray-900">{r.name}</span>
                       <span className="block truncate text-sm text-gray-500">
-                        {typeLabel(r)}{r.dateText ? ` · ${r.dateText}` : ''}
+                        {displayTypeLabel(r)}{r.dateText ? ` · ${r.dateText}` : ''}
                       </span>
                       {!mine && r.teacherName && <span className="block truncate text-xs text-gray-400">{r.teacherName}</span>}
                     </span>
                     {done ? (
                       <Icon d={PATH.chev} className="h-5 w-5 shrink-0 text-gray-400" />
                     ) : (
-                      <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">ยังไม่เสร็จ</span>
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">{t('ยังไม่เสร็จ')}</span>
                     )}
                   </button>
                 </li>
@@ -266,9 +269,9 @@ const LessonLogHome = () => {
 
       {/* Secondary actions: บนคอมอยู่ในการติ๊ก/คลิกขวาของตารางแล้ว · มือถือยังใช้ปุ่ม */}
       <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-3 md:hidden">
-        <Link to="/lesson-log/export" className={linkBtn}>ส่งออกเป็น Word</Link>
-        <Link to="/lesson-log/summary" className={linkBtn}>สรุปผลรายคน</Link>
-        <Link to="/lesson-log/templates" className={linkBtn}>แบบประเมิน</Link>
+        <Link to="/lesson-log/export" className={linkBtn}>{t('ส่งออกเป็น Word')}</Link>
+        <Link to="/lesson-log/summary" className={linkBtn}>{t('สรุปผลรายคน')}</Link>
+        <Link to="/lesson-log/templates" className={linkBtn}>{t('แบบประเมิน')}</Link>
       </div>
 
       {/* Primary action on phones: above the bottom bar (56px + safe area) */}
@@ -281,12 +284,11 @@ const LessonLogHome = () => {
           onClick={() => setCreateOpen(true)}
           className="mx-auto flex min-h-[48px] w-full max-w-lg items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 font-semibold text-white shadow-lg hover:bg-brand-700"
         >
-          <Icon d={PATH.plus} className="h-5 w-5" /> สร้างบันทึก / แบบประเมิน
-        </button>
+          <Icon d={PATH.plus} className="h-5 w-5" />{t(' สร้างบันทึก / แบบประเมิน')}</button>
       </div>
 
-      <WindowModal open={createOpen} id="lesson-create" title="สร้างบันทึก / แบบประเมิน" onClose={() => setCreateOpen(false)} initialWidth="max-w-5xl">
-        {createOpen && <CreateRecord ctx={ctx} embedded onDone={(ids) => { setCreateOpen(false); setReloadKey(k => k + 1); setExportMsg(`สร้างบันทึกแล้ว ${ids.length} ห้อง`); }} />}
+      <WindowModal open={createOpen} id="lesson-create" title={t("สร้างบันทึก / แบบประเมิน")} onClose={() => setCreateOpen(false)} initialWidth="max-w-5xl">
+        {createOpen && <CreateRecord ctx={ctx} embedded onDone={(ids) => { setCreateOpen(false); setReloadKey(k => k + 1); setExportMsg(t('สร้างบันทึกแล้ว {value1} ห้อง', { value1: ids.length })); }} />}
       </WindowModal>
     </div>
   );

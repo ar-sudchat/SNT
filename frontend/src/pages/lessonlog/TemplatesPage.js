@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { assessmentAPI } from '../../services/api';
@@ -7,12 +8,15 @@ import PageHeader, { CRUMB_LINK } from '../../components/ui/PageHeader';
 import { RESPONSE_TYPES, SCOPE_LABEL, scopeOf, responseOf } from './lessonLogCore';
 import TemplateEditorModal, { INPUT, BTN_PRIMARY, BTN_SECONDARY, BTN_ICON, errMsg, nextKey } from './TemplateEditorModal';
 
+// Keep translation callable in scopes with a local variable named t.
+const i18n = { t };
+
 // จัดการแบบประเมินของบันทึกหลังแผน + ข้อมูลที่พิมพ์ลงไฟล์ Word (ชื่อโรงเรียน/ผู้ลงนาม)
 // หน้า = ภาพรวมเป็นการ์ด · สร้าง/แก้ทำใน popup (TemplateEditorModal)
 
 const MAX_SIGNERS = 6;
 
-const responseLabel = (id) => (RESPONSE_TYPES.find(r => r.id === id) || RESPONSE_TYPES[0]).label;
+const responseLabel = (id) => t((RESPONSE_TYPES.find(r => r.id === id) || RESPONSE_TYPES[0]).label);
 
 // ชิปกรองตามแบบ (NOTE นับเป็นระดับห้อง ตาม scopeOf)
 const FILTERS = [
@@ -37,36 +41,36 @@ function TemplateCard({ t, onEdit, onRemove }) {
   const rt = responseOf(t);
   const nQ = (t.classFields || []).length;
   const nItems = (t.criteria || []).length;
-  const levels = (t.levels || []).map(l => l.label).join(' / ');
-  const counts = [nQ > 0 && `${nQ} คำถามระดับห้อง`, isStudent && `${nItems} รายการ`].filter(Boolean).join(' · ');
+  const levels = (t.levels || []).map(l => i18n.t(l.label)).join(' / '); // ชื่อระดับของแบบสำเร็จรูปแปลได้ · ที่ครูตั้งเองคงเดิม
+  const counts = [nQ > 0 && i18n.t('{nQ} คำถามระดับห้อง', { nQ: nQ }), isStudent && i18n.t('{nItems} รายการ', { nItems: nItems })].filter(Boolean).join(' · ');
 
   return (
     <li className="flex flex-col rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-start gap-2">
-        <h2 className="flex-1 min-w-0 font-semibold text-gray-900 break-words">{t.name}</h2>
-        {t.isBuiltIn && <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">สำเร็จรูป</span>}
+        <h2 className="flex-1 min-w-0 font-semibold text-gray-900 break-words">{i18n.t(t.name)}</h2>
+        {t.isBuiltIn && <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{i18n.t('สำเร็จรูป')}</span>}
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-brand-800">{SCOPE_LABEL[scopeOf(t)]}</span>
+        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-brand-800">{i18n.t(SCOPE_LABEL[scopeOf(t)])}</span>
         {isStudent && (
           <span className="rounded-full border border-gray-200 px-2 py-0.5 text-gray-700">
-            {rt === 'SCORE' ? `ให้คะแนน 1–${t.maxScore}` : responseLabel(rt)}
+            {rt === 'SCORE' ? i18n.t('ให้คะแนน 1–{value1}', { value1: t.maxScore }) : responseLabel(rt)}
           </span>
         )}
-        {isNote && <span className="rounded-full border border-gray-200 px-2 py-0.5 text-gray-700">บันทึกข้อความหลังสอน</span>}
+        {isNote && <span className="rounded-full border border-gray-200 px-2 py-0.5 text-gray-700">{i18n.t('บันทึกข้อความหลังสอน')}</span>}
       </div>
       {counts && <p className="mt-2 text-sm text-gray-600">{counts}</p>}
       {isStudent && levels && <p className="text-sm text-gray-500 truncate" title={levels}>{levels}</p>}
       <div className="mt-auto pt-3 flex items-center gap-2">
         {t.canEdit ? (
           <>
-            <button type="button" className={`${BTN_SECONDARY} flex-1`} onClick={() => onEdit(t)}>แก้ไข</button>
+            <button type="button" className={`${BTN_SECONDARY} flex-1`} onClick={() => onEdit(t)}>{i18n.t('แก้ไข')}</button>
             {!t.isBuiltIn && (
-              <button type="button" className="min-h-[44px] px-3 text-sm text-red-700 hover:underline" onClick={() => onRemove(t)}>ลบ</button>
+              <button type="button" className="min-h-[44px] px-3 text-sm text-red-700 hover:underline" onClick={() => onRemove(t)}>{i18n.t('ลบ')}</button>
             )}
           </>
         ) : (
-          <span className="text-xs text-gray-500">ดูได้อย่างเดียว</span>
+          <span className="text-xs text-gray-500">{i18n.t('ดูได้อย่างเดียว')}</span>
         )}
       </div>
     </li>
@@ -95,7 +99,7 @@ function DocSettingsCard({ canManage }) {
     let alive = true;
     assessmentAPI.settings()
       .then(res => { if (alive) { apply(res.data); setLoaded(true); } })
-      .catch(err => { if (alive) setLoadError(errMsg(err, 'โหลดข้อมูลไม่สำเร็จ')); });
+      .catch(err => { if (alive) setLoadError(errMsg(err, t('โหลดข้อมูลไม่สำเร็จ'))); });
     return () => { alive = false; clearTimeout(timer.current); };
   }, [apply]);
 
@@ -119,7 +123,7 @@ function DocSettingsCard({ canManage }) {
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(errMsg(err, 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'));
+      setError(errMsg(err, t('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')));
     } finally {
       setSaving(false);
     }
@@ -131,29 +135,29 @@ function DocSettingsCard({ canManage }) {
     <section className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-[12rem]">
-          <h2 className="font-semibold text-gray-900">ข้อมูลในไฟล์ Word</h2>
-          <p className="text-xs text-gray-500">ชื่อโรงเรียนและผู้ลงนามที่พิมพ์ท้ายแบบบันทึกเมื่อส่งออก</p>
+          <h2 className="font-semibold text-gray-900">{t('ข้อมูลในไฟล์ Word')}</h2>
+          <p className="text-xs text-gray-500">{t('ชื่อโรงเรียนและผู้ลงนามที่พิมพ์ท้ายแบบบันทึกเมื่อส่งออก')}</p>
           {loadError && <p className="mt-1 text-sm text-red-700" role="alert">{loadError}</p>}
-          {!loaded && !loadError && <p className="mt-1 text-sm text-gray-500">กำลังโหลด…</p>}
+          {!loaded && !loadError && <p className="mt-1 text-sm text-gray-500">{t('กำลังโหลด…')}</p>}
           {loaded && (
             <div className="mt-2 space-y-0.5 text-sm text-gray-800">
-              <p><span className="text-gray-500">โรงเรียน </span>{data.schoolName || '—'}</p>
-              <p className="break-words"><span className="text-gray-500">ผู้ลงนาม </span>{signerText || 'ยังไม่มี'}</p>
+              <p><span className="text-gray-500">{t('โรงเรียน ')}</span>{data.schoolName || '—'}</p>
+              <p className="break-words"><span className="text-gray-500">{t('ผู้ลงนาม ')}</span>{signerText || t('ยังไม่มี')}</p>
             </div>
           )}
         </div>
         {loaded && canManage && (
           <div className="flex items-center gap-2">
-            {saved && <span className="text-sm text-green-700" role="status">บันทึกแล้ว</span>}
-            <button type="button" className={BTN_SECONDARY} onClick={openEdit}>แก้ไข</button>
+            {saved && <span className="text-sm text-green-700" role="status">{t('บันทึกแล้ว')}</span>}
+            <button type="button" className={BTN_SECONDARY} onClick={openEdit}>{t('แก้ไข')}</button>
           </div>
         )}
-        {loaded && !canManage && <p className="w-full text-sm text-gray-600">แจ้งผู้ดูแลกลุ่มเพื่อแก้ไข</p>}
+        {loaded && !canManage && <p className="w-full text-sm text-gray-600">{t('แจ้งผู้ดูแลกลุ่มเพื่อแก้ไข')}</p>}
       </div>
 
       <WindowModal
         open={!!draft}
-        title="ข้อมูลในไฟล์ Word"
+        title={t("ข้อมูลในไฟล์ Word")}
         onClose={close}
         id="lesson-log-doc-settings"
         initialWidth="max-w-lg"
@@ -161,15 +165,15 @@ function DocSettingsCard({ canManage }) {
           <div className="space-y-2">
             {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" className={BTN_SECONDARY} disabled={saving} onClick={close}>ยกเลิก</button>
-              <button type="button" className={BTN_PRIMARY} disabled={saving} onClick={save}>{saving ? 'กำลังบันทึก…' : 'บันทึก'}</button>
+              <button type="button" className={BTN_SECONDARY} disabled={saving} onClick={close}>{t('ยกเลิก')}</button>
+              <button type="button" className={BTN_PRIMARY} disabled={saving} onClick={save}>{saving ? t('กำลังบันทึก…') : t('บันทึก')}</button>
             </div>
           </div>
         )}
       >
         {draft && (
           <div className="p-4 space-y-4">
-            <Field label="ชื่อโรงเรียน">
+            <Field label={t("ชื่อโรงเรียน")}>
               <input
                 data-autofocus
                 className={INPUT}
@@ -179,8 +183,8 @@ function DocSettingsCard({ canManage }) {
               />
             </Field>
             <div>
-              <h3 className="text-sm font-medium text-gray-800 mb-2">ผู้ลงนาม</h3>
-              {draft.signers.length === 0 && <p className="text-sm text-gray-500 mb-2">ยังไม่มีผู้ลงนาม</p>}
+              <h3 className="text-sm font-medium text-gray-800 mb-2">{t('ผู้ลงนาม')}</h3>
+              {draft.signers.length === 0 && <p className="text-sm text-gray-500 mb-2">{t('ยังไม่มีผู้ลงนาม')}</p>}
               <ul className="space-y-3">
                 {draft.signers.map((s, i) => (
                   <li key={s._k} className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
@@ -188,8 +192,8 @@ function DocSettingsCard({ canManage }) {
                       className={INPUT}
                       value={s.role}
                       maxLength={80}
-                      placeholder="ตำแหน่ง เช่น หัวหน้ากลุ่มสาระฯ"
-                      aria-label={`ตำแหน่งผู้ลงนามที่ ${i + 1}`}
+                      placeholder={t("ตำแหน่ง เช่น หัวหน้ากลุ่มสาระฯ")}
+                      aria-label={t('ตำแหน่งผู้ลงนามที่ {value1}', { value1: i + 1 })}
                       onChange={(e) => setSigner(i, { role: e.target.value })}
                     />
                     <div className="flex items-center gap-2">
@@ -197,14 +201,14 @@ function DocSettingsCard({ canManage }) {
                         className={INPUT}
                         value={s.name}
                         maxLength={80}
-                        placeholder="ชื่อ-สกุล"
-                        aria-label={`ชื่อ-สกุลผู้ลงนามที่ ${i + 1}`}
+                        placeholder={t("ชื่อ-สกุล")}
+                        aria-label={t('ชื่อ-สกุลผู้ลงนามที่ {value1}', { value1: i + 1 })}
                         onChange={(e) => setSigner(i, { name: e.target.value })}
                       />
                       <button
                         type="button"
                         className={`${BTN_ICON} text-red-700 shrink-0`}
-                        aria-label={`เอาผู้ลงนามที่ ${i + 1} ออก`}
+                        aria-label={t('เอาผู้ลงนามที่ {value1} ออก', { value1: i + 1 })}
                         onClick={() => setSigners(list => list.filter((_, j) => j !== i))}
                       >✕</button>
                     </div>
@@ -216,7 +220,7 @@ function DocSettingsCard({ canManage }) {
                 className={`${BTN_SECONDARY} mt-2`}
                 disabled={draft.signers.length >= MAX_SIGNERS}
                 onClick={() => setSigners(list => [...list, { _k: nextKey(), role: '', name: '' }])}
-              >+ เพิ่มผู้ลงนาม</button>
+              >{t('+ เพิ่มผู้ลงนาม')}</button>
             </div>
           </div>
         )}
@@ -243,7 +247,7 @@ export default function TemplatesPage() {
       setTemplates(res.data || []);
       setLoadError('');
     } catch (err) {
-      setLoadError(errMsg(err, 'โหลดแบบประเมินไม่สำเร็จ'));
+      setLoadError(errMsg(err, t('โหลดแบบประเมินไม่สำเร็จ')));
     } finally {
       setLoading(false);
     }
@@ -257,20 +261,20 @@ export default function TemplatesPage() {
 
   const remove = async (t) => {
     const ok = await dialog.confirm({
-      title: 'ลบแบบประเมิน',
-      message: `ลบ "${t.name}" ใช่ไหม`,
-      confirmText: 'ลบแบบประเมิน',
+      title: i18n.t('ลบแบบประเมิน'),
+      message: i18n.t('ลบ "{value1}" ใช่ไหม', { value1: t.name }),
+      confirmText: i18n.t('ลบแบบประเมิน'),
       type: 'danger',
     });
     if (!ok) return;
     try {
       const res = await assessmentAPI.deleteTemplate(t.id);
       if (res.data?.deactivated) {
-        await dialog.alert({ title: 'ซ่อนแบบประเมินแล้ว', message: 'มีบันทึกที่ใช้แบบนี้อยู่ จึงซ่อนไว้แทนการลบ', type: 'info' });
+        await dialog.alert({ title: i18n.t('ซ่อนแบบประเมินแล้ว'), message: i18n.t('มีบันทึกที่ใช้แบบนี้อยู่ จึงซ่อนไว้แทนการลบ'), type: 'info' });
       }
       await load();
     } catch (err) {
-      await dialog.alert({ title: 'ลบไม่สำเร็จ', message: errMsg(err, 'ลองใหม่อีกครั้ง'), type: 'danger' });
+      await dialog.alert({ title: i18n.t('ลบไม่สำเร็จ'), message: errMsg(err, i18n.t('ลองใหม่อีกครั้ง')), type: 'danger' });
     }
   };
 
@@ -282,26 +286,24 @@ export default function TemplatesPage() {
 
   return (
     <div className="mx-auto max-w-3xl lg:max-w-6xl space-y-4 pb-24 sm:pb-6">
-      <PageHeader title="แบบประเมิน" crumb={<Link to="/lesson-log" className={CRUMB_LINK}>‹ บันทึกหลังแผน</Link>}>
-        <button type="button" className={BTN_PRIMARY} onClick={openCreate}>+ สร้างแบบประเมิน</button>
+      <PageHeader title={t("แบบประเมิน")} crumb={<Link to="/lesson-log" className={CRUMB_LINK}>{t('‹ บันทึกหลังแผน')}</Link>}>
+        <button type="button" className={BTN_PRIMARY} onClick={openCreate}>{t('+ สร้างแบบประเมิน')}</button>
       </PageHeader>
 
-      {loading && <p className="text-sm text-gray-500">กำลังโหลด…</p>}
+      {loading && <p className="text-sm text-gray-500">{t('กำลังโหลด…')}</p>}
       {loadError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
           {loadError}{' '}
-          <button type="button" className="min-h-[44px] underline" onClick={() => { setLoading(true); load(); }}>ลองใหม่</button>
+          <button type="button" className="min-h-[44px] underline" onClick={() => { setLoading(true); load(); }}>{t('ลองใหม่')}</button>
         </div>
       )}
 
       {!loading && !loadError && templates.length === 0 && (
-        <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-gray-600">
-          ยังไม่มีแบบประเมิน กด "+ สร้างแบบประเมิน" เพื่อเริ่ม
-        </p>
+        <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-gray-600">{t('ยังไม่มีแบบประเมิน กด "+ สร้างแบบประเมิน" เพื่อเริ่ม')}</p>
       )}
 
       {chips.length > 2 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="กรองตามแบบ">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("กรองตามแบบ")}>
           {chips.map(f => (
             <button
               key={f.id}
@@ -311,7 +313,7 @@ export default function TemplatesPage() {
               className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full border text-sm ${active === f.id
                 ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'}`}
             >
-              {f.label}
+              {t(f.label)}
               <span className={active === f.id ? 'text-white/80' : 'text-gray-500'}>{counts[f.id]}</span>
             </button>
           ))}

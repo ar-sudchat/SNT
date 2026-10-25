@@ -1,3 +1,4 @@
+import { t, t as translate, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { reportAPI, monitorAPI } from '../../services/api';
@@ -10,7 +11,7 @@ const stripTitle = (name = '') =>
   name.replace(/^(นาย|นางสาว|นาง|น\.ส\.|ครู|ดร\.)\s*/, '').trim();
 
 const thaiDate = () =>
-  new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+  new Date().toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
 const monitorUrl = (subject, taskId) => {
   if (!subject) return '/monitor';
@@ -37,7 +38,7 @@ const Bar = ({ value, color = 'bg-brand-600' }) => (
 );
 
 const Skeleton = () => (
-  <div className="space-y-4 animate-pulse" aria-label="กำลังโหลด">
+  <div className="space-y-4 animate-pulse" aria-label={t("กำลังโหลด")}>
     <div className="h-14 w-2/3 rounded bg-gray-200" />
     <div className="grid grid-cols-3 gap-3">{[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl bg-gray-200" />)}</div>
     <div className="grid gap-6 lg:grid-cols-5">
@@ -92,8 +93,8 @@ const TeacherDashboard = () => {
     } catch (err) {
       // ไม่มี response = ต่อเซิร์ฟเวอร์ไม่ได้ (เน็ต) · มี response = เซิร์ฟเวอร์ตอบข้อผิดพลาดกลับมา
       setError(err?.response
-        ? `โหลดข้อมูลไม่สำเร็จ${err.response.data?.error ? ` (${err.response.data.error})` : ''} ลองใหม่อีกครั้ง`
-        : 'โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
+        ? t('โหลดข้อมูลไม่สำเร็จ{value1} ลองใหม่อีกครั้ง', { value1: err.response.data?.error ? ` (${err.response.data.error})` : '' })
+        : t('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +129,7 @@ const TeacherDashboard = () => {
       <div className="min-w-0 flex items-center gap-3">
         <TeacherWave className="hidden min-[400px]:block h-16 sm:h-20 w-auto shrink-0 text-brand-600" />
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 truncate">สวัสดี ครู{name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 truncate">{t('สวัสดี ครู{value1}', { value1: name })}</h1>
           <p className="text-sm text-gray-500">{thaiDate()}</p>
         </div>
       </div>
@@ -136,9 +137,7 @@ const TeacherDashboard = () => {
         to="/teacher/scan"
         className="flex lg:hidden items-center justify-center gap-2 min-h-[56px] sm:min-h-[48px] w-full sm:w-auto rounded-xl bg-cta px-6 text-cta-fg font-semibold text-lg sm:text-base shadow-sm hover:brightness-95 active:scale-[0.99] transition"
       >
-        <ScanIcon className="w-6 h-6 sm:w-5 sm:h-5" />
-        สแกนส่งงาน
-      </Link>
+        <ScanIcon className="w-6 h-6 sm:w-5 sm:h-5" />{t('สแกนส่งงาน')}</Link>
     </div>
   );
 
@@ -153,9 +152,7 @@ const TeacherDashboard = () => {
           <button
             onClick={fetchData}
             className="mt-3 min-h-[44px] rounded-lg border border-red-300 bg-white px-5 text-red-700 hover:bg-red-50"
-          >
-            ลองอีกครั้ง
-          </button>
+          >{t('ลองอีกครั้ง')}</button>
         </div>
       </div>
     );
@@ -165,19 +162,19 @@ const TeacherDashboard = () => {
   if (subjects.length === 0) {
     const canManage = !!user?.canManage;
     const steps = [
-      { n: 1, title: 'สร้างวิชาที่สอน', desc: 'ตั้งชื่อวิชาและรหัสวิชา ครูผู้สอนคือคุณ', to: '/admin/subjects?new=1' },
-      { n: 2, title: 'เพิ่มห้องและนักเรียน', desc: 'พิมพ์เองหรือนำเข้ารายชื่อจาก Excel', to: '/admin/import' },
-      { n: 3, title: 'สร้างงานแล้วสแกนสมุด', desc: 'รู้ทันทีว่าใครส่งแล้ว ใครยังค้าง', to: '/admin/tasks' },
+      { n: 1, title: t('สร้างวิชาที่สอน'), desc: t('ตั้งชื่อวิชาและรหัสวิชา ครูผู้สอนคือคุณ'), to: '/admin/subjects?new=1' },
+      { n: 2, title: t('เพิ่มห้องและนักเรียน'), desc: t('พิมพ์เองหรือนำเข้ารายชื่อจาก Excel'), to: '/admin/import' },
+      { n: 3, title: t('สร้างงานแล้วสแกนสมุด'), desc: t('รู้ทันทีว่าใครส่งแล้ว ใครยังค้าง'), to: '/admin/tasks' },
     ];
     return (
       <div className="space-y-4">
         {header}
         <section className="rounded-xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-gray-100" aria-labelledby="td-empty">
           <div className="max-w-xl">
-            <h2 id="td-empty" className="text-xl font-bold text-gray-900">ยังไม่มีวิชา — เริ่มต้นสร้างวิชาแรก</h2>
+            <h2 id="td-empty" className="text-xl font-bold text-gray-900">{t('ยังไม่มีวิชา — เริ่มต้นสร้างวิชาแรก')}</h2>
             {canManage ? (
               <>
-                <p className="mt-1 text-gray-600">ตั้งค่าครั้งเดียว 3 ขั้น แล้วเริ่มสแกนส่งงานได้เลย</p>
+                <p className="mt-1 text-gray-600">{t('ตั้งค่าครั้งเดียว 3 ขั้น แล้วเริ่มสแกนส่งงานได้เลย')}</p>
                 <ol className="mt-5 space-y-2">
                   {steps.map(s => (
                     <li key={s.n}>
@@ -192,21 +189,15 @@ const TeacherDashboard = () => {
                   ))}
                 </ol>
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                  <Link to="/admin/subjects?new=1" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">
-                    สร้างวิชาแรก
-                  </Link>
+                  <Link to="/admin/subjects?new=1" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">{t('สร้างวิชาแรก')}</Link>
                 </div>
               </>
             ) : (
               <>
-                <p className="mt-1 text-gray-600">เจ้าของหรือผู้ดูแลกลุ่มเป็นคนเพิ่มวิชา แล้วเลือกให้คุณเป็นครูผู้สอน เมื่อเพิ่มแล้ววิชาจะขึ้นที่หน้านี้</p>
+                <p className="mt-1 text-gray-600">{t('เจ้าของหรือผู้ดูแลกลุ่มเป็นคนเพิ่มวิชา แล้วเลือกให้คุณเป็นครูผู้สอน เมื่อเพิ่มแล้ววิชาจะขึ้นที่หน้านี้')}</p>
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                  <Link to="/group" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">
-                    ดูสมาชิกกลุ่ม
-                  </Link>
-                  <button onClick={fetchData} className="min-h-[48px] rounded-xl border border-gray-300 bg-white px-6 text-gray-700 hover:bg-gray-50">
-                    โหลดใหม่
-                  </button>
+                  <Link to="/group" className="flex min-h-[48px] items-center justify-center rounded-xl bg-cta px-6 font-semibold text-cta-fg shadow-sm hover:brightness-95">{t('ดูสมาชิกกลุ่ม')}</Link>
+                  <button onClick={fetchData} className="min-h-[48px] rounded-xl border border-gray-300 bg-white px-6 text-gray-700 hover:bg-gray-50">{t('โหลดใหม่')}</button>
                 </div>
               </>
             )}
@@ -217,8 +208,8 @@ const TeacherDashboard = () => {
   }
 
   const stats = [
-    { label: 'ค้างส่ง', value: `${totalMissing}`, sub: `${tasksWithMissing.length} งาน`, tone: totalMissing > 0 ? 'text-red-600' : 'text-green-600' },
-    { label: 'รอตรวจ', value: `${totalPending}`, sub: 'ชิ้น', tone: totalPending > 0 ? 'text-amber-600' : 'text-gray-800' },
+    { label: 'ค้างส่ง', value: `${totalMissing}`, sub: t('{value1} งาน', { value1: tasksWithMissing.length }), tone: totalMissing > 0 ? 'text-red-600' : 'text-green-600' },
+    { label: 'รอตรวจ', value: `${totalPending}`, sub: t('ชิ้น'), tone: totalPending > 0 ? 'text-amber-600' : 'text-gray-800' },
     { label: 'ส่งแล้ว', value: `${submittedPct}%`, sub: `${totalAll - totalMissing}/${totalAll}`, tone: 'text-gray-800' },
   ];
 
@@ -230,11 +221,11 @@ const TeacherDashboard = () => {
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {stats.map(s => (
           <Link
-            key={s.label}
+            key={t(s.label)}
             to="/monitor"
             className="min-h-[44px] rounded-xl bg-white p-3 sm:p-4 shadow-sm ring-1 ring-gray-100 hover:ring-brand-200 transition"
           >
-            <div className="text-xs sm:text-sm text-gray-500">{s.label}</div>
+            <div className="text-xs sm:text-sm text-gray-500">{t(s.label)}</div>
             <div className={`text-xl sm:text-2xl font-bold ${s.tone}`}>{s.value}</div>
             <div className="text-xs text-gray-400 truncate">{s.sub}</div>
           </Link>
@@ -245,14 +236,14 @@ const TeacherDashboard = () => {
         {/* งานที่ต้องติดตาม */}
         <section className="lg:col-span-3 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
           <div className="px-4 sm:px-5 py-3 border-b flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-gray-800">งานที่ต้องติดตาม</h2>
-            <Link to="/monitor" className="min-h-[44px] flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">ดูทั้งหมด &rarr;</Link>
+            <h2 className="text-lg font-semibold text-gray-800">{t('งานที่ต้องติดตาม')}</h2>
+            <Link to="/monitor" className="min-h-[44px] flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">{t('ดูทั้งหมด →')}</Link>
           </div>
           {followUp.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <StackDone className="mx-auto h-24 w-auto text-brand-600" />
-              <p className="mt-2 font-medium text-gray-800">ทุกงานส่งครบแล้ว</p>
-              <p className="text-sm text-gray-500">ยังไม่มีนักเรียนค้างส่ง</p>
+              <p className="mt-2 font-medium text-gray-800">{t('ทุกงานส่งครบแล้ว')}</p>
+              <p className="text-sm text-gray-500">{t('ยังไม่มีนักเรียนค้างส่ง')}</p>
             </div>
           ) : (
             <ul className="divide-y">
@@ -269,12 +260,12 @@ const TeacherDashboard = () => {
                         <div className="text-sm text-gray-500 truncate">{t.subjectName}</div>
                         <div className="mt-1.5 flex items-center gap-2">
                           <div className="flex-1 max-w-[12rem]"><Bar value={pct(sent, t.total)} /></div>
-                          <span className="text-xs text-gray-500 shrink-0">ส่ง {sent}/{t.total}</span>
+                          <span className="text-xs text-gray-500 shrink-0">{translate('ส่ง {value1}/{value2}', { value1: sent, value2: t.total })}</span>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-xl font-bold text-red-600">{t.notSubmitted}</div>
-                        <div className="text-xs text-gray-500">ยังไม่ส่ง</div>
+                        <div className="text-xs text-gray-500">{translate('ยังไม่ส่ง')}</div>
                       </div>
                     </Link>
                   </li>
@@ -286,9 +277,9 @@ const TeacherDashboard = () => {
 
         {/* วิชาของฉัน */}
         <section className="lg:col-span-2">
-          <h2 className="mb-3 text-lg font-semibold text-gray-800">วิชาของฉัน</h2>
+          <h2 className="mb-3 text-lg font-semibold text-gray-800">{t('วิชาของฉัน')}</h2>
           {subjects.length === 0 ? (
-            <p className="rounded-xl bg-white px-4 py-8 text-center text-gray-500 ring-1 ring-gray-100">ยังไม่มีวิชาที่สอน แจ้งผู้ดูแลระบบให้เพิ่มวิชาให้</p>
+            <p className="rounded-xl bg-white px-4 py-8 text-center text-gray-500 ring-1 ring-gray-100">{t('ยังไม่มีวิชาที่สอน แจ้งผู้ดูแลระบบให้เพิ่มวิชาให้')}</p>
           ) : (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {subjects.map(s => {
@@ -302,15 +293,15 @@ const TeacherDashboard = () => {
                   >
                     <div className="font-medium text-gray-800 leading-snug line-clamp-2 break-words">{s.subjectName}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-xs text-gray-500">{s.subjectCode} · {taskCount} งาน</span>
+                      <span className="text-xs text-gray-500">{t('{value1} · {value2} งาน', { value1: s.subjectCode, value2: taskCount })}</span>
                       {st.missing > 0
-                        ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">ค้าง {st.missing} ชิ้น</span>
-                        : st.total > 0 && <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">ครบ</span>}
+                        ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{t('ค้าง {value1} ชิ้น', { value1: st.missing })}</span>
+                        : st.total > 0 && <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">{t('ครบ')}</span>}
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <div className="flex-1"><Bar value={st.done} color={st.done === 100 ? 'bg-green-500' : 'bg-brand-600'} /></div>
                       <span className="text-xs text-gray-600 shrink-0">
-                        {st.total > 0 ? `${st.done}% · ${st.total - st.missing}/${st.total}` : taskCount > 0 ? 'ยังไม่มีนักเรียน' : 'ยังไม่มีงาน'}
+                        {st.total > 0 ? `${st.done}% · ${st.total - st.missing}/${st.total}` : taskCount > 0 ? t('ยังไม่มีนักเรียน') : t('ยังไม่มีงาน')}
                       </span>
                     </div>
                   </Link>

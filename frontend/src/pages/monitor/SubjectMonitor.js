@@ -1,3 +1,4 @@
+import { t, tx } from '../../i18n';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, subjectAPI, academicYearAPI, gradeAPI, classAPI, submissionAPI } from '../../services/api';
@@ -85,7 +86,7 @@ const SubjectMonitor = ({ embedded = false }) => {
         }
         setInitialLoadDone(true);
       } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลได้');
+        setError(t('ไม่สามารถโหลดข้อมูลได้'));
         setInitialLoadDone(true);
       }
     };
@@ -152,7 +153,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       const response = await monitorAPI.getSubjectMonitor(selectedSubject, params);
       setData(response.data);
     } catch (err) {
-      setError(err.response?.data?.error || 'ไม่สามารถโหลดข้อมูลได้');
+      setError(err.response?.data?.error || t('ไม่สามารถโหลดข้อมูลได้'));
     } finally {
       setLoading(false);
     }
@@ -227,7 +228,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Export error:', err);
-      setError('ไม่สามารถ Export ได้');
+      setError(t('ไม่สามารถ Export ได้'));
     } finally {
       setExporting(false);
     }
@@ -298,7 +299,7 @@ const SubjectMonitor = ({ embedded = false }) => {
         })
       }));
     } catch (err) {
-      setError('ไม่สามารถบันทึกได้');
+      setError(t('ไม่สามารถบันทึกได้'));
     } finally {
       setSavingCell(null);
     }
@@ -308,9 +309,9 @@ const SubjectMonitor = ({ embedded = false }) => {
   const handleBatchMarkAll = async (taskId, task) => {
     if (!data) return;
     const okAll = await dialog.confirm({
-      title: 'ให้ทุกคนผ่านงานนี้?',
-      message: `ต้องการให้ทุกคนผ่านงาน "${task.taskName}" หรือไม่?`,
-      confirmText: 'ให้ผ่านทั้งหมด',
+      title: t('ให้ทุกคนผ่านงานนี้?'),
+      message: t('ต้องการให้ทุกคนผ่านงาน "{value1}" หรือไม่?', { value1: task.taskName }),
+      confirmText: t('ให้ผ่านทั้งหมด'),
       type: 'warning',
     });
     if (!okAll) return;
@@ -321,7 +322,7 @@ const SubjectMonitor = ({ embedded = false }) => {
     });
 
     if (studentsToUpdate.length === 0) {
-      await dialog.alert({ title: 'ส่งครบแล้ว', message: 'ทุกคนส่งงานครบแล้ว', type: 'success' });
+      await dialog.alert({ title: t('ส่งครบแล้ว'), message: t('ทุกคนส่งงานครบแล้ว'), type: 'success' });
       return;
     }
 
@@ -339,7 +340,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       // Refresh data
       fetchData();
     } catch (err) {
-      setError('ไม่สามารถบันทึกได้');
+      setError(t('ไม่สามารถบันทึกได้'));
     } finally {
       setSavingCell(null);
     }
@@ -466,21 +467,21 @@ const SubjectMonitor = ({ embedded = false }) => {
       {!embedded && <div className="flex items-center gap-2">
         <button
           onClick={() => navigate(-1)}
-          aria-label="ย้อนกลับ"
+          aria-label={t("ย้อนกลับ")}
           className="w-11 h-11 -ml-2 flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">ติดตามงานรายวิชา</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงานรายวิชา')}</h1>
       </div>}
 
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600" aria-label="ปิด">
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600" aria-label={t("ปิด")}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -491,7 +492,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
       <MonitorFilterBar>
         <MonitorFilterField
-          label="ปีการศึกษา"
+          label={t("ปีการศึกษา")}
           options={academicYears}
           value={filterAcademicYear}
           onChange={(val) => {
@@ -504,11 +505,11 @@ const SubjectMonitor = ({ embedded = false }) => {
           }}
           labelKey="year"
           valueKey="id"
-          placeholder="เลือกปีการศึกษา"
+          placeholder={t("เลือกปีการศึกษา")}
           clearable={false}
         />
         <MonitorFilterField
-          label="ชั้น"
+          label={t("ชั้น")}
           options={grades}
           value={filterGrade}
           onChange={(val) => {
@@ -520,10 +521,10 @@ const SubjectMonitor = ({ embedded = false }) => {
           }}
           labelKey="gradeName"
           valueKey="id"
-          placeholder="ทุกชั้น"
+          placeholder={t("ทุกชั้น")}
         />
         <MonitorFilterField
-          label="วิชา"
+          label={t("วิชา")}
           options={subjects}
           value={selectedSubject}
           onChange={(val) => {
@@ -532,10 +533,10 @@ const SubjectMonitor = ({ embedded = false }) => {
           }}
           labelKey="subjectName"
           valueKey="id"
-          placeholder="เลือกวิชา"
+          placeholder={t("เลือกวิชา")}
         />
         <MonitorFilterField
-          label="ห้องเรียน"
+          label={t("ห้องเรียน")}
           options={classes}
           value={filterClass}
           onChange={(val) => {
@@ -544,7 +545,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           }}
           labelKey="className"
           valueKey="id"
-          placeholder="ทุกห้อง"
+          placeholder={t("ทุกห้อง")}
         />
       </MonitorFilterBar>
 
@@ -553,7 +554,7 @@ const SubjectMonitor = ({ embedded = false }) => {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+            <p className="text-gray-500">{t('กำลังโหลดข้อมูล...')}</p>
           </div>
         </div>
       )}
@@ -563,23 +564,23 @@ const SubjectMonitor = ({ embedded = false }) => {
           {/* Summary strip */}
           <div className="bg-white rounded-lg shadow px-3 sm:px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-              <span className="text-sm text-gray-600 whitespace-nowrap">ส่งครบ <b className="text-gray-900">{counts.complete}/{counts.all}</b> คน</span>
+              <span className="text-sm text-gray-600 whitespace-nowrap">{tx('ส่งครบ <b>{done}/{all}</b> คน', { done: counts.complete, all: counts.all, b: (c) => <b className="text-gray-900">{c}</b> })}</span>
               <div className="flex-1 bg-gray-200 rounded-full h-2">
                 <div className={`h-2 rounded-full ${getProgressColor(workPct)}`} style={{ width: `${workPct}%` }} />
               </div>
             </div>
-            <span className="text-sm text-gray-600 whitespace-nowrap">ค้าง <b className="text-red-600">{counts.missing}</b> คน</span>
-            <span className="text-sm text-gray-600 whitespace-nowrap">งานส่งแล้ว <b className="text-gray-900">{workPct}%</b> <span className="text-gray-500">{workSent}/{workTotal}</span></span>
-            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">นักเรียน {data.summary.totalStudents} คน</span>
-            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">งาน {activeTasks.length} ชิ้น</span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">{tx('ค้าง <b>{n}</b> คน', { n: counts.missing, b: (c) => <b className="text-red-600">{c}</b> })}</span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">{tx('งานส่งแล้ว <b>{pct}%</b>', { pct: workPct, b: (c) => <b className="text-gray-900">{c}</b> })} <span className="text-gray-500">{workSent}/{workTotal}</span></span>
+            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">{t('นักเรียน {value1} คน', { value1: data.summary.totalStudents })}</span>
+            <span className="hidden md:inline text-sm text-gray-500 whitespace-nowrap">{t('งาน {value1} ชิ้น', { value1: activeTasks.length })}</span>
           </div>
 
           {activeTask && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">เฉพาะงาน</span>
+              <span className="text-sm text-gray-500">{t('เฉพาะงาน')}</span>
               <button
                 onClick={clearTaskFilter}
-                aria-label={`เลิกกรอง ${activeTask.taskName}`}
+                aria-label={t('เลิกกรอง {value1}', { value1: activeTask.taskName })}
                 className="min-h-[44px] inline-flex items-center gap-2 pl-3 pr-2 rounded-full bg-brand-50 text-brand-700 font-medium hover:bg-brand-100"
               >
                 {activeTask.taskName}
@@ -593,8 +594,8 @@ const SubjectMonitor = ({ embedded = false }) => {
             <div className="flex items-center gap-2">
             <div className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
               {[
-                { key: 'missing', label: 'ยังไม่ส่ง' },
-                { key: 'all', label: 'ทั้งหมด' }
+                { key: 'missing', label: t('ยังไม่ส่ง') },
+                { key: 'all', label: t('ทั้งหมด') }
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -615,16 +616,14 @@ const SubjectMonitor = ({ embedded = false }) => {
                 className={`min-h-[44px] px-3 rounded-full text-xs font-medium whitespace-nowrap border ${
                   quickFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-800 border-amber-200'
                 }`}
-              >
-                รอตรวจ {counts.pendingTasks} งาน
-              </button>
+              >{t('รอตรวจ {value1} งาน', { value1: counts.pendingTasks })}</button>
             )}
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto">
               <div className="relative flex-1 md:flex-none">
                 <input
                   type="text"
-                  placeholder="ค้นหา ชื่อ/เลขที่/รหัส..."
+                  placeholder={t("ค้นหา ชื่อ/เลขที่/รหัส...")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm w-full md:w-56 min-h-[44px]"
@@ -636,19 +635,19 @@ const SubjectMonitor = ({ embedded = false }) => {
               <button
                 onClick={handleExportExcel}
                 disabled={exporting}
-                title="ดาวน์โหลดเป็นไฟล์ Excel"
-                aria-label="ดาวน์โหลดเป็นไฟล์ Excel"
+                title={t("ดาวน์โหลดเป็นไฟล์ Excel")}
+                aria-label={t("ดาวน์โหลดเป็นไฟล์ Excel")}
                 className="shrink-0 min-h-[44px] min-w-[44px] px-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 bg-brand-100 text-brand-700 hover:bg-brand-200 disabled:opacity-50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="hidden lg:inline">{exporting ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลด Excel'}</span>
+                <span className="hidden lg:inline">{exporting ? t('กำลังสร้างไฟล์...') : t('ดาวน์โหลด Excel')}</span>
               </button>
               <ReminderButton title={reminder.title} deadline={reminder.deadline} items={reminder.items} />
               <button
                 onClick={() => setQuickGradeMode(!quickGradeMode)}
-                title="ให้คะแนนเร็ว: แตะช่องงานเพื่อเปลี่ยนสถานะ"
+                title={t("ให้คะแนนเร็ว: แตะช่องงานเพื่อเปลี่ยนสถานะ")}
                 className={`shrink-0 min-h-[44px] px-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
                   quickGradeMode ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -656,13 +655,13 @@ const SubjectMonitor = ({ embedded = false }) => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
-                <span>{quickGradeMode ? 'เสร็จ' : 'ตรวจเร็ว'}</span>
+                <span>{quickGradeMode ? t('เสร็จ') : t('ตรวจเร็ว')}</span>
               </button>
             </div>
           </div>
 
           {quickGradeMode && (
-            <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">แตะช่องงานเพื่อเปลี่ยนสถานะ (✓ ผ่าน / ✗ ไม่ผ่าน / - ยังไม่ส่ง)</p>
+            <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{t('แตะช่องงานเพื่อเปลี่ยนสถานะ (✓ ผ่าน / ✗ ไม่ผ่าน / - ยังไม่ส่ง)')}</p>
           )}
 
           {/* Phone: simple list (hidden while quick-grading, which needs the table) */}
@@ -672,7 +671,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                 <React.Fragment key={student.id}>
                 {isGroupStart(i) && (
                   <li className="px-3 py-1.5 bg-gray-50 text-xs font-semibold text-gray-600">
-                    {student.className || 'ไม่ระบุห้อง'} <span className="font-normal text-gray-400">· {groupSize(student.className)} คน</span>
+                    {student.className || t('ไม่ระบุห้อง')} <span className="font-normal text-gray-400">{t('· {value1} คน', { value1: groupSize(student.className) })}</span>
                   </li>
                 )}
                 <li>
@@ -686,11 +685,11 @@ const SubjectMonitor = ({ embedded = false }) => {
 
                     </span>
                     {student.missing > 0 ? (
-                      <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">ค้าง {student.missing}</span>
+                      <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">{t('ค้าง {value1}', { value1: student.missing })}</span>
                   ) : student.pending > 0 ? (
-                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">รอตรวจ {student.pending}</span>
+                    <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">{t('รอตรวจ {value1}', { value1: student.pending })}</span>
                     ) : (
-                      <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">ครบ</span>
+                      <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">{t('ครบ')}</span>
                     )}
                     <svg className="w-4 h-4 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -701,7 +700,7 @@ const SubjectMonitor = ({ embedded = false }) => {
               ))}
               {sortedByNumber.length === 0 && (
                 <li className="text-center py-10 text-gray-500">
-                  {data.students.length === 0 ? 'ไม่พบนักเรียนในวิชานี้' : 'ไม่มีนักเรียนตามที่เลือก'}
+                  {data.students.length === 0 ? t('ไม่พบนักเรียนในวิชานี้') : t('ไม่มีนักเรียนตามที่เลือก')}
                 </li>
               )}
             </ul>
@@ -713,18 +712,10 @@ const SubjectMonitor = ({ embedded = false }) => {
               <table className="min-w-full border-collapse border border-gray-300">
                 <thead className="bg-th print:bg-transparent sticky top-0 z-20">
                   <tr>
-                    <th className="hidden sm:table-cell px-2 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 w-12 bg-th print:bg-transparent">
-                      เลขที่
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black sticky left-0 bg-th print:bg-transparent z-30 min-w-[140px] sm:min-w-[200px] border border-brand-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                      นักเรียน
-                    </th>
-                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">
-                      ห้อง
-                    </th>
-                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">
-                      ความคืบหน้า
-                    </th>
+                    <th className="hidden sm:table-cell px-2 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 w-12 bg-th print:bg-transparent">{t('เลขที่')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-th-fg print:text-black sticky left-0 bg-th print:bg-transparent z-30 min-w-[140px] sm:min-w-[200px] border border-brand-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{t('นักเรียน')}</th>
+                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">{t('ห้อง')}</th>
+                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-semibold text-th-fg print:text-black border border-brand-100 bg-th print:bg-transparent">{t('ความคืบหน้า')}</th>
                     {activeTasks.map(task => (
                       <th
                         key={task.id}
@@ -732,15 +723,15 @@ const SubjectMonitor = ({ embedded = false }) => {
                         title={task.taskName}
                       >
                         <div className="flex flex-col items-center gap-1">
-                          <span>งาน {task.taskNumber}</span>
+                          <span>{t('งาน {value1}', { value1: task.taskNumber })}</span>
                           {quickGradeMode && (
                             <button
                               onClick={() => handleBatchMarkAll(task.id, task)}
                               disabled={savingCell?.taskId === task.id}
                               className="text-[10px] px-2 py-1.5 sm:py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50"
-                              title={`ให้ทุกคนผ่าน ${task.taskName}`}
+                              title={t('ให้ทุกคนผ่าน {value1}', { value1: task.taskName })}
                             >
-                              {savingCell?.taskId === task.id && savingCell?.batch ? '...' : 'ผ่านทั้งหมด'}
+                              {savingCell?.taskId === task.id && savingCell?.batch ? '...' : t('ผ่านทั้งหมด')}
                             </button>
                           )}
                         </div>
@@ -754,7 +745,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                     {isGroupStart(i) && (
                       <tr className="bg-gray-50">
                         <td colSpan={4 + activeTasks.length} className="px-4 py-1.5 text-xs font-semibold text-gray-600 border border-gray-300">
-                          {student.className || 'ไม่ระบุห้อง'} <span className="font-normal text-gray-400">· {groupSize(student.className)} คน</span>
+                          {student.className || t('ไม่ระบุห้อง')} <span className="font-normal text-gray-400">{t('· {value1} คน', { value1: groupSize(student.className) })}</span>
                         </td>
                       </tr>
                     )}
@@ -792,7 +783,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                         // ห้องนี้ไม่ได้งานนี้: แสดงขีด กดไม่ได้ ไม่นับว่าค้าง
                         if (status === 'NOT_ASSIGNED') {
                           return (
-                            <td key={task.id} className="px-2 sm:px-3 py-3 text-center border border-gray-300 bg-gray-50 text-gray-300" title={`${task.taskName} - ห้องนี้ไม่ได้รับงานนี้`}>
+                            <td key={task.id} className="px-2 sm:px-3 py-3 text-center border border-gray-300 bg-gray-50 text-gray-300" title={t('{value1} - ห้องนี้ไม่ได้รับงานนี้', { value1: task.taskName })}>
                               —
                             </td>
                           );
@@ -806,7 +797,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                                 className={`w-11 h-11 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-medium transition-all ${getStatusColor(status)} ${
                                   quickGradeMode ? 'cursor-pointer hover:scale-110 hover:shadow-md' : 'cursor-default'
                                 } ${isSaving ? 'animate-pulse' : ''}`}
-                                title={`${task.taskName} - ${status === 'APPROVED' ? 'ผ่าน' : status === 'PENDING' ? 'รอตรวจ' : status === 'REJECTED' ? 'ไม่ผ่าน' : 'ยังไม่ส่ง'}${quickGradeMode ? ' (แตะเพื่อเปลี่ยน)' : ''}`}
+                                title={t('{name} - {status}{hint}', { name: task.taskName, status: status === 'APPROVED' ? t('ผ่าน') : status === 'PENDING' ? t('รอตรวจ') : status === 'REJECTED' ? t('ไม่ผ่าน') : t('ยังไม่ส่ง'), hint: quickGradeMode ? t(' (แตะเพื่อเปลี่ยน)') : '' })}
                               >
                                 {isSaving ? '...' : getStatusIcon(status)}
                               </button>
@@ -822,7 +813,7 @@ const SubjectMonitor = ({ embedded = false }) => {
             </div>
             {visibleStudents.length === 0 && (
               <div className="text-center py-12 text-gray-500">
-                {data.students.length === 0 ? 'ไม่พบนักเรียนในวิชานี้' : 'ไม่มีนักเรียนตามที่เลือก'}
+                {data.students.length === 0 ? t('ไม่พบนักเรียนในวิชานี้') : t('ไม่มีนักเรียนตามที่เลือก')}
               </div>
             )}
           </div>
@@ -832,7 +823,7 @@ const SubjectMonitor = ({ embedded = false }) => {
       {/* No subject selected */}
       {!loading && !selectedSubject && (
         <div className="bg-white rounded-lg shadow p-10 text-center">
-          <p className="text-gray-500 text-lg">เลือกวิชาด้านบนเพื่อดูผล</p>
+          <p className="text-gray-500 text-lg">{t('เลือกวิชาด้านบนเพื่อดูผล')}</p>
         </div>
       )}
     </div>

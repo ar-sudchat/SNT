@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -31,9 +32,9 @@ const SmartComboBox = ({
   onChange,
   labelKey = 'label',
   valueKey = 'value',
-  placeholder = 'เลือก...',
+  placeholder = t('เลือก...'),
   searchable = true,
-  searchPlaceholder = 'พิมพ์เพื่อค้นหา...',
+  searchPlaceholder = t('พิมพ์เพื่อค้นหา...'),
   disabled = false,
   loading = false,
   error = '',
@@ -45,8 +46,8 @@ const SmartComboBox = ({
   renderOption,
   renderValue,
   onSearch,
-  noOptionsMessage = 'ไม่พบข้อมูล',
-  loadingMessage = 'กำลังโหลด...',
+  noOptionsMessage = t('ไม่พบข้อมูล'),
+  loadingMessage = t('กำลังโหลด...'),
   className = '',
   dropdownClassName = '',
   required = false,
@@ -411,9 +412,7 @@ const SmartComboBox = ({
 
             {/* Show more indicator */}
             {filteredOptions.length > maxDisplayItems && (
-              <div className="px-3 py-2 text-sm text-gray-500 bg-gray-50 border-t">
-                แสดง {maxDisplayItems} จาก {filteredOptions.length} รายการ (พิมพ์เพื่อค้นหาเพิ่มเติม)
-              </div>
+              <div className="px-3 py-2 text-sm text-gray-500 bg-gray-50 border-t">{t('แสดง {shown} จาก {total} รายการ (พิมพ์เพื่อค้นหาเพิ่มเติม)', { shown: maxDisplayItems, total: filteredOptions.length })}</div>
             )}
           </>
         )}

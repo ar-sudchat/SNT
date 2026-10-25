@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { taskAPI, subjectAPI, academicYearAPI, classAPI } from '../../services/api';
@@ -9,7 +10,7 @@ import PageHeader from '../../components/ui/PageHeader';
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 const SCORING_LABEL = { SUBMISSION_ONLY: 'ส่ง/ไม่ส่ง', PASS_FAIL: 'ผ่าน/ไม่ผ่าน', SCORED: 'คิดคะแนน' };
-const shortDate = (v) => new Date(v).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+const shortDate = (v) => new Date(v).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit' });
 
 const ManageTasks = () => {
   const location = useLocation();
@@ -57,7 +58,7 @@ const ManageTasks = () => {
         }
         initialLoadDone.current = true;
       } catch (err) {
-        setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+        setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
         initialLoadDone.current = true;
       }
     };
@@ -86,7 +87,7 @@ const ManageTasks = () => {
       setSubjects(subjectRes.data);
       setClasses(classRes.data);
     } catch (err) {
-      setErrorAlert({ show: true, message: 'ไม่สามารถโหลดข้อมูลได้' });
+      setErrorAlert({ show: true, message: t('ไม่สามารถโหลดข้อมูลได้') });
     } finally {
       setLoading(false);
     }
@@ -99,13 +100,13 @@ const ManageTasks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate(e.currentTarget, [
-      { key: 'subjectId', message: 'กรุณาเลือกวิชา', missing: toId(formData.subjectId) === null },
-      { key: 'taskName', message: 'กรุณากรอกชื่องาน', missing: !String(formData.taskName ?? '').trim() },
-      { key: 'maxScore', message: 'กรุณากรอกคะแนนเต็ม', missing: formData.scoringType === 'SCORED' && !(parseFloat(formData.maxScore) >= 0 && formData.maxScore !== '') },
+      { key: 'subjectId', message: t('กรุณาเลือกวิชา'), missing: toId(formData.subjectId) === null },
+      { key: 'taskName', message: t('กรุณากรอกชื่องาน'), missing: !String(formData.taskName ?? '').trim() },
+      { key: 'maxScore', message: t('กรุณากรอกคะแนนเต็ม'), missing: formData.scoringType === 'SCORED' && !(parseFloat(formData.maxScore) >= 0 && formData.maxScore !== '') },
     ])) return;
     const subjectId = toId(formData.subjectId);
     if (subjectId === null) {
-      setErrorAlert({ show: true, message: 'กรุณาเลือกวิชา' });
+      setErrorAlert({ show: true, message: t('กรุณาเลือกวิชา') });
       return;
     }
     try {
@@ -126,7 +127,7 @@ const ManageTasks = () => {
       fetchData();
       closeModal();
     } catch (err) {
-      setErrorAlert({ show: true, message: err.response?.data?.error || 'เกิดข้อผิดพลาด' });
+      setErrorAlert({ show: true, message: err.response?.data?.error || t('เกิดข้อผิดพลาด') });
     }
   };
 
@@ -140,7 +141,7 @@ const ManageTasks = () => {
         await taskAPI.delete(deleteConfirm.item.id);
         fetchData();
       } catch (err) {
-        setErrorAlert({ show: true, message: err.response?.data?.error || 'ไม่สามารถลบได้' });
+        setErrorAlert({ show: true, message: err.response?.data?.error || t('ไม่สามารถลบได้') });
       }
     }
   };
@@ -219,34 +220,34 @@ const ManageTasks = () => {
   });
   const roomLabel = (task) => (task.rooms && task.rooms.length
     ? task.rooms.map(r => r.class?.className).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th')).join(', ')
-    : 'ทุกห้อง');
+    : t('ทุกห้อง'));
 
   // Table columns
   const columns = [
     {
       key: 'subject.subjectName',
       mobileSecondary: true,
-      label: 'วิชา',
+      label: t('วิชา'),
       sortable: true
     },
     {
       key: 'taskName',
       mobilePrimary: true,
-      label: 'ชื่องาน',
+      label: t('ชื่องาน'),
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
       key: 'rooms',
       mobileSecondary: true,
-      label: 'ห้อง',
+      label: t('ห้อง'),
       render: (_, row) => <span className={row.rooms?.length ? 'text-gray-900' : 'text-gray-500'}>{roomLabel(row)}</span>,
       exportValue: (row) => roomLabel(row)
     },
     {
       key: 'taskNumber',
       hideOnMobile: true,
-      label: 'หมายเลข',
+      label: t('หมายเลข'),
       sortable: true,
       render: (value) => (
         <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
@@ -257,26 +258,26 @@ const ManageTasks = () => {
     {
       key: 'deadline',
       mobileSecondary: true,
-      label: 'กำหนดส่ง',
+      label: t('กำหนดส่ง'),
       render: (value) => (value ? (
         <>
-          <span className="md:hidden">ส่ง {shortDate(value)}</span>
-          <span className="hidden md:inline">{new Date(value).toLocaleDateString('th-TH')}</span>
+          <span className="md:hidden">{t("ส่ง {value1}", { value1: shortDate(value) })}</span>
+          <span className="hidden md:inline">{new Date(value).toLocaleDateString(dateLocale())}</span>
         </>
       ) : '-')
     },
     {
       key: 'scoringType',
       mobileSecondary: true,
-      label: 'การให้คะแนน',
-      render: (value, row) => (SCORING_LABEL[value] || SCORING_LABEL.SUBMISSION_ONLY) + (value === 'SCORED' && row.maxScore ? ` (${row.maxScore})` : '')
+      label: t('การให้คะแนน'),
+      render: (value, row) => t(SCORING_LABEL[value] || SCORING_LABEL.SUBMISSION_ONLY) + (value === 'SCORED' && row.maxScore ? ` (${row.maxScore})` : '')
     },
     {
       key: 'status',
-      label: 'สถานะ',
+      label: t('สถานะ'),
       mobileBadge: true,
       render: (value) => value === 'INACTIVE' ? (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">ไม่ใช้งาน</span>
+        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700 whitespace-nowrap">{t("ไม่ใช้งาน")}</span>
       ) : null
     }
   ];
@@ -286,7 +287,7 @@ const ManageTasks = () => {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
         <div className="sm:w-52">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ปีการศึกษา</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ปีการศึกษา")}</label>
           <SmartComboBox
             options={academicYears}
             value={filterAcademicYear}
@@ -297,33 +298,33 @@ const ManageTasks = () => {
             }}
             labelKey="year"
             valueKey="id"
-            placeholder="ทุกปีการศึกษา"
+            placeholder={t("ทุกปีการศึกษา")}
             clearable
             searchable
           />
         </div>
         <div className="sm:w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้น")}</label>
           <SmartComboBox
             options={grades}
             value={filterGrade}
             onChange={(val) => { setFilterGrade(val); setFilterSubject(null); }}
             labelKey="gradeName"
             valueKey="id"
-            placeholder="ทุกชั้น"
+            placeholder={t("ทุกชั้น")}
             clearable
             searchable
           />
         </div>
         <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">วิชา</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
           <SmartComboBox
             options={filterGrade ? subjects.filter(sj => sj.gradeId === filterGrade) : subjects}
             value={filterSubject}
             onChange={setFilterSubject}
             labelKey="subjectName"
             valueKey="id"
-            placeholder="ทุกวิชา"
+            placeholder={t("ทุกวิชา")}
             clearable
             searchable
           />
@@ -334,18 +335,16 @@ const ManageTasks = () => {
 
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
-      <PageHeader title="งาน">
+      <PageHeader title={t("งาน")}>
         <button
           onClick={() => openModal()}
           className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700 hidden sm:flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มงาน
-        </button>
+          </svg>{t("เพิ่มงาน")}</button>
       </PageHeader>
-      <AddFab onClick={() => openModal()} label="เพิ่มงาน" />
+      <AddFab onClick={() => openModal()} label={t("เพิ่มงาน")} />
 
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
@@ -366,18 +365,18 @@ const ManageTasks = () => {
         onClearFilters={() => { setFilterSubject(null); setFilterAcademicYear(null); setFilterGrade(null); }}
         emptyAction={
           <>
-            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">เพิ่มงาน</button>
+            <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มงาน")}</button>
             
           </>
         }
-        emptyMessage="ยังไม่มีงาน"
+        emptyMessage={t("ยังไม่มีงาน")}
         onRowClick={(row) => openModal(row)}
       />
 
       {/* Modal */}
       <WindowModal
         open={showModal}
-        title={editingTask ? 'แก้ไขงาน' : 'เพิ่มงาน'}
+        title={editingTask ? t('แก้ไขงาน') : t('เพิ่มงาน')}
         onClose={closeModal}
         id="task-form"
         initialWidth="max-w-3xl"
@@ -388,16 +387,10 @@ const ManageTasks = () => {
                 type="button"
                 onClick={() => { const target = editingTask; closeModal(); handleDeleteClick(target); }}
                 className="px-4 py-2 min-h-[44px] border border-red-300 text-red-600 rounded-lg hover:bg-red-50 sm:mr-auto"
-              >
-                ลบ…
-              </button>
+              >{t("ลบ…")}</button>
             )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">
-                  ยกเลิก
-                </button>
-                <button type="submit" form="task-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                  บันทึก
-                </button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 min-h-[44px] border rounded-lg hover:bg-gray-50">{t("ยกเลิก")}</button>
+                <button type="submit" form="task-form" className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("บันทึก")}</button>
           </div>
         }
       >
@@ -406,7 +399,7 @@ const ManageTasks = () => {
               {/* Row 1: ชั้น → วิชา (งานแยกตามชั้น) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชั้น")}</label>
                   <SmartComboBox
                     options={grades}
                     value={formData.gradeId}
@@ -416,15 +409,14 @@ const ManageTasks = () => {
                     })}
                     labelKey="gradeName"
                     valueKey="id"
-                    placeholder="เลือกชั้น"
+                    placeholder={t("เลือกชั้น")}
                     searchable
                     clearable
-                    ariaLabel="ชั้น"
+                    ariaLabel={t("ชั้น")}
                   />
                 </div>
                 <div data-field="subjectId">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    วิชา <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา ")}<span className="text-red-500">*</span>
                   </label>
                   <SmartComboBox
                     options={formSubjects}
@@ -436,7 +428,7 @@ const ManageTasks = () => {
                     })}
                     labelKey="subjectName"
                     valueKey="id"
-                    placeholder="เลือกวิชา"
+                    placeholder={t("เลือกวิชา")}
                     searchable
                     error={errorFor('subjectId', toId(formData.subjectId) === null)}
                   />
@@ -445,17 +437,15 @@ const ManageTasks = () => {
 
               {/* ห้องที่ได้งานนี้: เลือกได้หลายห้องในชั้นเดียวกัน */}
               {formClasses.length > 0 && (
-                <div role="group" aria-label="ห้องที่ได้งานนี้">
-                  <p className="block text-sm font-medium text-gray-700 mb-1">ห้องที่ได้งานนี้</p>
+                <div role="group" aria-label={t("ห้องที่ได้งานนี้")}>
+                  <p className="block text-sm font-medium text-gray-700 mb-1">{t("ห้องที่ได้งานนี้")}</p>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       aria-pressed={formData.classIds.length === 0}
                       onClick={() => setFormData(f => ({ ...f, classIds: [] }))}
                       className={`min-h-[44px] rounded-full border px-4 text-sm font-medium ${formData.classIds.length === 0 ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
-                    >
-                      ทุกห้อง ({formClasses.length})
-                    </button>
+                    >{t("ทุกห้อง ({value1})", { value1: formClasses.length })}</button>
                     {formClasses.map(c => {
                       const on = formData.classIds.length === 0 || formData.classIds.includes(c.id);
                       return (
@@ -472,15 +462,14 @@ const ManageTasks = () => {
                     })}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    {formData.classIds.length === 0 ? 'ทุกห้องของชั้นนี้ได้งาน รวมห้องที่เพิ่มทีหลัง · แตะชื่อห้องเพื่อเลือกเฉพาะห้อง' : `ลงงานให้ ${formData.classIds.length} ห้อง · แตะเพื่อเพิ่มหรือเอาออก`}
+                    {formData.classIds.length === 0 ? t('ทุกห้องของชั้นนี้ได้งาน รวมห้องที่เพิ่มทีหลัง · แตะชื่อห้องเพื่อเลือกเฉพาะห้อง') : t("ลงงานให้ {value1} ห้อง · แตะเพื่อเพิ่มหรือเอาออก", { value1: formData.classIds.length })}
                   </p>
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4">
                 <div data-field="taskName">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ชื่องาน <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("ชื่องาน ")}<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -495,7 +484,7 @@ const ManageTasks = () => {
               {/* กำหนดส่ง + ประเภทคะแนน */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">กำหนดส่ง</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("กำหนดส่ง")}</label>
                   <input
                     type="date"
                     value={formData.deadline}
@@ -504,8 +493,7 @@ const ManageTasks = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ประเภทการให้คะแนน <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("ประเภทการให้คะแนน ")}<span className="text-red-500">*</span>
                   </label>
                   <div className="flex flex-col gap-1">
                     <label className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${
@@ -519,7 +507,7 @@ const ManageTasks = () => {
                         onChange={(e) => setFormData({ ...formData, scoringType: e.target.value, maxScore: '' })}
                         className="w-4 h-4 text-brand-600"
                       />
-                      <span className="text-sm text-gray-900">ส่ง/ไม่ส่ง</span>
+                      <span className="text-sm text-gray-900">{t("ส่ง/ไม่ส่ง")}</span>
                     </label>
                     <label className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${
                       formData.scoringType === 'PASS_FAIL' ? 'border-brand-500 bg-brand-50' : 'hover:bg-gray-50'
@@ -532,7 +520,7 @@ const ManageTasks = () => {
                         onChange={(e) => setFormData({ ...formData, scoringType: e.target.value, maxScore: '' })}
                         className="w-4 h-4 text-brand-600"
                       />
-                      <span className="text-sm text-gray-900">ผ่าน/ไม่ผ่าน</span>
+                      <span className="text-sm text-gray-900">{t("ผ่าน/ไม่ผ่าน")}</span>
                     </label>
                     <label className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${
                       formData.scoringType === 'SCORED' ? 'border-brand-500 bg-brand-50' : 'hover:bg-gray-50'
@@ -545,7 +533,7 @@ const ManageTasks = () => {
                         onChange={(e) => setFormData({ ...formData, scoringType: e.target.value })}
                         className="w-4 h-4 text-brand-600"
                       />
-                      <span className="text-sm text-gray-900">คิดคะแนน</span>
+                      <span className="text-sm text-gray-900">{t("คิดคะแนน")}</span>
                       {formData.scoringType === 'SCORED' && (
                         <input
                           type="number"
@@ -554,9 +542,9 @@ const ManageTasks = () => {
                           value={formData.maxScore}
                           onChange={(e) => setFormData({ ...formData, maxScore: e.target.value })}
                           data-field="maxScore"
-                          aria-label="คะแนนเต็ม"
+                          aria-label={t("คะแนนเต็ม")}
                           className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-brand-500 ml-auto ${errorFor('maxScore', !formData.maxScore) ? 'border-red-500' : ''}`}
-                          placeholder="เต็ม"
+                          placeholder={t("เต็ม")}
                         />
                       )}
                     </label>
@@ -566,10 +554,10 @@ const ManageTasks = () => {
               </div>
 
               <details className="border rounded-lg px-3 py-2" open={!!formData.description}>
-                <summary className="cursor-pointer text-sm text-gray-600 select-none">ข้อมูลเพิ่มเติม (งานที่ {formData.taskNumber} · {formData.status === 'ACTIVE' ? 'ใช้งาน' : 'ไม่ใช้งาน'})</summary>
+                <summary className="cursor-pointer text-sm text-gray-600 select-none">{t("ข้อมูลเพิ่มเติม (งานที่ {value1} · {value2})", { value1: formData.taskNumber, value2: formData.status === 'ACTIVE' ? t('ใช้งาน') : t('ไม่ใช้งาน') })}</summary>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">งานที่</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("งานที่")}</label>
                     <input
                       type="number"
                       min="1"
@@ -579,18 +567,18 @@ const ManageTasks = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("สถานะ")}</label>
                     <SmartComboBox
-                      options={[{ value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }]}
+                      options={[{ value: 'ACTIVE', label: t('ใช้งาน') }, { value: 'INACTIVE', label: t('ไม่ใช้งาน') }]}
                       value={formData.status}
                       onChange={(v) => v && setFormData({ ...formData, status: v })}
                       searchable={false}
                       clearable={false}
-                      ariaLabel="สถานะ"
+                      ariaLabel={t("สถานะ")}
                     />
                   </div>
                   <div className="sm:col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("คำอธิบาย")}</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -610,10 +598,10 @@ const ManageTasks = () => {
         isOpen={deleteConfirm.show}
         onClose={() => setDeleteConfirm({ show: false, item: null })}
         onConfirm={handleDeleteConfirm}
-        title="ยืนยันการลบ"
-        message={`ต้องการลบงาน "${deleteConfirm.item?.taskName}" หรือไม่?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
+        title={t("ยืนยันการลบ")}
+        message={t("ต้องการลบงาน \"{value1}\" หรือไม่?", { value1: deleteConfirm.item?.taskName })}
+        confirmText={t("ลบ")}
+        cancelText={t("ยกเลิก")}
         type="danger"
       />
 
@@ -621,9 +609,9 @@ const ManageTasks = () => {
       <ConfirmDialog
         isOpen={errorAlert.show}
         onClose={() => setErrorAlert({ show: false, message: '' })}
-        title="เกิดข้อผิดพลาด"
+        title={t("เกิดข้อผิดพลาด")}
         message={errorAlert.message}
-        confirmText="ตกลง"
+        confirmText={t("ตกลง")}
         type="danger"
         mode="alert"
       />

@@ -1,3 +1,4 @@
+import { dateLocale } from '../../i18n';
 // Helpers for StudentMonitor (per-student action page)
 
 export const STATUS_META = {
@@ -12,8 +13,11 @@ export const STATUS_ORDER = ['APPROVED', 'PENDING', 'REJECTED', 'NOT_SUBMITTED']
 export const statusOf = (task) => task?.submission?.status || 'NOT_SUBMITTED';
 export const isMissing = (task) => statusOf(task) === 'NOT_SUBMITTED';
 
-export const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
+// หน้าจอ = ตามภาษาที่เลือก · ไฟล์ Excel ที่ส่งออก = ไทย (หัวคอลัมน์ไทย ดู docs/I18N.md)
+const fmtDateIn = (locale) => (d) =>
+  d ? new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: '2-digit' }) : '';
+export const fmtDate = (d) => fmtDateIn(dateLocale())(d);
+export const fmtDateTh = fmtDateIn('th-TH');
 
 export const isOverdue = (task) => {
   if (!task?.deadline) return false;

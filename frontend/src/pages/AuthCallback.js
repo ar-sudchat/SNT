@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, homePathFor } from '../context/AuthContext';
@@ -34,11 +35,11 @@ const AuthCallback = () => {
       <div className="max-w-sm w-full bg-white rounded-xl shadow-2xl p-6 text-center space-y-4">
         {error ? (
           <>
-            <p className="text-gray-800">{error}</p>
-            <a href="/login" className="inline-block py-2 px-4 rounded-lg text-white bg-brand-600 hover:bg-brand-700">กลับไปหน้าเข้าสู่ระบบ</a>
+            <p className="text-gray-800">{t(error)}</p>
+            <a href="/login" className="inline-block py-2 px-4 rounded-lg text-white bg-brand-600 hover:bg-brand-700">{t('กลับไปหน้าเข้าสู่ระบบ')}</a>
           </>
         ) : (
-          <p className="text-gray-700">กำลังเข้าสู่ระบบ…</p>
+          <p className="text-gray-700">{t('กำลังเข้าสู่ระบบ…')}</p>
         )}
       </div>
     </div>

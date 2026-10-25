@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { sfx } from './sfx';
 import { easeOutCubic, SPIN_MS } from './common';
@@ -22,7 +23,7 @@ const Slot = ({ entries, spin, onDone, reduced }) => {
   doneRef.current = onDone;
   const winner = spin ? entries[spin.index] : null;
   const strips = useMemo(() => {
-    if (!winner) return [['—'], ['กดดึงคันโยก!'], ['⭐']];
+    if (!winner) return [['—'], [t('กดดึงคันโยก!')], ['⭐']];
     return ['no', 'name', 'sym'].map((f) => buildStrip(entries, winner, f));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spin]);
@@ -74,7 +75,7 @@ const Slot = ({ entries, spin, onDone, reduced }) => {
           ))}
         </div>
         <div className="mt-2 flex justify-between text-xs sm:text-sm font-semibold text-ink-900/80 px-1" aria-hidden="true">
-          <span>เลขที่</span><span>ชื่อ</span><span>โชค</span>
+          <span>{t('เลขที่')}</span><span>{t('ชื่อ')}</span><span>{t('โชค')}</span>
         </div>
       </div>
     </div>

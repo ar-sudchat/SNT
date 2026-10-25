@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assessmentAPI } from '../../services/api';
 import PaperPreview from './PaperPreview';
@@ -33,7 +34,7 @@ function FieldInput({ field, value, disabled, onChange }) {
             <button key={o} type="button" role="radio" aria-checked={on} disabled={disabled}
               onClick={() => onChange(on ? '' : o)}
               className={`${chipBase} ${on ? chipOn : chipOff}`}>
-              {on && <span aria-hidden="true">{'✓ '}</span>}{o}
+              {on && <span aria-hidden="true">{'✓ '}</span>}{t(o)}
             </button>
           );
         })}
@@ -51,7 +52,7 @@ function FieldInput({ field, value, disabled, onChange }) {
             <button key={o} type="button" aria-pressed={on} disabled={disabled}
               onClick={() => onChange(on ? list.filter((x) => x !== o) : options.filter((x) => x === o || list.includes(x)))}
               className={`${chipBase} ${on ? chipOn : chipOff}`}>
-              {on && <span aria-hidden="true">{'✓ '}</span>}{o}
+              {on && <span aria-hidden="true">{'✓ '}</span>}{t(o)}
             </button>
           );
         })}
@@ -131,12 +132,12 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
       const body = standalone ? { classAnswers: payload, status: 'DONE' } : { classAnswers: payload };
       const { data } = await assessmentAPI.updateRecord(record.id, body);
       setBaseline(JSON.stringify(payload));
-      setMessage('บันทึกแล้ว');
+      setMessage(t('บันทึกแล้ว'));
       clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => setMessage(''), 4000);
       if (onSaved) onSaved(data);
     } catch (e) {
-      setError(e?.response?.data?.error || 'บันทึกไม่สำเร็จ ลองอีกครั้ง');
+      setError(e?.response?.data?.error || t('บันทึกไม่สำเร็จ ลองอีกครั้ง'));
     } finally {
       setSaving(false);
     }
@@ -149,16 +150,16 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
   const questions = fields.map((f) => (
     <div key={f.key}>
       {f.type === 'choice' || f.type === 'checklist' ? (
-        <p id={`ll-ca-${f.key}-label`} className="text-sm font-medium text-gray-700">{f.label}</p>
+        <p id={`ll-ca-${f.key}-label`} className="text-sm font-medium text-gray-700">{t(f.label)}</p>
       ) : (
-        <label htmlFor={`ll-ca-${f.key}`} className="block text-sm font-medium text-gray-700">{f.label}</label>
+        <label htmlFor={`ll-ca-${f.key}`} className="block text-sm font-medium text-gray-700">{t(f.label)}</label>
       )}
       <FieldInput field={f} value={answers[f.key]} disabled={disabled} onChange={(v) => setValue(f.key, v)} />
     </div>
   ));
 
   const readOnlyNote = disabled && (
-    <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">ดูได้อย่างเดียว — แก้ไขได้เฉพาะครูเจ้าของบันทึกหรือผู้ดูแล</div>
+    <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">{t("ดูได้อย่างเดียว — แก้ไขได้เฉพาะครูเจ้าของบันทึกหรือผู้ดูแล")}</div>
   );
   const errorBox = error && (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
@@ -167,7 +168,7 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
   if (!standalone) {
     return (
       <section className={`${card} space-y-4`} aria-labelledby="ll-class-questions">
-        <h2 id="ll-class-questions" className="text-base font-semibold text-gray-900">คำถามระดับห้อง</h2>
+        <h2 id="ll-class-questions" className="text-base font-semibold text-gray-900">{t("คำถามระดับห้อง")}</h2>
         {readOnlyNote}
         {questions}
         {errorBox}
@@ -175,10 +176,10 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={save} disabled={saving || !dirty}
               className="min-h-[44px] rounded-lg border border-brand-600 bg-white px-5 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50">
-              {saving ? 'กำลังบันทึก…' : 'บันทึกคำตอบระดับห้อง'}
+              {saving ? t('กำลังบันทึก…') : t('บันทึกคำตอบระดับห้อง')}
             </button>
             {message && <span role="status" className="text-sm text-green-700">{message}</span>}
-            {!message && dirty && <span className="text-sm text-gray-600">ยังไม่ได้บันทึก</span>}
+            {!message && dirty && <span className="text-sm text-gray-600">{t("ยังไม่ได้บันทึก")}</span>}
           </div>
         )}
       </section>
@@ -191,7 +192,7 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
         <div>
           <div className="space-y-4">
             {readOnlyNote}
-            <section className={`${card} space-y-4`} aria-label="คำตอบระดับห้อง">
+            <section className={`${card} space-y-4`} aria-label={t("คำตอบระดับห้อง")}>
               {questions}
             </section>
             {errorBox}
@@ -200,7 +201,7 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
           <div className="mt-4 lg:hidden">
             <button type="button" aria-expanded={showPaper} onClick={() => setShowPaper((v) => !v)}
               className="min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              {showPaper ? 'ซ่อนหน้ากระดาษ' : 'ดูหน้ากระดาษ'}
+              {showPaper ? t('ซ่อนหน้ากระดาษ') : t('ดูหน้ากระดาษ')}
             </button>
             {showPaper && (
               <div className="mt-3 rounded-xl border border-gray-200 bg-gray-100 p-2">
@@ -213,10 +214,10 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
             <div className="mt-4 hidden items-center gap-3 lg:flex">
               <button type="button" onClick={save} disabled={saving}
                 className="min-h-[44px] rounded-lg bg-brand-600 px-6 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-                {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+                {saving ? t('กำลังบันทึก…') : t('บันทึก')}
               </button>
               {message && <span role="status" className="text-sm text-green-700">{message}</span>}
-              {!message && dirty && <span className="text-sm text-gray-600">ยังไม่ได้บันทึก</span>}
+              {!message && dirty && <span className="text-sm text-gray-600">{t("ยังไม่ได้บันทึก")}</span>}
             </div>
           )}
         </div>
@@ -234,7 +235,7 @@ export default function ClassAnswersEditor({ record, canEdit, onSaved, standalon
           {message && <p role="status" className="mb-2 text-center text-sm text-green-700">{message}</p>}
           <button type="button" onClick={save} disabled={saving}
             className="min-h-[48px] w-full rounded-lg bg-brand-600 px-4 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-            {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+            {saving ? t('กำลังบันทึก…') : t('บันทึก')}
           </button>
         </div>
       )}

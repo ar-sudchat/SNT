@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { btnPrimary, btnSecondary } from './toolsUtils';
 
@@ -72,7 +73,7 @@ const ClassTimer = () => {
     <div className="space-y-4">
       <div className={`rounded-2xl border px-4 py-10 sm:py-16 text-center ${finished ? 'border-accent-400 bg-accent-50' : 'border-ink-200 bg-white'}`} role="timer" aria-live="off">
         <p className="font-bold text-ink-900 tabular-nums leading-none text-7xl sm:text-9xl lg:text-[11rem]">{fmt(left)}</p>
-        {finished && <p className="mt-4 text-2xl font-semibold text-accent-700" role="status">หมดเวลา</p>}
+        {finished && <p className="mt-4 text-2xl font-semibold text-accent-700" role="status">{t('หมดเวลา')}</p>}
         <div className="mt-8 mx-auto max-w-xl h-2 rounded-full bg-ink-100 overflow-hidden" aria-hidden="true">
           <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
         </div>
@@ -80,32 +81,28 @@ const ClassTimer = () => {
 
       <div className="flex flex-wrap gap-3">
         {running ? (
-          <button type="button" onClick={pause} className={`${btnPrimary} text-lg px-8 flex-1 sm:flex-none`}>หยุดชั่วคราว</button>
+          <button type="button" onClick={pause} className={`${btnPrimary} text-lg px-8 flex-1 sm:flex-none`}>{t('หยุดชั่วคราว')}</button>
         ) : (
           <button type="button" onClick={start} disabled={left <= 0} className={`${btnPrimary} text-lg px-8 flex-1 sm:flex-none`}>
-            {left < total && left > 0 ? 'เล่นต่อ' : 'เริ่ม'}
+            {left < total && left > 0 ? t('เล่นต่อ') : t('เริ่ม')}
           </button>
         )}
-        <button type="button" onClick={reset} className={btnSecondary}>เริ่มใหม่</button>
+        <button type="button" onClick={reset} className={btnSecondary}>{t('เริ่มใหม่')}</button>
       </div>
 
       <div className="rounded-xl border border-ink-200 bg-white p-4 flex flex-wrap items-end gap-3">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="ตั้งเวลาด่วน">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("ตั้งเวลาด่วน")}>
           {PRESETS.map((m) => (
             <button key={m} type="button" aria-pressed={total === m * 60} onClick={() => setDuration(m * 60)}
-              className={`min-h-[44px] min-w-[64px] px-4 rounded-lg border font-medium ${total === m * 60 ? 'border-brand bg-brand-50 text-brand-800' : 'border-ink-200 text-ink-700 hover:bg-ink-50'}`}>
-              {m} นาที
-            </button>
+              className={`min-h-[44px] min-w-[64px] px-4 rounded-lg border font-medium ${total === m * 60 ? 'border-brand bg-brand-50 text-brand-800' : 'border-ink-200 text-ink-700 hover:bg-ink-50'}`}>{t('{value1} นาที', { value1: m })}</button>
           ))}
         </div>
-        <label className="flex flex-col text-sm text-ink-600">
-          กำหนดเอง (นาที)
-          <div className="mt-1 flex gap-2">
+        <label className="flex flex-col text-sm text-ink-600">{t('กำหนดเอง (นาที)')}<div className="mt-1 flex gap-2">
             <input type="number" min="0.5" max="180" step="0.5" inputMode="decimal" value={customMin}
               onChange={(e) => setCustomMin(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') applyCustom(); }}
               className="min-h-[44px] w-28 rounded-lg border border-ink-200 px-3 text-lg text-ink-900" />
-            <button type="button" onClick={applyCustom} className={btnSecondary}>ตั้งเวลา</button>
+            <button type="button" onClick={applyCustom} className={btnSecondary}>{t('ตั้งเวลา')}</button>
           </div>
         </label>
       </div>
