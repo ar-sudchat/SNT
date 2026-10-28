@@ -5,7 +5,7 @@ const { getTenantId, isBypassed, getStore } = require('../services/tenantContext
 const TENANT_MODELS = new Set([
   'AcademicYear', 'Grade', 'Class', 'Student', 'Teacher', 'Subject', 'Task',
   'QRCode', 'Submission', 'AiConversation', 'AiMessage', 'Invite', 'AuditLog',
-  'AssessmentTemplate', 'AssessmentRecord', 'AssessmentScore', 'TaskRoom',
+  'AssessmentTemplate', 'AssessmentRecord', 'AssessmentScore', 'TaskRoom', 'Attendance', 'DayAttendance',
 ]);
 // Former global unique field -> composite @@unique([tenantId, field]).
 const COMPOSITE_UNIQUE = {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
+const daySummary = require('../controllers/daySummaryController');
 const { authenticate, isTeacher, authorize } = require('../middleware/auth');
 // Every teacher of the group manages its teaching data (owner request 2026-10-24).
 const staff = authorize('ADMIN', 'TEACHER');
@@ -16,6 +17,10 @@ router.get('/teacher/overview', authenticate, isTeacher, reportController.teache
 
 // Teacher task statistics
 router.get('/teacher/statistics', authenticate, isTeacher, reportController.teacherStatistics);
+
+// สรุปการส่งงานของวันหนึ่ง แยกวิชา/งาน + export Excel
+router.get('/teacher/day-submissions', authenticate, isTeacher, daySummary.daySubmissions);
+router.get('/teacher/day-submissions/export', authenticate, isTeacher, daySummary.exportDaySubmissions);
 
 // Teacher dashboard - by subject
 router.get('/teacher/subjects', authenticate, isTeacher, reportController.teacherSubjects);

@@ -128,6 +128,8 @@ model Student {
   qrcodes          QRCode[]
   submissions      Submission[]
   assessmentScores AssessmentScore[]
+  attendances      Attendance[]
+  dayAttendances   DayAttendance[]
   user             User?
 
   @@unique([tenantId, studentCode])
@@ -182,6 +184,7 @@ model Subject {
   academicYear      AcademicYear?      @relation(fields: [academicYearId], references: [id])
   tasks             Task[]
   qrcodes           QRCode[]
+  attendances       Attendance[]
   assessmentRecords AssessmentRecord[]
 
   @@unique([tenantId, subjectCode])
@@ -356,6 +359,8 @@ model Tenant {
   assessmentRecords   AssessmentRecord[]
   assessmentScores    AssessmentScore[]
   taskRooms           TaskRoom[]
+  attendances         Attendance[]
+  dayAttendances      DayAttendance[]
 }
 
 enum TenantRole {
@@ -491,4 +496,49 @@ model AssessmentScore {
 
   @@unique([recordId, studentId])
   @@index([tenantId])
+}
+
+// เช็คการเข้าเรียน · 1 แถว = นักเรียน 1 คน ในวิชา 1 วิชา ใน 1 วัน
+// date เก็บเป็นข้อความ YYYY-MM-DD (วันตามเวลาไทย) · วันที่มีแถวของวิชานั้น = วันที่มีคาบเรียน
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+model Attendance {
+  tenantId   String
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  id         Int              @id @default(autoincrement())
+  studentId  Int
+  subjectId  Int
+  date       String
+  status     AttendanceStatus
+  markedById Int? // ครูที่บันทึก (Teacher.id)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId, date])
+  @@index([tenantId])
+  @@index([subjectId, date])
+}
+
+// เช็คมาเรียนรายวัน (ไม่ผูกวิชา) · สแกนเอกสารวิชาไหนก็ได้ = มาโรงเรียนวันนั้น
+// ไม่มีแถว = ไม่มา · วันที่ห้องนั้นมีคนถูกสแกนอย่างน้อย 1 คน = วันที่มีเรียนของห้อง
+model DayAttendance {
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  id         Int      @id @default(autoincrement())
+  studentId  Int
+  date       String
+  markedById Int?
+  createdAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([tenantId])
+  @@index([date])
 }
