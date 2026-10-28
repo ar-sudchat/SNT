@@ -403,13 +403,13 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
       </div>
       </details>
 
-      <div className="border border-gray-200 rounded-lg bg-gray-50 p-3 sm:p-4 min-h-[240px] max-h-[55vh] overflow-y-auto space-y-3" aria-live="polite">
+      <div className={`border border-gray-200 rounded-lg bg-gray-50 p-3 sm:p-4 ${messages.length || loading || convLoading ? 'min-h-[200px]' : 'sm:min-h-[240px]'} max-h-[55vh] overflow-y-auto space-y-3`} aria-live="polite">
         {convLoading && (
           <div className="text-center text-gray-500 text-sm py-6 flex items-center justify-center gap-2"><Spinner className="h-4 w-4" />{t(" กำลังโหลดบทสนทนา...")}</div>
         )}
         {messages.length === 0 && !loading && !convLoading && (
-          <div className="text-center text-gray-500 text-sm py-6">
-            <ChatSpark className="mx-auto mb-3 h-16 sm:h-20 w-auto text-brand-500" />
+          <div className="text-center text-gray-500 text-sm py-2 sm:py-6">
+            <ChatSpark className="mx-auto mb-3 hidden sm:block h-20 w-auto text-brand-500" />
             <p>{t("ถามเกี่ยวกับการส่งงานของนักเรียนได้เลย หรือพิมพ์คำถามด้านล่าง")}</p>
           </div>
         )}

@@ -98,7 +98,7 @@ export function ReminderButton({ title, deadline, items }) {
       <button
         onClick={() => setOpen(true)}
         title={t("คัดลอกข้อความทวงงานไปวางในกลุ่ม LINE")}
-        className="shrink-0 min-h-[44px] px-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap bg-amber-100 text-amber-800 hover:bg-amber-200"
+        className="flex-1 md:flex-none min-h-[44px] px-2 sm:px-3 rounded-lg text-sm sm:text-base font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap bg-amber-100 text-amber-800 hover:bg-amber-200"
       >
         <span aria-hidden="true">📣</span>
         <span>{t('คัดลอกข้อความทวงงาน')}</span>

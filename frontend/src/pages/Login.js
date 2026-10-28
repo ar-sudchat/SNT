@@ -68,8 +68,8 @@ const Login = () => {
 
       {!admin && (
         <div className="mt-7 space-y-2 border-t border-gray-100 pt-6 text-center text-[15px] text-gray-600">
-          <p>{t('ยังไม่มีบัญชี? ')}<Link to="/signup" className={linkClass}>{t('สมัครใช้ฟรี')}</Link></p>
-          <p>{t('มีรหัสจากเพื่อนครู? ')}<Link to="/join" className={linkClass}>{t('เข้าร่วมกลุ่มด้วยรหัส')}</Link></p>
+          <p className="flex min-h-[44px] flex-wrap items-center justify-center">{t('ยังไม่มีบัญชี? ')}<Link to="/signup" className={linkClass}>{t('สมัครใช้ฟรี')}</Link></p>
+          <p className="flex min-h-[44px] flex-wrap items-center justify-center">{t('มีรหัสจากเพื่อนครู? ')}<Link to="/join" className={linkClass}>{t('เข้าร่วมกลุ่มด้วยรหัส')}</Link></p>
         </div>
       )}
     </AuthLayout>

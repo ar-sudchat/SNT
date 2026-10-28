@@ -1,11 +1,11 @@
-import { t, t as translate, dateLocale } from '../../i18n';
+import { t, dateLocale } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { reportAPI, monitorAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { TeacherWave, StackDone } from '../../components/illustrations';
+import { TeacherWave } from '../../components/illustrations';
 
-// หน้าแรกของครู: ทักทาย + สแกน → สรุปวันนี้ → งานที่ต้องติดตาม | วิชาของฉัน
+// หน้าแรกของครู: ทักทาย + เช็คชื่อ/สแกน → การ์ดต่อวิชา (ค้างกี่คน กี่งาน) แตะเข้าไปดูรายวิชา
 
 const stripTitle = (name = '') =>
   name.replace(/^(นาย|นางสาว|นาง|น\.ส\.|ครู|ดร\.)\s*/, '').trim();
@@ -40,11 +40,7 @@ const Bar = ({ value, color = 'bg-brand-600' }) => (
 const Skeleton = () => (
   <div className="space-y-4 animate-pulse" aria-label={t("กำลังโหลด")}>
     <div className="h-14 w-2/3 rounded bg-gray-200" />
-    <div className="grid grid-cols-3 gap-3">{[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl bg-gray-200" />)}</div>
-    <div className="grid gap-6 lg:grid-cols-5">
-      <div className="lg:col-span-3 h-72 rounded-xl bg-gray-200" />
-      <div className="lg:col-span-2 h-72 rounded-xl bg-gray-200" />
-    </div>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="h-32 rounded-xl bg-gray-200" />)}</div>
   </div>
 );
 
@@ -54,6 +50,7 @@ const TeacherDashboard = () => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [subjectSums, setSubjectSums] = useState({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,14 +64,16 @@ const TeacherDashboard = () => {
         monitorAPI.getSubjectMonitor(s.id).then(r => r.data).catch(() => null)
       ));
       const rows = [];
+      const sums = {};
       monitors.forEach((m, i) => {
         if (!m) return;
+        const missingStudents = new Set();
         (m.tasks || []).forEach(task => {
           let notSubmitted = 0;
           let pending = 0;
           (m.students || []).forEach(st => {
             const status = st.submissions.find(x => x.taskId === task.id)?.status || 'NOT_SUBMITTED';
-            if (status === 'NOT_SUBMITTED') notSubmitted += 1;
+            if (status === 'NOT_SUBMITTED') { notSubmitted += 1; missingStudents.add(st.studentId ?? st.id); }
             else if (status === 'PENDING') pending += 1;
           });
           rows.push({
@@ -87,8 +86,19 @@ const TeacherDashboard = () => {
             total: (m.students || []).length
           });
         });
+        const byClass = {};
+        (m.students || []).forEach(st => {
+          const c = byClass[st.classId] || (byClass[st.classId] = { id: st.classId, name: st.className, missing: 0, total: 0 });
+          c.total += 1;
+          if (st.submissions.some(x => x.status === 'NOT_SUBMITTED')) c.missing += 1;
+        });
+        sums[subs[i].id] = {
+          students: missingStudents.size,
+          rooms: Object.values(byClass).sort((a, b) => String(a.name).localeCompare(String(b.name), 'th', { numeric: true }))
+        };
       });
       setStatistics(rows);
+      setSubjectSums(sums);
       setSubjects(subs);
     } catch (err) {
       // ไม่มี response = ต่อเซิร์ฟเวอร์ไม่ได้ (เน็ต) · มี response = เซิร์ฟเวอร์ตอบข้อผิดพลาดกลับมา
@@ -103,25 +113,20 @@ const TeacherDashboard = () => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const name = stripTitle(user?.teacher?.name || '');
-  const subjectById = Object.fromEntries(subjects.map(s => [s.id, s]));
-
-  const totalMissing = statistics.reduce((s, t) => s + (t.notSubmitted || 0), 0);
-  const totalPending = statistics.reduce((s, t) => s + (t.pending || 0), 0);
-  const totalAll = statistics.reduce((s, t) => s + (t.total || 0), 0);
-  const submittedPct = pct(totalAll - totalMissing, totalAll);
-  const tasksWithMissing = statistics.filter(t => (t.notSubmitted || 0) > 0);
-
-  // เฉพาะงานที่ยังมีคนไม่ส่ง เรียงค้างมากไปน้อย สูงสุด 5
-  const followUp = [...tasksWithMissing]
-    .sort((a, b) => b.notSubmitted - a.notSubmitted)
-    .slice(0, 5);
 
   // สรุปรายวิชาจาก statistics
   const subjectStats = (id) => {
     const rows = statistics.filter(t => t.subjectId === id);
     const total = rows.reduce((s, t) => s + (t.total || 0), 0);
     const missing = rows.reduce((s, t) => s + (t.notSubmitted || 0), 0);
-    return { total, missing, done: pct(total - missing, total) };
+    const pending = rows.reduce((s, t) => s + (t.pending || 0), 0);
+    return {
+      total, missing, pending, done: pct(total - missing, total),
+      students: subjectSums[id]?.students || 0,
+      rooms: subjectSums[id]?.rooms || [],
+      tasks: rows.filter(t => (t.notSubmitted || 0) > 0).length,
+      taskCount: rows.length
+    };
   };
 
   const header = (
@@ -133,11 +138,17 @@ const TeacherDashboard = () => {
           <p className="text-sm text-gray-500">{thaiDate()}</p>
         </div>
       </div>
-      <Link
-        to="/teacher/scan"
-        className="flex lg:hidden items-center justify-center gap-2 min-h-[56px] sm:min-h-[48px] w-full sm:w-auto rounded-xl bg-cta px-6 text-cta-fg font-semibold text-lg sm:text-base shadow-sm hover:brightness-95 active:scale-[0.99] transition"
-      >
-        <ScanIcon className="w-6 h-6 sm:w-5 sm:h-5" />{t('สแกนส่งงาน')}</Link>
+      <div className="grid w-full grid-cols-2 gap-2 sm:w-auto lg:hidden">
+        <Link
+          to="/attendance"
+          className="flex items-center justify-center gap-2 min-h-[56px] sm:min-h-[48px] rounded-xl border border-brand-300 bg-white px-5 text-brand-700 font-semibold text-lg sm:text-base hover:bg-brand-50 active:scale-[0.99] transition"
+        >{t('เช็คชื่อ')}</Link>
+        <Link
+          to="/teacher/scan"
+          className="flex items-center justify-center gap-2 min-h-[56px] sm:min-h-[48px] rounded-xl bg-cta px-5 text-cta-fg font-semibold text-lg sm:text-base shadow-sm hover:brightness-95 active:scale-[0.99] transition"
+        >
+          <ScanIcon className="w-6 h-6 sm:w-5 sm:h-5" />{t('สแกนงาน')}</Link>
+      </div>
     </div>
   );
 
@@ -207,110 +218,73 @@ const TeacherDashboard = () => {
     );
   }
 
-  const stats = [
-    { label: 'ค้างส่ง', value: `${totalMissing}`, sub: t('{value1} งาน', { value1: tasksWithMissing.length }), tone: totalMissing > 0 ? 'text-red-600' : 'text-green-600' },
-    { label: 'รอตรวจ', value: `${totalPending}`, sub: t('ชิ้น'), tone: totalPending > 0 ? 'text-amber-600' : 'text-gray-800' },
-    { label: 'ส่งแล้ว', value: `${submittedPct}%`, sub: `${totalAll - totalMissing}/${totalAll}`, tone: 'text-gray-800' },
-  ];
-
   return (
     <div className="space-y-4">
       {header}
 
-      {/* สรุปวันนี้ */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {stats.map(s => (
-          <Link
-            key={t(s.label)}
-            to="/monitor"
-            className="min-h-[44px] rounded-xl bg-white p-3 sm:p-4 shadow-sm ring-1 ring-gray-100 hover:ring-brand-200 transition"
-          >
-            <div className="text-xs sm:text-sm text-gray-500">{t(s.label)}</div>
-            <div className={`text-xl sm:text-2xl font-bold ${s.tone}`}>{s.value}</div>
-            <div className="text-xs text-gray-400 truncate">{s.sub}</div>
-          </Link>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-5 lg:items-start">
-        {/* งานที่ต้องติดตาม */}
-        <section className="lg:col-span-3 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-          <div className="px-4 sm:px-5 py-3 border-b flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-gray-800">{t('งานที่ต้องติดตาม')}</h2>
-            <Link to="/monitor" className="min-h-[44px] flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">{t('ดูทั้งหมด →')}</Link>
-          </div>
-          {followUp.length === 0 ? (
-            <div className="px-4 py-10 text-center">
-              <StackDone className="mx-auto h-24 w-auto text-brand-600" />
-              <p className="mt-2 font-medium text-gray-800">{t('ทุกงานส่งครบแล้ว')}</p>
-              <p className="text-sm text-gray-500">{t('ยังไม่มีนักเรียนค้างส่ง')}</p>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {followUp.map(t => {
-                const sent = (t.total || 0) - t.notSubmitted;
-                return (
-                  <li key={t.taskId}>
-                    <Link
-                      to={monitorUrl(subjectById[t.subjectId] || { id: t.subjectId }, t.taskId)}
-                      className="flex items-center gap-3 px-4 sm:px-5 py-3 min-h-[56px] hover:bg-gray-50"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-800 truncate">{t.taskName}</div>
-                        <div className="text-sm text-gray-500 truncate">{t.subjectName}</div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <div className="flex-1 max-w-[12rem]"><Bar value={pct(sent, t.total)} /></div>
-                          <span className="text-xs text-gray-500 shrink-0">{translate('ส่ง {value1}/{value2}', { value1: sent, value2: t.total })}</span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-xl font-bold text-red-600">{t.notSubmitted}</div>
-                        <div className="text-xs text-gray-500">{translate('ยังไม่ส่ง')}</div>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* วิชาของฉัน */}
-        <section className="lg:col-span-2">
-          <h2 className="mb-3 text-lg font-semibold text-gray-800">{t('วิชาของฉัน')}</h2>
-          {subjects.length === 0 ? (
-            <p className="rounded-xl bg-white px-4 py-8 text-center text-gray-500 ring-1 ring-gray-100">{t('ยังไม่มีวิชาที่สอน แจ้งผู้ดูแลระบบให้เพิ่มวิชาให้')}</p>
-          ) : (
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              {subjects.map(s => {
-                const st = subjectStats(s.id);
-                const taskCount = s.tasks?.length || 0;
-                return (
-                  <Link
-                    key={s.id}
-                    to={monitorUrl(s)}
-                    className="block min-h-[44px] rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 hover:ring-brand-200 transition"
-                  >
-                    <div className="font-medium text-gray-800 leading-snug line-clamp-2 break-words">{s.subjectName}</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-xs text-gray-500">{t('{value1} · {value2} งาน', { value1: s.subjectCode, value2: taskCount })}</span>
-                      {st.missing > 0
-                        ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{t('ค้าง {value1} ชิ้น', { value1: st.missing })}</span>
-                        : st.total > 0 && <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">{t('ครบ')}</span>}
-                    </div>
+      {/* การ์ดต่อวิชา: ค้างกี่คน กี่งาน · แตะเข้าไปดูรายวิชา */}
+      <section aria-label={t('วิชาของฉัน')}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-gray-800">{t('วิชาของฉัน')}</h2>
+          <Link to="/monitor" className="min-h-[44px] flex items-center text-sm text-brand-600 hover:text-brand-800 shrink-0">{t('ตรวจงานทั้งหมด →')}</Link>
+        </div>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          {subjects.map(s => {
+            const st = subjectStats(s.id);
+            const allDone = st.taskCount > 0 && st.missing === 0;
+            return (
+              <div key={s.id} className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100 hover:ring-brand-200 transition">
+              <Link to={monitorUrl(s)} className="block min-h-[44px] p-4 pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-gray-900 leading-snug line-clamp-2 break-words">{s.subjectName}</div>
+                    <div className="text-xs text-gray-500">{s.subjectCode}</div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {st.taskCount === 0 ? (
+                      <div className="text-sm text-gray-500">{t('ยังไม่มีงาน')}</div>
+                    ) : allDone ? (
+                      <div className="text-lg font-bold text-green-600">{t('ครบ')}</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold leading-none text-red-600">{st.students}</div>
+                        <div className="text-xs text-gray-500">{t('คนค้างส่ง')}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {st.taskCount > 0 && (
+                  <>
                     <div className="mt-3 flex items-center gap-2">
                       <div className="flex-1"><Bar value={st.done} color={st.done === 100 ? 'bg-green-500' : 'bg-brand-600'} /></div>
-                      <span className="text-xs text-gray-600 shrink-0">
-                        {st.total > 0 ? `${st.done}% · ${st.total - st.missing}/${st.total}` : taskCount > 0 ? t('ยังไม่มีนักเรียน') : t('ยังไม่มีงาน')}
-                      </span>
+                      <span className="shrink-0 text-xs text-gray-600">{st.done}%</span>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                      {st.tasks > 0 && <span>{t('{value1} งานที่ยังค้าง', { value1: st.tasks })}</span>}
+                      {st.pending > 0 && <span className="rounded-md bg-amber-50 px-2 py-0.5 text-amber-700">{t('รอตรวจ {value1} ชิ้น', { value1: st.pending })}</span>}
+                    </div>
+                  </>
+                )}
+              </Link>
+              {st.rooms.length > 1 && st.taskCount > 0 && (
+                <div className="flex flex-wrap gap-2 px-4 pb-4" role="group" aria-label={t('แยกตามห้อง')}>
+                  {st.rooms.map(r => (
+                    <Link
+                      key={r.id}
+                      to={`${monitorUrl(s)}&class=${r.id}`}
+                      className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium ring-1 ${r.missing > 0 ? 'bg-red-50 text-red-700 ring-red-100' : 'bg-green-50 text-green-700 ring-green-100'}`}
+                    >
+                      <span>{r.name}</span>
+                      <span className="font-bold">{r.missing > 0 ? t('ค้าง {value1}', { value1: r.missing }) : '✓'}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 };

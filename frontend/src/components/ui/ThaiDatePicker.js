@@ -1,6 +1,7 @@
 import { t, getLang } from '../../i18n';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useBodyScrollLock } from './WindowModal';
 
 // ช่องวันที่แบบไทย: เลือกจากปฏิทินเท่านั้น "หลายวัน" / "ช่วงวันที่"
 // onChange(ข้อความ, วันจริง) เช่น ("3, 9, 10 มิ.ย. 69", ['2026-06-03', ...]) · วันจริงใช้คิวรี ข้อความใช้แสดง/พิมพ์
@@ -78,12 +79,19 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
   const days = useMemo(() => monthGrid(view.y, view.m), [view]);
   const anchorRef = useRef(null);
   const [pos, setPos] = useState(null);
+  // มือถือ (<640px): ปฏิทินเป็นแผ่นล่างเต็มความกว้าง ปุ่มวัน 44px ปุ่ม 'เสร็จ' อยู่ในระยะหัวแม่โป้ง
+  const isMobile = () => typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 639px)').matches;
+  const [mobile, setMobile] = useState(isMobile);
+  useBodyScrollLock(open && mobile);
 
   // ปฏิทินลอยเหนือทุกอย่าง (portal) วางใต้ช่อง ถ้าที่ข้างล่างไม่พอให้เด้งขึ้นบน
   const PANEL_H = 470;
   const place = () => {
     const el = anchorRef.current;
     if (!el) return;
+    const m = isMobile();
+    setMobile(m);
+    if (m) { setPos(p => (p && p.sheet ? p : { sheet: true })); return; }
     const r = el.getBoundingClientRect();
     const width = Math.min(Math.max(r.width, 300), 380, window.innerWidth - 16);
     const left = Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8);
@@ -173,26 +181,29 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
 
       {open && pos && createPortal(
         <>
-        <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} aria-hidden="true" />
+        <div className={`fixed inset-0 z-[9998] ${pos.sheet ? 'bg-black/40' : ''}`} onClick={() => setOpen(false)} aria-hidden="true" />
         <div
           role="dialog"
+          aria-modal={pos.sheet ? 'true' : undefined}
           aria-label={t("เลือกวันที่")}
-          className="fixed z-[9999] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
-          style={pos}
+          className={pos.sheet
+            ? 'fixed inset-x-0 bottom-0 z-[9999] max-h-[92vh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-gray-200 bg-white p-3 shadow-2xl'
+            : 'fixed z-[9999] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white p-3 shadow-xl'}
+          style={pos.sheet ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : pos}
         >
           <div role="group" aria-label={t("แบบการเลือก")} className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
             {[['multi', t('หลายวัน')], ['range', t('ช่วงวันที่')]].map(([m, label]) => (
               <button key={m} type="button" aria-pressed={mode === m} onClick={() => switchMode(m)}
-                className={`min-h-[40px] rounded-md text-sm font-medium ${mode === m ? 'bg-white text-brand-700 shadow' : 'text-gray-600'}`}>
+                className={`min-h-[44px] rounded-md text-sm font-medium ${mode === m ? 'bg-white text-brand-700 shadow' : 'text-gray-600'}`}>
                 {label}
               </button>
             ))}
           </div>
 
           <div className="mb-2 flex items-center justify-between">
-            <button type="button" onClick={() => shift(-1)} aria-label={t("เดือนก่อน")} className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">‹</button>
-            <span className="font-medium text-gray-800">{t(MONTH_FULL[view.m])} {view.y + yearOffset()}</span>
-            <button type="button" onClick={() => shift(1)} aria-label={t("เดือนถัดไป")} className="min-h-[40px] min-w-[40px] rounded-lg text-gray-600 hover:bg-gray-100">›</button>
+            <button type="button" onClick={() => shift(-1)} aria-label={t("เดือนก่อน")} className="min-h-[44px] min-w-[44px] rounded-lg text-xl text-gray-600 hover:bg-gray-100">‹</button>
+            <span className="font-semibold text-gray-800">{t(MONTH_FULL[view.m])} {view.y + yearOffset()}</span>
+            <button type="button" onClick={() => shift(1)} aria-label={t("เดือนถัดไป")} className="min-h-[44px] min-w-[44px] rounded-lg text-xl text-gray-600 hover:bg-gray-100">›</button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500">
@@ -210,7 +221,7 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
                   onClick={() => clickDay(d)}
                   aria-pressed={on}
                   aria-label={`${d.getDate()} ${t(MONTH_FULL[d.getMonth()])} ${d.getFullYear() + yearOffset()}`}
-                  className={`min-h-[40px] rounded-lg text-sm tabular-nums ${
+                  className={`min-h-[44px] rounded-lg text-base sm:text-sm sm:min-h-[40px] tabular-nums ${
                     on ? (mode === 'range' && !edge ? 'bg-brand-100 text-brand-800' : 'bg-brand-600 font-semibold text-white')
                       : other ? 'text-gray-300 hover:bg-gray-50' : 'text-gray-800 hover:bg-gray-100'
                   } ${sameDay(d, today) && !on ? 'ring-1 ring-brand-300' : ''}`}
@@ -221,7 +232,7 @@ export default function ThaiDatePicker({ value, dates = [], onChange, placeholde
             })}
           </div>
 
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-sm text-gray-600">
             {mode === 'multi' ? t('แตะวันที่สอนได้หลายวัน แตะซ้ำเพื่อเอาออก') : t('แตะวันเริ่ม แล้วแตะวันสุดท้าย')}
           </p>
           <div className="mt-2 flex gap-2">

@@ -48,13 +48,13 @@ const SignupPage = () => {
         <button type="submit" className={primaryBtn} disabled={busy}>
           {busy && <Spinner />}{busy ? t('กำลังสร้างบัญชี...') : t('สร้างบัญชี')}
         </button>
-        <p className="text-center text-xs leading-relaxed text-gray-500">{t('เมื่อสมัคร ถือว่าคุณยอมรับ ')}<a href="/privacy" className="rounded underline underline-offset-4 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">{t('นโยบายความเป็นส่วนตัว')}</a>
+        <p className="text-center text-xs leading-relaxed text-gray-500">{t('เมื่อสมัคร ถือว่าคุณยอมรับ ')}<a href="/privacy" className="-my-2 inline-block rounded py-2 underline underline-offset-4 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">{t('นโยบายความเป็นส่วนตัว')}</a>
         </p>
       </form>
 
       <div className="mt-7 space-y-2 border-t border-gray-100 pt-6 text-center text-[15px] text-gray-600">
-        <p>{t('มีบัญชีอยู่แล้ว? ')}<Link to="/login" className={linkClass}>{t('เข้าสู่ระบบ')}</Link></p>
-        <p>{t('มีรหัสจากเพื่อนครู? ')}<Link to="/join" className={linkClass}>{t('เข้าร่วมกลุ่มด้วยรหัส')}</Link></p>
+        <p className="flex min-h-[44px] flex-wrap items-center justify-center">{t('มีบัญชีอยู่แล้ว? ')}<Link to="/login" className={linkClass}>{t('เข้าสู่ระบบ')}</Link></p>
+        <p className="flex min-h-[44px] flex-wrap items-center justify-center">{t('มีรหัสจากเพื่อนครู? ')}<Link to="/join" className={linkClass}>{t('เข้าร่วมกลุ่มด้วยรหัส')}</Link></p>
       </div>
     </AuthLayout>
   );

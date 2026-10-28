@@ -29,7 +29,7 @@ const applyToken = (token) => {
   window.location.assign('/');
 };
 
-const TenantSwitcher = () => {
+const TenantSwitcher = ({ fullWidth = false }) => {
   const dialog = useDialog();
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
@@ -102,15 +102,15 @@ const TenantSwitcher = () => {
   const itemCls = 'flex min-h-[44px] w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50 disabled:cursor-default';
 
   return (
-    <div ref={box} className="relative min-w-0">
+    <div ref={box} className={`relative min-w-0 ${fullWidth ? 'w-full flex-1' : ''}`}>
       <button type="button" onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open}
         title={t("สลับกลุ่ม")}
-        className="flex min-h-[44px] min-w-0 max-w-[9rem] items-center gap-1 rounded-lg bg-brand-50 px-2.5 text-sm text-brand-800 ring-1 ring-brand-100 hover:bg-brand-100 sm:max-w-[14rem]">
+        className={`flex min-h-[44px] min-w-0 items-center gap-1 rounded-lg bg-brand-50 px-2.5 text-sm text-brand-800 ring-1 ring-brand-100 hover:bg-brand-100 ${fullWidth ? 'w-full justify-between px-3 text-base' : 'max-w-[9rem] sm:max-w-[14rem]'}`}>
         <span className="truncate font-medium">{current.name}</span>
         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true"><path d="M5 7l5 6 5-6H5z" /></svg>
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 max-h-80 w-64 max-w-[calc(100vw-1.5rem)] overflow-auto rounded-lg bg-white py-1 shadow-lg ring-1 ring-ink-200">
+        <div className={`absolute right-0 z-30 mt-1 max-h-80 overflow-auto ${fullWidth ? 'w-full' : 'w-64 max-w-[calc(100vw-1.5rem)]'} rounded-lg bg-white py-1 shadow-lg ring-1 ring-ink-200`}>
           <p className="px-3 pt-1 text-xs text-gray-500">{t("กลุ่มของฉัน")}</p>
           <ul role="listbox">
             {items.map(i => (

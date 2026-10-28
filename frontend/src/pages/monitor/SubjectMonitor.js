@@ -2,7 +2,8 @@ import { t, tx } from '../../i18n';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, subjectAPI, academicYearAPI, gradeAPI, classAPI, submissionAPI } from '../../services/api';
-import { MonitorFilterBar, MonitorFilterField } from './MonitorFilterBar';
+import { MonitorFilterBar, MonitorFilterField, MonitorChips } from './MonitorFilterBar';
+import QuickFilterBar from '../../components/ui/QuickFilterBar';
 import { useDialog } from '../../components/ui/DialogProvider';
 import { ReminderButton, shortThaiDate } from './reminderText';
 
@@ -474,7 +475,7 @@ const SubjectMonitor = ({ embedded = false }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงานรายวิชา')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ตรวจงานรายวิชา')}</h1>
       </div>}
 
       {/* Error */}
@@ -490,7 +491,24 @@ const SubjectMonitor = ({ embedded = false }) => {
       )}
 
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
-      <MonitorFilterBar>
+      <MonitorFilterBar chips={<>
+        <MonitorChips
+          label={t("วิชา")}
+          options={subjects}
+          value={selectedSubject}
+          labelKey="subjectName"
+          onChange={(val) => { setSelectedSubject(val); updateURL(filterAcademicYear, filterGrade, filterClass, val); }}
+        />
+        {classes.length > 1 && (
+          <QuickFilterBar
+            label={t("ห้อง")}
+            allLabel={t("ทุกห้อง")}
+            options={classes.map(c => ({ value: c.id, label: c.className }))}
+            value={filterClass}
+            onChange={(val) => { setFilterClass(val); updateURL(filterAcademicYear, filterGrade, val, selectedSubject); }}
+          />
+        )}
+      </>}>
         <MonitorFilterField
           label={t("ปีการศึกษา")}
           options={academicYears}
@@ -524,6 +542,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           placeholder={t("ทุกชั้น")}
         />
         <MonitorFilterField
+          mobileHidden
           label={t("วิชา")}
           options={subjects}
           value={selectedSubject}
@@ -536,6 +555,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           placeholder={t("เลือกวิชา")}
         />
         <MonitorFilterField
+          mobileHidden
           label={t("ห้องเรียน")}
           options={classes}
           value={filterClass}
@@ -620,7 +640,7 @@ const SubjectMonitor = ({ embedded = false }) => {
             )}
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-              <div className="relative flex-1 md:flex-none">
+              <div className="relative basis-full md:basis-auto md:flex-none">
                 <input
                   type="text"
                   placeholder={t("ค้นหา ชื่อ/เลขที่/รหัส...")}
@@ -652,7 +672,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                   quickGradeMode ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 hidden min-[400px]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
                 <span>{quickGradeMode ? t('เสร็จ') : t('ตรวจเร็ว')}</span>

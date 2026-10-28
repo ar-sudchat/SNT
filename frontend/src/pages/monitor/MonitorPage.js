@@ -26,7 +26,7 @@ const MonitorPage = () => {
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงาน')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ตรวจงาน')}</h1>
         <div role="tablist" aria-label={t("มุมมอง")} className="inline-flex rounded-lg bg-gray-100 p-1">
           {MODES.map(m => (
             <button

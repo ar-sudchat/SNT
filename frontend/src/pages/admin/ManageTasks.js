@@ -5,6 +5,7 @@ import { taskAPI, subjectAPI, academicYearAPI, classAPI } from '../../services/a
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import QuickFilterBar from '../../components/ui/QuickFilterBar';
 import PageHeader from '../../components/ui/PageHeader';
 
 const toId = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
@@ -27,6 +28,8 @@ const ManageTasks = () => {
   const [filterSubject, setFilterSubject] = useState(null);
   const [filterAcademicYear, setFilterAcademicYear] = useState(null);
   const [filterGrade, setFilterGrade] = useState(null);
+  const [filterRoom, setFilterRoom] = useState(null); // กรองในเครื่อง: ห้อง
+  const [filterDue, setFilterDue] = useState(null); // กรองในเครื่อง: upcoming | overdue
   const { validate, reset: resetErrors, errorFor } = useFormErrors();
   const [formData, setFormData] = useState({
     gradeId: null,
@@ -241,7 +244,17 @@ const ManageTasks = () => {
       key: 'rooms',
       mobileSecondary: true,
       label: t('ห้อง'),
-      render: (_, row) => <span className={row.rooms?.length ? 'text-gray-900' : 'text-gray-500'}>{roomLabel(row)}</span>,
+      render: (_, row) => {
+        const names = row.rooms?.length ? roomLabel(row).split(', ') : null;
+        if (!names) return <span className="text-gray-600">{roomLabel(row)}</span>;
+        const full = names.join(', ');
+        return (
+          <span className="font-medium text-gray-900" title={full}>
+            <span className="md:hidden">{names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : full}</span>
+            <span className="hidden md:inline">{full}</span>
+          </span>
+        );
+      },
       exportValue: (row) => roomLabel(row)
     },
     {
@@ -259,12 +272,12 @@ const ManageTasks = () => {
       key: 'deadline',
       mobileSecondary: true,
       label: t('กำหนดส่ง'),
-      render: (value) => (value ? (
-        <>
-          <span className="md:hidden">{t("ส่ง {value1}", { value1: shortDate(value) })}</span>
+      render: (value, row) => (value ? (
+        <span className={dueOf(row) === 'overdue' ? 'font-medium text-red-700' : 'text-gray-900'}>
+          <span className="md:hidden">{t("ส่ง {value1}", { value1: shortDate(value) })}{dueOf(row) === 'overdue' ? ` · ${t('เลยกำหนด')}` : ''}</span>
           <span className="hidden md:inline">{new Date(value).toLocaleDateString(dateLocale())}</span>
-        </>
-      ) : '-')
+        </span>
+      ) : <span className="text-gray-500">{t('ไม่มีกำหนดส่ง')}</span>)
     },
     {
       key: 'scoringType',
@@ -282,7 +295,45 @@ const ManageTasks = () => {
     }
   ];
 
-  const activeFilterCount = ((filterSubject) ? 1 : 0) + ((filterAcademicYear) ? 1 : 0) + ((filterGrade) ? 1 : 0);
+  // ตัวกรองด่วน (ชิป): วิชา → ห้อง → กำหนดส่ง · ห้อง/กำหนดส่งกรองในเครื่องจากงานที่โหลดมา
+  const subjectGrade = (task) => task.subject?.gradeId ?? subjects.find(sj => sj.id === task.subjectId)?.gradeId;
+  const inRoom = (task, room) => (task.rooms && task.rooms.length ? task.rooms.some(r => r.classId === room.id) : subjectGrade(task) === room.gradeId);
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const dueOf = (task) => (!task.deadline ? null : new Date(task.deadline).getTime() < startOfToday ? 'overdue' : 'upcoming');
+  // เรียง: ใกล้ถึงกำหนดก่อน → เลยกำหนด (ล่าสุดก่อน) → ไม่มีกำหนดส่ง
+  const dueRank = (task) => { const d = dueOf(task); return d === 'upcoming' ? 0 : d === 'overdue' ? 1 : 2; };
+  const sortByDue = (list) => [...list].sort((a, b) => {
+    const ra = dueRank(a); const rb = dueRank(b);
+    if (ra !== rb) return ra - rb;
+    const da = a.deadline ? new Date(a.deadline).getTime() : 0;
+    const db = b.deadline ? new Date(b.deadline).getTime() : 0;
+    if (ra === 0) return da - db;
+    if (ra === 1) return db - da;
+    return (a.taskNumber || 0) - (b.taskNumber || 0);
+  });
+  const roomScope = filterGrade ? classes.filter(c => c.gradeId === filterGrade)
+    : filterSubject ? classes.filter(c => c.gradeId === subjects.find(sj => sj.id === filterSubject)?.gradeId) : classes;
+  const byRoom = (list) => (filterRoom ? list.filter(tk => { const room = classes.find(c => c.id === filterRoom); return room ? inRoom(tk, room) : true; }) : list);
+  const byDue = (list) => (filterDue ? list.filter(tk => dueOf(tk) === filterDue) : list);
+  const visibleTasks = sortByDue(byDue(byRoom(tasks)));
+  const subjectChips = subjects.filter(sj => !filterGrade || sj.gradeId === filterGrade)
+    .map(sj => ({ value: sj.id, label: sj.subjectName }));
+  const roomChips = [...roomScope].sort((a, b) => a.className.localeCompare(b.className, 'th'))
+    .map(c => ({ value: c.id, label: c.className, count: byDue(tasks).filter(tk => inRoom(tk, c)).length }));
+  const dueChips = [
+    { value: 'upcoming', label: t('ยังไม่ถึงกำหนด'), count: byRoom(tasks).filter(tk => dueOf(tk) === 'upcoming').length },
+    { value: 'overdue', label: t('เลยกำหนดแล้ว'), count: byRoom(tasks).filter(tk => dueOf(tk) === 'overdue').length }
+  ];
+  const currentYearId = academicYears.find(y => y.isCurrent)?.id ?? null;
+  const clearAll = () => { setFilterSubject(null); setFilterAcademicYear(currentYearId); setFilterGrade(null); setFilterRoom(null); setFilterDue(null); };
+
+  // ปีการศึกษาปัจจุบันเป็นค่าเริ่มต้น ไม่นับเป็นตัวกรองที่ผู้ใช้เปิดเอง
+  const activeFilterCount = ((filterSubject) ? 1 : 0) + ((filterAcademicYear && filterAcademicYear !== currentYearId) ? 1 : 0) + ((filterGrade) ? 1 : 0) + ((filterRoom) ? 1 : 0) + ((filterDue) ? 1 : 0);
+  const roomName = classes.find(c => c.id === filterRoom)?.className;
+  const subjectName = subjects.find(sj => sj.id === filterSubject)?.subjectName;
+  const dueName = filterDue === 'upcoming' ? t('ยังไม่ถึงกำหนด') : filterDue === 'overdue' ? t('เลยกำหนดแล้ว') : null;
+  const gradeName = grades.find(g => g.id === filterGrade)?.gradeName;
+  const filteredEmpty = !loading && visibleTasks.length === 0 && activeFilterCount > 0;
   const filterControls = (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
@@ -308,23 +359,10 @@ const ManageTasks = () => {
           <SmartComboBox
             options={grades}
             value={filterGrade}
-            onChange={(val) => { setFilterGrade(val); setFilterSubject(null); }}
+            onChange={(val) => { setFilterGrade(val); setFilterSubject(null); setFilterRoom(null); }}
             labelKey="gradeName"
             valueKey="id"
             placeholder={t("ทุกชั้น")}
-            clearable
-            searchable
-          />
-        </div>
-        <div className="sm:w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t("วิชา")}</label>
-          <SmartComboBox
-            options={filterGrade ? subjects.filter(sj => sj.gradeId === filterGrade) : subjects}
-            value={filterSubject}
-            onChange={setFilterSubject}
-            labelKey="subjectName"
-            valueKey="id"
-            placeholder={t("ทุกวิชา")}
             clearable
             searchable
           />
@@ -351,18 +389,45 @@ const ManageTasks = () => {
         {filterControls}
       </div>
 
-      {/* Table */}
+      {/* ตัวกรองด่วน: แสดงนอกปุ่ม 'ตัวกรอง' ทุกขนาดจอ */}
+      <div className="space-y-0.5 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-gray-100">
+        <QuickFilterBar label={t('วิชา')} allLabel={t('ทุกวิชา')} options={subjectChips} value={filterSubject} onChange={(v) => { setFilterSubject(v); setFilterRoom(null); }} />
+        <QuickFilterBar label={t('ห้อง')} allLabel={t('ทุกห้อง')} options={roomChips} value={filterRoom} onChange={setFilterRoom} />
+        <QuickFilterBar label={t('กำหนดส่ง')} allLabel={t('ทั้งหมด')} options={dueChips} value={filterDue} onChange={setFilterDue} />
+      </div>
+
+      {/* สรุปตัวกรองที่เปิดอยู่ + ล้างทั้งหมด (จำนวนที่พบแสดงในหัวตารางอยู่แล้ว) */}
+      {!loading && activeFilterCount > 0 && (
+        <div className="flex min-h-[44px] items-center justify-between gap-3 px-1">
+          <p className="min-w-0 text-sm text-gray-700">
+            <span className="text-gray-600">{t('กรองอยู่')}: </span>
+            <span className="font-medium text-gray-900">{[gradeName, subjectName, roomName, dueName].filter(Boolean).join(' · ') || t('ตามตัวกรอง')}</span>
+          </p>
+          <button type="button" onClick={clearAll} className="min-h-[44px] shrink-0 px-2 text-sm font-medium text-brand-700 hover:text-brand-800">{t('ล้างตัวกรอง')}</button>
+        </div>
+      )}
+
+      {filteredEmpty ? (
+        <div className="flex flex-col items-center gap-2 rounded-lg bg-white px-4 py-10 text-center shadow">
+          <p className="text-gray-800">
+            {roomName
+              ? t('ไม่พบงานของห้อง {value1}', { value1: roomName }) + (dueName ? ` (${dueName})` : '')
+              : t('ไม่พบงานที่ตรงกับตัวกรอง')}
+          </p>
+          <button type="button" onClick={clearAll} className="min-h-[44px] rounded-lg border border-brand-600 px-5 text-sm font-medium text-brand-700 hover:bg-brand-50">{t('ล้างตัวกรอง')}</button>
+        </div>
+      ) : (
       <SmartTable
         filters={filterControls}
         activeFilterCount={activeFilterCount}
-        data={tasks}
+        data={visibleTasks}
         columns={columns}
         loading={loading}
         exportFileName="tasks"
         searchable
         exportable
         pagination
-        onClearFilters={() => { setFilterSubject(null); setFilterAcademicYear(null); setFilterGrade(null); }}
+        onClearFilters={clearAll}
         emptyAction={
           <>
             <button type="button" onClick={() => openModal()} className="px-4 py-2 min-h-[44px] bg-brand-600 text-white rounded-lg hover:bg-brand-700">{t("เพิ่มงาน")}</button>
@@ -372,6 +437,7 @@ const ManageTasks = () => {
         emptyMessage={t("ยังไม่มีงาน")}
         onRowClick={(row) => openModal(row)}
       />
+      )}
 
       {/* Modal */}
       <WindowModal

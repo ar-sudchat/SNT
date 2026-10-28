@@ -47,7 +47,7 @@ export default function SmartImport() {
   if (result) return <section className="rounded-lg bg-green-50 p-4 space-y-3" role="status">
     <h3 className="font-semibold">{t("นำเข้ารายชื่อสำเร็จ")}</h3>
     <p>{t("เพิ่มใหม่ {value1} คน · อัปเดต {value2} คน · สร้างห้อง {value3} ห้อง · สร้างชั้น {value4} ชั้น", { value1: result.created, value2: result.updated, value3: result.classesCreated, value4: result.gradesCreated })}</p>
-    <Link to="/monitor" className="inline-flex items-center min-h-[44px] rounded-lg bg-brand-600 text-white px-4">{t("ไปหน้าติดตามงาน")}</Link>
+    <Link to="/monitor" className="inline-flex items-center min-h-[44px] rounded-lg bg-brand-600 text-white px-4">{t("ไปหน้าตรวจงาน")}</Link>
   </section>;
   return <section className="space-y-4 min-w-0" aria-busy={loading || saving}>
     <p className="text-sm text-gray-600">{t("ไฟล์ Excel หรือ CSV แบบไหนก็ได้ ระบบจะดูเองว่าคอลัมน์ไหนคือ เลขประจำตัว เลขที่ ชื่อ และห้อง")}</p>

@@ -1,6 +1,7 @@
 import { t } from '../../i18n';
 import React, { useEffect, useRef, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { useVisualViewportBox, useBodyScrollLock } from './WindowModal';
 
 const dialogButtonText = (text) => text === 'ตกลง' ? t('ตกลง') : text === 'ยกเลิก' ? t('ยกเลิก') : text === 'ยืนยัน' ? t('ยืนยัน') : text;
 
@@ -35,6 +36,9 @@ const ConfirmDialog = ({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const isInput = mode === 'prompt' || mode === 'copy';
+  // มือถือ: ใช้พื้นที่เหนือแป้นพิมพ์ ปุ่มยืนยันจะไม่ถูกบัง
+  const vvBox = useVisualViewportBox(isOpen);
+  useBodyScrollLock(isOpen);
 
   // เปิด: รีเซ็ตค่า, โฟกัสช่องกรอก/ปุ่มหลัก, ปิด: คืนโฟกัสให้ปุ่มที่เรียก
   useEffect(() => {
@@ -74,7 +78,7 @@ const ConfirmDialog = ({
   const typeStyles = {
     danger: {
       icon: (
-        <svg className="w-12 h-12 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg aria-hidden="true" className="w-12 h-12 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       ),
@@ -83,7 +87,7 @@ const ConfirmDialog = ({
     },
     warning: {
       icon: (
-        <svg className="w-12 h-12 text-pending" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg aria-hidden="true" className="w-12 h-12 text-pending" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -92,7 +96,7 @@ const ConfirmDialog = ({
     },
     info: {
       icon: (
-        <svg className="w-12 h-12 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg aria-hidden="true" className="w-12 h-12 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -101,7 +105,7 @@ const ConfirmDialog = ({
     },
     success: {
       icon: (
-        <svg className="w-12 h-12 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg aria-hidden="true" className="w-12 h-12 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -114,7 +118,7 @@ const ConfirmDialog = ({
 
   const handleOverlayClick = (e) => {
     e.stopPropagation(); // portal: กันคลิกทะลุไปยัง element แม่ใน React tree
-    if (e.target === e.currentTarget && !isInput) {
+    if ((e.target === e.currentTarget || e.target.dataset?.dlgWrap) && !isInput) {
       onClose();
     }
   };
@@ -147,14 +151,15 @@ const ConfirmDialog = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto"
+      className="fixed inset-x-0 z-[100] overflow-y-auto overscroll-contain"
+      style={vvBox ? { top: vvBox.top, height: vvBox.height } : { top: 0, bottom: 0 }}
       onClick={handleOverlayClick}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" aria-hidden="true"></div>
 
       {/* Dialog: มือถือเป็น bottom-sheet, จอใหญ่อยู่กลาง */}
-      <div className="flex min-h-full items-end justify-center sm:items-center sm:px-4 sm:py-4">
+      <div data-dlg-wrap="1" className="flex min-h-full items-end justify-center sm:items-center sm:px-4 sm:py-4">
         <form
           ref={panelRef}
           role={mode === 'alert' ? 'alertdialog' : 'dialog'}
@@ -162,9 +167,9 @@ const ConfirmDialog = ({
           aria-labelledby={titleId}
           aria-describedby={message ? descId : undefined}
           onSubmit={handleConfirm}
-          className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white shadow-2xl animate-fade-in sm:rounded-2xl"
+          className="relative w-full max-w-md rounded-t-2xl bg-white shadow-2xl animate-fade-in sm:rounded-2xl"
         >
-          <div className="p-5 text-center sm:p-6">
+          <div className="p-5 text-center sm:p-6" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
             {/* Icon */}
             <div className={`mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full sm:mb-4 sm:h-20 sm:w-20 ${style.iconBg}`}>
               {style.icon}

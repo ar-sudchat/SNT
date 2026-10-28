@@ -52,14 +52,27 @@ const Layout = () => {
   const mainItems = isStaff
     ? [
         { path: homePath, label: t('หน้าแรก'), icon: ICON.home },
-        { path: '/monitor', label: t('ติดตามงาน'), icon: ICON.chart },
-        { path: '/admin/tasks', label: t('งาน'), icon: ICON.task },
+        { path: '/monitor', label: t('ตรวจงาน'), icon: ICON.chart },
+        { path: '/admin/tasks', label: t('สร้างงาน'), icon: ICON.task },
+        { path: '/attendance', label: t('เช็คชื่อ'), icon: ICON.attendance },
+        { path: '/summary', label: t('สรุปรายวัน'), icon: ICON.chart },
         { path: '/lesson-log', label: t('บันทึกหลังแผน'), icon: ICON.lessonlog },
         { path: '/ai', label: t('ผู้ช่วย AI'), icon: ICON.ai },
         { path: '/tools', label: t('เครื่องมือห้องเรียน'), icon: ICON.tools },
         { path: '/admin/settings', label: canManage ? t('ตั้งค่าระบบ') : t('ห้องและนักเรียน'), icon: ICON.gear }
       ]
     : [{ path: '/student', label: t('งานของฉัน'), icon: ICON.task }];
+
+  // รายการในแผ่น "เพิ่มเติม" (เช็คชื่อ/สรุปรายวันขึ้นก่อน เพราะใช้ทุกคาบ)
+  const moreItems = [
+    { path: '/attendance', label: t('เช็คชื่อเข้าเรียน'), icon: ICON.attendance },
+    { path: '/summary', label: t('สรุปรายวัน'), icon: ICON.chart },
+    { path: '/lesson-log', label: t('บันทึกหลังแผน'), icon: ICON.lessonlog },
+    { path: '/ai', label: t('ผู้ช่วย AI'), icon: ICON.ai },
+    { path: '/tools', label: t('เครื่องมือห้องเรียน'), icon: ICON.tools },
+    { path: '/admin/settings', label: canManage ? t('ตั้งค่าระบบ') : t('ห้องและนักเรียน'), icon: ICON.gear },
+    { path: '/group', label: t('ตั้งค่ากลุ่ม / รหัสเชิญ'), icon: ICON.students }
+  ];
 
   const userName = displayNameOf(user && user.role === 'ADMIN' && !user.displayName ? { ...user, name: t('ผู้ดูแลระบบ') } : user);
   const roleLabel = isAdmin ? t('ผู้ดูแลระบบ') : role === 'TEACHER' ? t('ครู') : t('นักเรียน');
@@ -118,8 +131,14 @@ const Layout = () => {
           <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:py-3">
             <Link to={homePath} className="shrink-0 lg:hidden" aria-label={t("หน้าแรก")}><Logo size={30} tone="theme" tagline={false} /></Link>
             <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
-              <TenantSwitcher />
-              <Link to="/profile" title={t("โปรไฟล์ของฉัน")} className="flex min-h-[44px] min-w-0 max-w-[11rem] items-center gap-2 text-sm text-gray-700 underline-offset-4 hover:text-brand-700 hover:underline sm:max-w-[18rem] sm:text-base">
+              <div className={isStaff ? 'hidden lg:block' : ''}><TenantSwitcher /></div>
+              {isStaff && (
+                <button type="button" onClick={() => setMoreOpen(true)} aria-label={t("เมนูบัญชี")} aria-expanded={moreOpen}
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full lg:hidden">
+                  <Avatar user={user} size={36} ring="ring-2 ring-brand-100" />
+                </button>
+              )}
+              <Link to="/profile" title={t("โปรไฟล์ของฉัน")} className={`${isStaff ? 'hidden lg:flex' : 'flex'} min-h-[44px] min-w-0 max-w-[11rem] items-center gap-2 text-sm text-gray-700 underline-offset-4 hover:text-brand-700 hover:underline sm:max-w-[18rem] sm:text-base`}>
                 <Avatar user={user} size={32} ring="ring-2 ring-brand-100" />
                 <span className="truncate">{userName}</span>
               </Link>
@@ -129,7 +148,7 @@ const Layout = () => {
                   <Icon d={ICON.help} />
                 </a>
               )}
-              <span className="hidden shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800 ring-1 ring-brand-100 sm:inline">{roleLabel}</span>
+              <span className="hidden shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800 ring-1 ring-brand-100 lg:inline">{roleLabel}</span>
               <div className={isStaff ? 'hidden lg:block' : ''}><LanguagePicker compact /></div>
               <div className={isStaff ? 'hidden lg:block' : ''}><ThemePicker /></div>
               <button
@@ -171,42 +190,48 @@ const Layout = () => {
             <Link to={homePath} className={tabCls(isActive(homePath))} aria-current={isActive(homePath) ? 'page' : undefined}>
               <Icon d={ICON.home} className="h-6 w-6" />{t("หน้าแรก")}</Link>
             <Link to="/monitor" className={tabCls(isActive('/monitor'))} aria-current={isActive('/monitor') ? 'page' : undefined}>
-              <Icon d={ICON.chart} className="h-6 w-6" />{t("ติดตามงาน")}</Link>
+              <Icon d={ICON.chart} className="h-6 w-6" />{t("ตรวจงาน")}</Link>
             <Link to={SCAN_PATH} aria-current={isActive(SCAN_PATH) ? 'page' : undefined} className="flex flex-1 flex-col items-center pb-1 text-[11px] font-semibold text-brand-700" aria-label={t("สแกนส่งงาน")}>
               <span className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg ring-4 ring-white">
                 <Icon d={ICON.scan} className="h-7 w-7" />
               </span>{t("สแกน")}</Link>
             <Link to="/admin/tasks" className={tabCls(isActive('/admin/tasks'))} aria-current={isActive('/admin/tasks') ? 'page' : undefined}>
-              <Icon d={ICON.task} className="h-6 w-6" />{t("งาน")}</Link>
+              <Icon d={ICON.task} className="h-6 w-6" />{t("สร้างงาน")}</Link>
             <button
               type="button"
               onClick={() => setMoreOpen(true)}
               aria-expanded={moreOpen}
-              className={tabCls(moreOpen || isActive('/lesson-log') || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile') || isActive('/group'))}
+              className={tabCls(moreOpen || isActive('/attendance') || isActive('/summary') || isActive('/lesson-log') || isActive('/ai') || isActive('/tools') || isActive('/admin/settings') || isActive('/profile') || isActive('/group'))}
             >
               <Icon d={ICON.more} className="h-6 w-6" />{t("เพิ่มเติม")}</button>
           </div>
         </nav>
       )}
 
-      {/* แผ่น "เพิ่มเติม" */}
+      {/* แผ่น "เพิ่มเติม" · สูงไม่เกิน 85% ของจอ ส่วนหัว+ปุ่มปิดติดบน รายการเลื่อนได้ (จอ 360x640 ไม่ถูกตัด) */}
       {moreOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-label={t("เพิ่มเติม")}>
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t("เพิ่มเติม")}>
           <div className="absolute inset-0 bg-black/40" onClick={() => setMoreOpen(false)} aria-hidden="true" />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-4 shadow-2xl" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-            <div className="mb-2 flex items-center justify-between">
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl bg-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4">
               <h2 className="text-base font-semibold text-gray-900">{t("เพิ่มเติม")}</h2>
-              <button type="button" onClick={() => setMoreOpen(false)} className="min-h-[44px] px-3 text-sm text-gray-600">{t("ปิด")}</button>
+              <button type="button" autoFocus onClick={() => setMoreOpen(false)} className="min-h-[48px] min-w-[48px] px-3 text-sm font-medium text-gray-700">{t("ปิด")}</button>
             </div>
-            <div className="divide-y divide-gray-100">
-              <Link to="/lesson-log" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.lessonlog} />{t(" บันทึกหลังแผน")}</Link>
-              <Link to="/ai" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.ai} />{t(" ผู้ช่วย AI")}</Link>
-              <Link to="/tools" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.tools} />{t(" เครื่องมือห้องเรียน")}</Link>
-              <Link to="/admin/settings" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.gear} /> {canManage ? t('ตั้งค่าระบบ') : t('ห้องและนักเรียน')}</Link>
-              <Link to="/group" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.students} />{t(" ตั้งค่ากลุ่ม / รหัสเชิญ")}</Link>
-              <Link to="/profile" className="flex min-h-[60px] items-center gap-3 text-gray-800">
+            <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto overscroll-contain px-4" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+              <div className="flex min-h-[56px] items-center justify-between gap-3">
+                <span className="w-12 shrink-0 text-sm text-gray-600">{t("กลุ่ม")}</span>
+                <TenantSwitcher fullWidth />
+              </div>
+              {moreItems.map(item => (
+                <Link key={item.path} to={item.path} aria-current={isActive(item.path) ? 'page' : undefined}
+                  className={`-mx-4 flex min-h-[52px] items-center gap-3 px-4 ${isActive(item.path) ? 'bg-brand-50 font-semibold text-brand-800' : 'text-gray-800'}`}>
+                  <Icon d={item.icon} />{item.label}
+                </Link>
+              ))}
+              <Link to="/profile" aria-current={isActive('/profile') ? 'page' : undefined}
+                className={`-mx-4 flex min-h-[60px] items-center gap-3 px-4 ${isActive('/profile') ? 'bg-brand-50 text-brand-800' : 'text-gray-800'}`}>
                 <Avatar user={user} size={36} ring="ring-2 ring-brand-100" />
-                <span className="min-w-0"><span className="block truncate font-medium">{userName}</span><span className="block text-xs text-gray-500">{t("โปรไฟล์ของฉัน")}</span></span>
+                <span className="min-w-0"><span className="block truncate font-medium">{userName}</span><span className="block text-xs text-gray-600">{t("โปรไฟล์ของฉัน")}</span></span>
               </Link>
               <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="flex min-h-[52px] items-center gap-3 text-gray-800"><Icon d={ICON.help} />{t(" คู่มือการใช้งาน")}<span className="sr-only">{t(" (เปิดแท็บใหม่)")}</span></a>
               <div className="flex min-h-[52px] items-center justify-between gap-3 text-gray-800">

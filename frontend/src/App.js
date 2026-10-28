@@ -10,6 +10,9 @@ import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import QRScanner from './pages/teacher/QRScanner';
+import ScanCheck from './pages/teacher/ScanCheck';
+import AttendanceCheck from './pages/attendance/AttendanceCheck';
+import DaySummary from './pages/attendance/DaySummary';
 import StudentPortal from './pages/student/StudentPortal';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageAcademicYears from './pages/admin/ManageAcademicYears';
@@ -134,7 +137,31 @@ function App() {
               path="teacher/scan"
               element={
                 <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <ScanCheck />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="teacher/scan/classic"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
                   <QRScanner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="attendance"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <AttendanceCheck />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="summary"
+              element={
+                <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                  <DaySummary />
                 </ProtectedRoute>
               }
             />

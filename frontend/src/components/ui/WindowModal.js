@@ -60,6 +60,36 @@ function useIsDesktop() {
   return match;
 }
 
+// พื้นที่ที่มองเห็นจริงบนมือถือ (หักแป้นพิมพ์ออก) — ให้โมดัลเต็มจอไม่ถูกแป้นพิมพ์บังปุ่มล่าง
+export function useVisualViewportBox(active) {
+  const [box, setBox] = useState(null);
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!active || !vv) { setBox(null); return undefined; }
+    const fn = () => setBox({ top: vv.offsetTop, height: vv.height });
+    fn();
+    vv.addEventListener('resize', fn);
+    vv.addEventListener('scroll', fn);
+    return () => { vv.removeEventListener('resize', fn); vv.removeEventListener('scroll', fn); };
+  }, [active]);
+  return box;
+}
+
+// ล็อกการเลื่อนของหน้าด้านหลังขณะมีโมดัลเปิด (นับซ้อนหลายชั้น)
+let lockCount = 0;
+let lockPrev = '';
+export function useBodyScrollLock(active) {
+  useEffect(() => {
+    if (!active) return undefined;
+    if (lockCount === 0) { lockPrev = document.body.style.overflow; document.body.style.overflow = 'hidden'; }
+    lockCount += 1;
+    return () => {
+      lockCount -= 1;
+      if (lockCount === 0) document.body.style.overflow = lockPrev;
+    };
+  }, [active]);
+}
+
 function clamp(pos, el) {
   const w = el ? el.offsetWidth : 0;
   const h = el ? el.offsetHeight : 0;
@@ -95,6 +125,8 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
   const openerRef = useRef(null);
   const dragRef = useRef(null);
   const titleId = useId();
+  const vvBox = useVisualViewportBox(open && !minimized && !isDesktop);
+  useBodyScrollLock(open && !minimized);
 
   // reset minimized when closed
   useEffect(() => {
@@ -196,8 +228,11 @@ export default function WindowModal({ open, title, onClose, initialWidth = 'max-
   let panelStyle;
   let panelClass;
   if (!isDesktop) {
-    panelClass = 'fixed inset-0 rounded-none';
-    panelStyle = { paddingBottom: 'env(safe-area-inset-bottom, 0px)' };
+    panelClass = 'fixed inset-x-0 rounded-none';
+    const keyboardUp = vvBox && window.innerHeight - vvBox.height > 120;
+    panelStyle = vvBox
+      ? { top: vvBox.top, height: vvBox.height, paddingBottom: keyboardUp ? 0 : 'env(safe-area-inset-bottom, 0px)' }
+      : { top: 0, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' };
   } else if (showMax) {
     panelClass = 'fixed rounded-lg';
     panelStyle = { inset: MARGIN };

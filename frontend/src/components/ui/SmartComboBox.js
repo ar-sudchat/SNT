@@ -1,6 +1,7 @@
 import { t } from '../../i18n';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useVisualViewportBox, useBodyScrollLock } from './WindowModal';
 
 /**
  * SmartComboBox - Dropdown อัจฉริยะที่รองรับข้อมูลจำนวนมาก
@@ -54,6 +55,8 @@ const SmartComboBox = ({
   name = '',
   id = '',
   ariaLabel,
+  title, // หัวแผ่นเลือกบนมือถือ (ชื่อช่อง เช่น "วิชา") · ไม่ส่ง = ใช้ ariaLabel/placeholder
+  allLabel, // มีค่า = แผ่นบนมือถือมีแถวบนสุดสำหรับ "ไม่กรอง" (เช่น "ทุกวิชา") แตะแล้วล้างค่า
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,6 +67,18 @@ const SmartComboBox = ({
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const listRef = useRef(null);
+  // มือถือ (<640px): เปิดเป็นแผ่นล่างเต็มความกว้าง รายการสูง 48px แตะง่าย ค้นหาเหนือแป้นพิมพ์
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 639px)').matches : false);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 639px)');
+    const fn = () => setIsMobile(mq.matches);
+    mq.addEventListener ? mq.addEventListener('change', fn) : mq.addListener(fn);
+    return () => (mq.removeEventListener ? mq.removeEventListener('change', fn) : mq.removeListener(fn));
+  }, []);
+  const sheet = isOpen && isMobile;
+  const vvBox = useVisualViewportBox(sheet);
+  useBodyScrollLock(sheet);
   const listboxId = useRef(`combobox-list-${Math.random().toString(36).slice(2, 9)}`).current;
 
   // Get label from option
@@ -137,15 +152,19 @@ const SmartComboBox = ({
       window.addEventListener('resize', updatePosition);
 
       // Focus search input
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 10);
+      // มือถือ + รายการสั้น: ไม่เด้งแป้นพิมพ์ทันที (จะบังรายการ) ให้แตะช่องค้นหาเองถ้าต้องการ
+      if (!(isMobile && options.length <= 12)) {
+        setTimeout(() => {
+          inputRef.current?.focus({ preventScroll: true });
+        }, 10);
+      }
     }
 
     return () => {
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, updatePosition]);
 
   // Close on click outside
@@ -285,9 +304,10 @@ const SmartComboBox = ({
               <button
                 type="button"
                 onClick={(e) => handleRemoveTag(e, getValue(opt))}
-                className="hover:text-brand-600"
+                aria-label={t('เอาออก')}
+                className="-my-1 -mr-1 flex min-h-[32px] min-w-[32px] items-center justify-center hover:text-brand-600"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -314,20 +334,40 @@ const SmartComboBox = ({
   };
 
   // Dropdown content
+  const closeSheet = () => { setIsOpen(false); setSearchTerm(''); };
+  const sheetMax = vvBox ? Math.round(vvBox.height * 0.85) : Math.round(window.innerHeight * 0.75);
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className={`fixed w-full max-w-[calc(100vw-1rem)] z-[9999] bg-white border rounded-lg shadow-lg overflow-hidden ${dropdownClassName}`}
-      style={{
+      role={sheet ? 'dialog' : undefined}
+      aria-modal={sheet ? 'true' : undefined}
+      aria-label={sheet ? (ariaLabel || placeholder) : undefined}
+      className={sheet
+        ? `fixed inset-x-0 z-[9999] flex flex-col rounded-t-2xl bg-white shadow-2xl overflow-hidden ${dropdownClassName}`
+        : `fixed w-full max-w-[calc(100vw-1rem)] z-[9999] bg-white border rounded-lg shadow-lg overflow-hidden ${dropdownClassName}`}
+      style={sheet ? {
+        // ยึดขอบล่างของพื้นที่ที่เห็นจริง (เหนือแป้นพิมพ์)
+        bottom: vvBox ? Math.max(0, window.innerHeight - vvBox.top - vvBox.height) : 0,
+        maxHeight: sheetMax,
+        paddingBottom: vvBox && window.innerHeight - vvBox.height > 120 ? 0 : 'env(safe-area-inset-bottom, 0px)',
+      } : {
         top: dropdownPosition.top,
         left: dropdownPosition.left,
         width: dropdownPosition.width,
         maxHeight: maxHeight,
       }}
     >
+      {sheet && (
+        <div className="flex shrink-0 items-center justify-between border-b px-4">
+          <span className="min-w-0 truncate py-2 text-base font-semibold text-gray-800">{title || ariaLabel || (typeof placeholder === 'string' ? placeholder : '')}</span>
+          <button type="button" onClick={closeSheet} aria-label={t('ปิด')} className="-mr-3 flex min-h-[44px] min-w-[44px] items-center justify-center text-gray-500">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
       {/* Search Input */}
       {searchable && (
-        <div className="p-2 border-b">
+        <div className="p-2 border-b shrink-0">
           <div className="relative">
             <input
               ref={inputRef}
@@ -336,9 +376,10 @@ const SmartComboBox = ({
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               placeholder={searchPlaceholder}
-              className="w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-base sm:text-sm"
+              aria-label={t('พิมพ์เพื่อค้นหา...')}
+              className="w-full min-h-[44px] sm:min-h-0 pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-base sm:text-sm"
             />
-            <svg className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -350,8 +391,8 @@ const SmartComboBox = ({
         ref={listRef}
         id={listboxId}
         role="listbox"
-        className="w-full max-h-60 overflow-auto"
-        style={{ maxHeight: `min(15rem, ${maxHeight - (searchable ? 60 : 0)}px)` }}
+        className={`w-full overflow-auto overscroll-contain ${sheet ? 'flex-1 min-h-0' : 'max-h-60'}`}
+        style={sheet ? undefined : { maxHeight: `min(15rem, ${maxHeight - (searchable ? 60 : 0)}px)` }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -367,6 +408,19 @@ const SmartComboBox = ({
           </div>
         ) : (
           <>
+            {sheet && allLabel && !multiple && !searchTerm && (
+              <div
+                role="option"
+                aria-selected={value == null || value === ''}
+                onClick={() => { onChange?.(null); closeSheet(); }}
+                className={`flex min-h-[52px] cursor-pointer items-center border-b border-gray-100 px-4 py-2 active:bg-brand-50 ${value == null || value === '' ? 'bg-brand-100 font-semibold text-brand-900' : 'text-gray-600'}`}
+              >
+                <span className="flex-1">{allLabel}</span>
+                {(value == null || value === '') && (
+                  <svg className="ml-2 h-5 w-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                )}
+              </div>
+            )}
             {displayOptions.map((option, index) => {
               const optValue = getValue(option);
               const isSelected = multiple
@@ -377,21 +431,24 @@ const SmartComboBox = ({
               return (
                 <div
                   key={optValue ?? index}
+                  role="option"
+                  aria-selected={!!isSelected}
                   className={`
-                    flex items-center px-3 py-2 cursor-pointer transition-colors
+                    flex items-center px-3 py-2 cursor-pointer transition-colors active:bg-brand-50
+                    ${sheet ? 'border-b border-gray-100 px-4' : ''}
                     ${isHighlighted ? 'bg-brand-50' : ''}
                     ${isSelected ? 'bg-brand-100 text-brand-900' : 'hover:bg-gray-50'}
                   `}
                   onClick={() => handleSelect(option)}
                   onMouseEnter={() => setHighlightedIndex(index)}
-                  style={{ minHeight: itemHeight }}
+                  style={{ minHeight: sheet ? Math.max(48, itemHeight) : itemHeight }}
                 >
                   {multiple && (
                     <input
                       type="checkbox"
                       checked={isSelected}
                       readOnly
-                      className="w-4 h-4 mr-3 text-brand-600 rounded border-gray-300"
+                      className="w-5 h-5 mr-3 text-brand-600 rounded border-gray-300"
                     />
                   )}
                   <div className="flex-1 min-w-0">
@@ -451,9 +508,10 @@ const SmartComboBox = ({
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              aria-label={t('ล้างค่าที่เลือก')}
+              className="-my-2 flex min-h-[44px] min-w-[36px] items-center justify-center text-gray-400 hover:text-gray-600 rounded"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -491,7 +549,12 @@ const SmartComboBox = ({
       )}
 
       {/* Dropdown Portal */}
-      {isOpen && createPortal(dropdownContent, document.body)}
+      {isOpen && createPortal(sheet ? (
+        <>
+          <div className="fixed inset-0 z-[9998] bg-black/40" onClick={closeSheet} aria-hidden="true" />
+          {dropdownContent}
+        </>
+      ) : dropdownContent, document.body)}
     </div>
   );
 };

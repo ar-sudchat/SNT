@@ -421,6 +421,9 @@ const SmartTable = ({
                     : mobileData.length < sortedData.length
                       ? <><span className="md:hidden">{t("แสดง {length} จาก {length1} รายการ", { length: mobileData.length, length1: sortedData.length })}</span></>
                       : loading ? t('กำลังอัพเดต...') : null}
+                {activeFilterCount > 0 && onClearFilters && (
+                  <button type="button" onClick={onClearFilters} className="sm:hidden ml-2 inline-flex min-h-[44px] items-center px-2 text-brand-700 underline underline-offset-2">{t('ล้างตัวกรอง')}</button>
+                )}
               </p>
             </div>
           )}
@@ -440,17 +443,20 @@ const SmartTable = ({
                     setMobileLimit(50);
                   }}
                   placeholder={searchPlaceholder}
-                  className="w-full sm:w-64 pl-9 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm"
+                  aria-label={searchPlaceholder}
+                  className="w-full min-h-[44px] sm:min-h-0 sm:w-64 pl-9 pr-11 sm:pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm"
                 />
-                <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 {searchTerm && (
                   <button
+                    type="button"
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    aria-label={t('ล้างการค้นหา')}
+                    className="absolute right-0 top-0 flex h-full w-11 sm:w-8 items-center justify-center text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -462,7 +468,7 @@ const SmartTable = ({
               <button
                 type="button"
                 onClick={() => setFilterSheet(true)}
-                className="sm:hidden print:hidden inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
+                className={`sm:hidden print:hidden inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-lg border px-3 text-sm ${activeFilterCount > 0 ? 'border-brand-500 bg-brand-50 text-brand-800' : 'border-gray-300 bg-white text-gray-700'}`}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18l-7 8v6l-4 2v-8L3 4z" />
@@ -671,30 +677,36 @@ const SmartTable = ({
           )}
           {paginatedData.length === 0 ? (
             <div className="py-12" role="status">
-              {loading ? <div className="text-center text-gray-500">{t("กำลังโหลดข้อมูล...")}</div> : renderEmpty()}
+              {loading ? (
+                <div className="flex flex-col items-center gap-3 text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" aria-hidden="true"></div>
+                  <span>{t("กำลังโหลดข้อมูล...")}</span>
+                </div>
+              ) : renderEmpty()}
             </div>
           ) : mobileData.map((row, rowIndex) => (
             <div
               key={row.id || rowIndex}
-              className={`min-w-0 min-h-[56px] rounded-lg border px-3 py-2.5 space-y-2 ${selectable && selectedRows.has(idOf(row)) ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-200'} ${onRowClick ? 'cursor-pointer active:bg-gray-100' : ''}`}
+              className={`min-w-0 min-h-[56px] rounded-lg border px-3 py-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${selectable && selectedRows.has(idOf(row)) ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-200'} ${onRowClick ? 'cursor-pointer active:bg-gray-100' : ''}`}
               onClick={() => onRowClick?.(row)}
               role={onRowClick ? 'button' : undefined}
               tabIndex={onRowClick ? 0 : undefined}
               onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row); } } : undefined}
             >
-              {selectable && (
-                <label className="flex min-h-[44px] min-w-[44px] items-center gap-3 text-sm" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedRows.has(idOf(row))} disabled={bulkBusy} onChange={() => handleSelectRow(row)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />{t("เลือก")}</label>
-              )}
               <div className="flex min-w-0 items-center gap-2">
+                {selectable && (
+                  <label className="-my-1 -ml-2 flex min-h-[44px] min-w-[44px] flex-none items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label={t("เลือกแถวนี้")} checked={selectedRows.has(idOf(row))} disabled={bulkBusy} onChange={() => handleSelectRow(row)} className="h-5 w-5 rounded border-gray-300 text-brand-600" />
+                  </label>
+                )}
                 <div className="min-w-0 flex-1">
                   {primaryCol && (
-                    <div className="min-w-0 truncate font-semibold text-gray-900">
+                    <div className="min-w-0 break-words font-semibold leading-snug text-gray-900" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {renderCell(primaryCol, row, rowIndex)}
                     </div>
                   )}
                   {secondaryCols.length > 0 && (
-                    <div className="mt-0.5 min-w-0 truncate text-sm text-gray-500">
+                    <div className="mt-0.5 min-w-0 break-words text-sm text-gray-600" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {secondaryCols.map((col, i) => (
                         <React.Fragment key={col.key}>
                           {i > 0 && <span aria-hidden="true"> · </span>}
@@ -706,7 +718,7 @@ const SmartTable = ({
                 </div>
                 {badgeCol && <div className="flex-none">{renderCell(badgeCol, row, rowIndex)}</div>}
                 {onRowClick && (
-                  <svg className="h-5 w-5 flex-none text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg className="h-5 w-5 flex-none text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 )}
@@ -731,12 +743,21 @@ const SmartTable = ({
           onClose={() => setFilterSheet(false)}
           id="smart-table-filter"
           footer={
-            <button
-              type="button"
-              onClick={() => setFilterSheet(false)}
-              className="w-full min-h-[44px] rounded-lg bg-brand-600 text-white"
-            >{t('ดูผลลัพธ์ ({count})', { count: sortedData.length })}
-            </button>
+            <div className="flex gap-2">
+              {activeFilterCount > 0 && onClearFilters && (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="min-h-[48px] flex-none rounded-lg border border-gray-300 bg-white px-4 text-gray-700 active:bg-gray-100"
+                >{t('ล้าง')}</button>
+              )}
+              <button
+                type="button"
+                onClick={() => setFilterSheet(false)}
+                className="min-h-[48px] flex-1 rounded-lg bg-brand-600 font-medium text-white active:bg-brand-700"
+              >{t('ดูผลลัพธ์ ({count})', { count: sortedData.length })}
+              </button>
+            </div>
           }
         >
           <div className="p-4 space-y-4">{filters}</div>

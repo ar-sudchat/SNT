@@ -4,6 +4,7 @@ import { classAPI, gradeAPI, teacherAPI, academicYearAPI } from '../../services/
 import { SmartTable, SmartComboBox, ConfirmDialog, WindowModal } from '../../components/ui';
 import useFormErrors from '../../utils/useFormErrors';
 import { AddFab } from '../../components/ui/SmartTable';
+import QuickFilterBar from '../../components/ui/QuickFilterBar';
 import PageHeader from '../../components/ui/PageHeader';
 import { useDialog } from '../../components/ui/DialogProvider';
 
@@ -361,6 +362,11 @@ const ManageClasses = () => {
       {/* Filter: จอ sm ขึ้นไปแสดงในแถว · มือถือใช้ปุ่ม 'ตัวกรอง' ใน SmartTable */}
       <div className="hidden sm:block bg-white rounded-lg shadow p-4">
         {filterControls}
+      </div>
+
+      {/* ตัวกรองด่วนบนมือถือ: ชั้น แตะได้ทันที */}
+      <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-100 sm:hidden">
+        <QuickFilterBar label={t('ชั้น')} allLabel={t('ทุกชั้น')} options={grades.map(g => ({ value: g.id, label: g.gradeName }))} value={filterGrade} onChange={setFilterGrade} />
       </div>
 
       {/* Table */}

@@ -2,7 +2,8 @@ import { t, tx } from '../../i18n';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { monitorAPI, classAPI, academicYearAPI, gradeAPI } from '../../services/api';
-import { MonitorFilterBar, MonitorFilterField } from './MonitorFilterBar';
+import { MonitorFilterBar, MonitorFilterField, MonitorChips } from './MonitorFilterBar';
+import QuickFilterBar from '../../components/ui/QuickFilterBar';
 import { ReminderButton } from './reminderText';
 
 const LAST_CLASS_KEY = 'monitor.lastClassId';
@@ -232,7 +233,7 @@ const ClassMonitor = ({ embedded = false }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ติดตามงานรายห้อง')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('ตรวจงานรายห้อง')}</h1>
       </div>}
 
       {/* Error */}
@@ -248,7 +249,24 @@ const ClassMonitor = ({ embedded = false }) => {
       )}
 
       {/* ตัวกรอง: แสดงตลอด เปลี่ยนแล้วใช้ทันที */}
-      <MonitorFilterBar>
+      <MonitorFilterBar chips={<>
+        <MonitorChips
+          label={t("ห้อง")}
+          options={classes}
+          value={selectedClass}
+          labelKey="className"
+          onChange={(val) => { setSelectedClass(val); setSelectedSubject(null); updateURL(filterAcademicYear, filterGrade, val, null); }}
+        />
+        {(data?.summary?.subjects || []).length > 0 && (
+          <QuickFilterBar
+            label={t("วิชา")}
+            allLabel={t("ทุกวิชา")}
+            options={data.summary.subjects.map(sj => ({ value: sj.id, label: sj.subjectName }))}
+            value={selectedSubject}
+            onChange={(val) => { setSelectedSubject(val); updateURL(filterAcademicYear, filterGrade, selectedClass, val); }}
+          />
+        )}
+      </>}>
         <MonitorFilterField
           label={t("ปีการศึกษา")}
           options={academicYears}
@@ -282,6 +300,7 @@ const ClassMonitor = ({ embedded = false }) => {
           placeholder={t("ทุกชั้น")}
         />
         <MonitorFilterField
+          mobileHidden
           label={t("ห้องเรียน")}
           options={classes}
           value={selectedClass}
@@ -295,6 +314,7 @@ const ClassMonitor = ({ embedded = false }) => {
           placeholder={t("เลือกห้องเรียน")}
         />
         <MonitorFilterField
+          mobileHidden
           label={t("วิชา")}
           options={data?.summary?.subjects || []}
           value={selectedSubject}

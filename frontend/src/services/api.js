@@ -174,7 +174,10 @@ export const submissionAPI = {
   getAll: (params) => api.get('/submissions', { params }),
   getById: (id) => api.get(`/submissions/${id}`),
   createOrUpdate: (data) => api.post('/submissions', data),
-  bulkUpdate: (data) => api.post('/submissions/bulk', data)
+  bulkUpdate: (data) => api.post('/submissions/bulk', data),
+  scanCheck: (data) => api.post('/submissions/scan-check', data),
+  taskProgress: (taskId) => api.get('/submissions/task-progress', { params: { taskId } }),
+  taskSheet: (taskId) => api.get('/submissions/task-sheet', { params: { taskId } })
 };
 
 export const importAPI = {
@@ -255,7 +258,23 @@ export const reportAPI = {
   subjectSummary: (id) => api.get(`/reports/teacher/subject/${id}`),
   studentSummary: (id) => api.get(`/reports/teacher/student/${id}`),
   studentSubmissions: () => api.get('/reports/student/my-submissions'),
-  exportReport: (type, params) => api.get(`/reports/export/${type}`, { params, responseType: 'blob' })
+  exportReport: (type, params) => api.get(`/reports/export/${type}`, { params, responseType: 'blob' }),
+  daySubmissions: (params) => api.get('/reports/teacher/day-submissions', { params }),
+  exportDaySubmissions: (params) => api.get('/reports/teacher/day-submissions/export', { params, responseType: 'blob' })
+};
+
+export const attendanceAPI = {
+  scan: (data) => api.post('/attendance/scan', data),
+  sheet: (params) => api.get('/attendance/sheet', { params }),
+  mark: (data) => api.put('/attendance/mark', data),
+  close: (data) => api.post('/attendance/close', data),
+  summary: (params) => api.get('/attendance/summary', { params }),
+  exportXlsx: (params) => api.get('/attendance/export', { params, responseType: 'blob' }),
+  dayScan: (data) => api.post('/attendance/day/scan', data),
+  daySheet: (params) => api.get('/attendance/day/sheet', { params }),
+  dayMark: (data) => api.put('/attendance/day/mark', data),
+  daySummary: (params) => api.get('/attendance/day/summary', { params }),
+  dayExport: (params) => api.get('/attendance/day/export', { params, responseType: 'blob' })
 };
 
 export const transferAPI = {

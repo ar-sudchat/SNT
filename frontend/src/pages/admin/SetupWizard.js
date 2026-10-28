@@ -463,7 +463,7 @@ export default function SetupWizard() {
         </div>
         <Footer
           onBack={back}
-          primary={<Link to="/monitor" className={primaryBtn}>{t("ไปหน้าติดตามงาน")}</Link>}
+          primary={<Link to="/monitor" className={primaryBtn}>{t("ไปหน้าตรวจงาน")}</Link>}
         />
       </>
     );

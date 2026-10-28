@@ -891,7 +891,7 @@ const QRScanner = () => {
         </div>
       ) : (
         /* Result View */
-        <div className="flex-1 flex flex-col overflow-hidden space-y-2">
+        <div className="flex-1 flex flex-col space-y-2">
           {/* Compact Student & Subject Info Card with Stats */}
           <div className="bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl p-3 text-white shadow-lg flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -1022,12 +1022,14 @@ const QRScanner = () => {
             </div>
           </div>
 
+          {/* ปุ่มบันทึก/สแกนต่อ ติดอยู่เหนือแถบล่างเสมอ (ระยะหัวแม่โป้ง) แม้รายการงานยาว */}
+          <div className="sticky bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] lg:bottom-2 z-10 -mx-1 space-y-2 bg-[rgb(var(--page)/0.95)] px-1 pb-1 pt-2 backdrop-blur-sm flex-shrink-0">
           {/* One-tap bulk record (thumb zone) */}
           {bulk.eligible.length > 0 && (
             <button
               onClick={handleBulkApprove}
               disabled={bulkSaving || savingTaskId !== null}
-              className="w-full py-4 min-h-[64px] bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all font-bold text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-60"
+              className="w-full py-2.5 min-h-[52px] bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all font-bold text-base sm:text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-60"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -1042,11 +1044,12 @@ const QRScanner = () => {
           {/* Always visible "Scan Next" button at bottom */}
           <button
             onClick={scanNextNow}
-            className="w-full py-4 min-h-[56px] bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors font-medium text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0"
+            className="w-full py-2.5 min-h-[48px] bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors font-medium text-base sm:text-lg shadow-lg flex items-center justify-center gap-2 flex-shrink-0"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             </svg>{t('สแกนคนถัดไป')}</button>
+          </div>
         </div>
       )}
     </div>
