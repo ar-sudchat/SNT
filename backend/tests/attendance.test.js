@@ -152,6 +152,10 @@ test('attendance: scan by chosen subject or by QR subject, close, summary, expor
   assert.strictEqual(r.status, 200);
 
   // สแกนตรวจงานต่อเนื่อง: เลือกงานก่อน สแกนเล่มไหนก็ผ่าน
+  // preview = ดูว่าสแกนเจอใคร โดยยังไม่บันทึก (โหมดครูเลือกผ่าน/ไม่ผ่านเอง)
+  r = await call(server.address().port, 'POST', '/api/submissions/scan-check', h, { taskId: task.id, qrcodeData: `SNT-${sfx}-2-1`, preview: true });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.deepStrictEqual([r.body.preview, r.body.previousStatus, r.body.progress.checked], [true, 'NOT_SUBMITTED', 0]);
   r = await call(server.address().port, 'POST', '/api/submissions/scan-check', h, { taskId: task.id, qrcodeData: `SNT-${sfx}-2-1` });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.deepStrictEqual([r.body.status, r.body.previousStatus, r.body.alreadyChecked], ['APPROVED', 'NOT_SUBMITTED', false]);

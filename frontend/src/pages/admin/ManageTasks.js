@@ -350,6 +350,7 @@ const ManageTasks = () => {
             labelKey="year"
             valueKey="id"
             placeholder={t("ทุกปีการศึกษา")}
+            allLabel={t("ทุกปีการศึกษา")}
             clearable
             searchable
           />
@@ -363,6 +364,7 @@ const ManageTasks = () => {
             labelKey="gradeName"
             valueKey="id"
             placeholder={t("ทุกชั้น")}
+            allLabel={t("ทุกชั้น")}
             clearable
             searchable
           />

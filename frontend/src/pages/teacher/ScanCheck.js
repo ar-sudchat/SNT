@@ -160,6 +160,12 @@ const ScanCheck = () => {
   const [manualCode, setManualCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [savingScore, setSavingScore] = useState(false);
+  // โหมดตรวจ: auto = สแกนแล้วผ่านเลย · manual = สแกนแล้วครูเลือกผ่าน/ไม่ผ่านเอง
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem('scancheck_mode') === 'manual' ? 'manual' : 'auto'; } catch { return 'auto'; } });
+  const [pending, setPending] = useState(null);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const chooseMode = (m) => { setMode(m); setPending(null); try { localStorage.setItem('scancheck_mode', m); } catch { /* ไม่เก็บค่าก็ไม่เป็นไร */ } };
 
   const readerRef = useRef(null);
   const audioRef = useRef(null);
@@ -255,6 +261,11 @@ const ScanCheck = () => {
   };
 
   const record = async (payload) => {
+    if (modeRef.current === 'manual' && !payload.status) {
+      const p = await send({ ...payload, preview: true });
+      if (p) { setLast(null); setPending(p); beep(true); }
+      return;
+    }
     const d = await send(payload);
     if (!d) return;
     scoreQ.current.confirmed[d.student.id] = d.score;
@@ -290,6 +301,14 @@ const ScanCheck = () => {
     setLast(l => (l ? { ...l, score: v } : l));
     setHistory(h => h.map(x => (x.id === last.student.id ? { ...x, score: v } : x)));
     if (!scoreQ.current.running) drainScores();
+  };
+
+  // โหมดเลือกเอง: ครูกดผ่าน/ไม่ผ่านให้คนที่สแกนล่าสุด
+  const decide = async (status) => {
+    if (!pending) return;
+    const code = pending.student.studentCode;
+    setPending(null);
+    await record({ studentCode: code, status });
   };
 
   // ย้อนกลับ / เปลี่ยนเป็นไม่ผ่าน ของคนล่าสุด
@@ -414,6 +433,18 @@ const ScanCheck = () => {
 
       {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
+      {pending && (
+        <div role="status" className="rounded-xl bg-blue-50 px-4 py-3 text-blue-900">
+          <div className="truncate text-lg font-semibold">{pending.student.name}</div>
+          <div className="text-sm">{pending.student.className}{pending.previousStatus !== 'NOT_SUBMITTED' ? ` · ${t('ตรวจไปแล้ว: {value1}', { value1: statusText(pending.previousStatus) })}` : ''} · {t('ยังไม่ได้บันทึก เลือกผลการตรวจ')}</div>
+          <div className="mt-2 flex gap-2">
+            <button type="button" disabled={busy} onClick={() => decide('APPROVED')} className="min-h-[56px] flex-1 rounded-xl bg-green-600 text-lg font-semibold text-white disabled:opacity-50">{t('ผ่าน')}</button>
+            <button type="button" disabled={busy} onClick={() => decide('REJECTED')} className="min-h-[56px] flex-1 rounded-xl bg-red-600 text-lg font-semibold text-white disabled:opacity-50">{t('ไม่ผ่าน')}</button>
+            <button type="button" disabled={busy} onClick={() => setPending(null)} className="min-h-[56px] rounded-xl border border-current/30 bg-white/70 px-4 text-sm font-medium">{t('ข้าม')}</button>
+          </div>
+        </div>
+      )}
+
       {last && (() => {
         const isScored = last.scoringType === 'SCORED';
         const max = last.maxScore;
@@ -455,6 +486,12 @@ const ScanCheck = () => {
       })()}
 
       <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-200 p-1" role="group" aria-label={t('วิธีตรวจ')}>
+          {[['auto', t('สแกนแล้วผ่านเลย')], ['manual', t('สแกนแล้วเลือกเอง')]].map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={mode === k} onClick={() => chooseMode(k)}
+              className={`min-h-[44px] rounded-md px-2 text-sm font-medium ${mode === k ? 'bg-white text-brand-700 shadow' : 'text-gray-600'}`}>{label}</button>
+          ))}
+        </div>
         <div id="scancheck-reader" hidden={!scanning} className="mx-auto w-full max-w-md overflow-hidden rounded-xl" />
         {scanning
           ? <button type="button" onClick={stopScanner} className="min-h-[56px] w-full rounded-xl bg-gray-700 px-6 text-lg font-semibold text-white">{t('หยุดสแกน')}</button>
@@ -465,7 +502,7 @@ const ScanCheck = () => {
             <button type="submit" disabled={busy || !manualCode.trim() || !task} className="min-h-[52px] rounded-lg border border-gray-300 px-4 font-medium disabled:opacity-50">{t('บันทึก')}</button>
           </form>
         </div>
-        <p className="text-sm text-gray-500">{task?.scoringType === 'SCORED' ? t('สแกน QR เล่มไหนของนักเรียนก็ได้ ระบบให้คะแนนเต็มทันที แล้วกดปุ่มปรับคะแนนได้') : t('สแกน QR เล่มไหนของนักเรียนก็ได้ ระบบบันทึกว่า "ผ่าน" ให้งานที่เลือกไว้ทันที')}</p>
+        <p className="text-sm text-gray-500">{mode === 'manual' ? t('สแกน QR แล้วเลือก "ผ่าน" หรือ "ไม่ผ่าน" เอง ระบบยังไม่บันทึกจนกว่าจะกด') : task?.scoringType === 'SCORED' ? t('สแกน QR เล่มไหนของนักเรียนก็ได้ ระบบให้คะแนนเต็มทันที แล้วกดปุ่มปรับคะแนนได้') : t('สแกน QR เล่มไหนของนักเรียนก็ได้ ระบบบันทึกว่า "ผ่าน" ให้งานที่เลือกไว้ทันที')}</p>
       </section>
 
       {history.length > 0 && (

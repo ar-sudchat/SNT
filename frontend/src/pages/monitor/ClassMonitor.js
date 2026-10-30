@@ -298,6 +298,7 @@ const ClassMonitor = ({ embedded = false }) => {
           labelKey="gradeName"
           valueKey="id"
           placeholder={t("ทุกชั้น")}
+          allLabel={t("ทุกชั้น")}
         />
         <MonitorFilterField
           mobileHidden
@@ -325,6 +326,7 @@ const ClassMonitor = ({ embedded = false }) => {
           labelKey="subjectName"
           valueKey="id"
           placeholder={t("ทุกวิชา")}
+          allLabel={t("ทุกวิชา")}
         />
       </MonitorFilterBar>
 

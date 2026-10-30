@@ -270,11 +270,18 @@ export const attendanceAPI = {
   close: (data) => api.post('/attendance/close', data),
   summary: (params) => api.get('/attendance/summary', { params }),
   exportXlsx: (params) => api.get('/attendance/export', { params, responseType: 'blob' }),
+  monthly: (params) => api.get('/attendance/monthly', { params }),
+  pp5Export: (params) => api.get('/attendance/pp5-export', { params, responseType: 'blob' }),
   dayScan: (data) => api.post('/attendance/day/scan', data),
   daySheet: (params) => api.get('/attendance/day/sheet', { params }),
   dayMark: (data) => api.put('/attendance/day/mark', data),
   daySummary: (params) => api.get('/attendance/day/summary', { params }),
   dayExport: (params) => api.get('/attendance/day/export', { params, responseType: 'blob' })
+};
+
+export const absenceNoticeAPI = {
+  notify: (data) => api.post('/absence-notices', data),
+  count: (params) => api.get('/absence-notices', { params })
 };
 
 export const transferAPI = {

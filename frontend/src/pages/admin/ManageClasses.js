@@ -324,6 +324,7 @@ const ManageClasses = () => {
             labelKey="year"
             valueKey="id"
             placeholder={t("ทุกปีการศึกษา")}
+            allLabel={t("ทุกปีการศึกษา")}
             clearable
             searchable
           />
@@ -337,6 +338,7 @@ const ManageClasses = () => {
             labelKey="gradeName"
             valueKey="id"
             placeholder={t("ทุกชั้นปี")}
+            allLabel={t("ทุกชั้นปี")}
             clearable
             searchable
           />

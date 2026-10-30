@@ -45,7 +45,7 @@
 | ไม่ได้รับงาน | Not assigned | 未布置 | 対象外 | 미배정 | Non attribué | Nicht zugewiesen |
 | ส่ง/ไม่ส่ง · ผ่าน/ไม่ผ่าน · ให้คะแนน | Submitted/Not · Pass/Fail · Score | 交/未交 · 通过/未通过 · 打分 | 提出/未提出 · 合否 · 点数 | 제출/미제출 · 통과/미통과 · 점수 | Rendu/Non rendu · Validé/Non validé · Note | Abgegeben/Nicht · Bestanden/Nicht · Punkte |
 | สแกน | Scan | 扫描 | スキャン | 스캔 | Scanner | Scannen |
-| ติดตามงาน | Progress | 作业进度 | 進捗 | 과제 현황 | Suivi | Fortschritt |
+| ตรวจงาน | Progress | 作业进度 | 進捗 | 과제 현황 | Suivi | Fortschritt |
 | ทวงงาน | Send reminder | 催交 | 催促する | 독촉하기 | Relancer | Erinnern |
 | นักเรียน | Student | 学生 | 生徒 | 학생 | Élève | Schüler |
 | ผู้ปกครอง | Parent | 家长 | 保護者 | 학부모 | Parent | Eltern |

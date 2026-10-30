@@ -381,6 +381,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
             labelKey="className"
             valueKey="id"
             placeholder={t("ทุกห้อง")}
+            allLabel={t("ทุกห้อง")}
             disabled={disabled}
             clearable
             searchable
@@ -395,6 +396,7 @@ const AskTab = ({ disabled, classes, subjects, userId }) => {
             labelKey="label"
             valueKey="id"
             placeholder={t("ทุกวิชา")}
+            allLabel={t("ทุกวิชา")}
             disabled={disabled}
             clearable
             searchable

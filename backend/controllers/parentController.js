@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../config/database');
+const { noticesForStudent } = require('../services/absenceNotify');
 const { withoutTenant, runWithTenant, getTenantId } = require('../services/tenantContext');
 
 const INVALID_MSG = 'ลิงก์หมดอายุหรือไม่ถูกต้อง';
@@ -138,6 +139,7 @@ exports.getPublic = async (req, res) => {
           return { taskNumber: t.taskNumber, taskName: t.taskName, deadline: t.deadline, status: st, statusText: STATUS_WORDS[st], overdue };
         })
       }));
+      const absences = await noticesForStudent(student.id).catch(e => { console.error('absence notices', e.message); return []; });
       const firstName = String(student.name || '').trim().replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|น\.ส\.)\s*/, '').split(/\s+/)[0];
       res.set('Cache-Control', 'no-store');
       res.set('X-Robots-Tag', 'noindex');
@@ -146,6 +148,7 @@ exports.getPublic = async (req, res) => {
         academicYear: student.class.academicYear ? (student.class.academicYear.name || student.class.academicYear.year) : null,
         subjects: out,
         summary,
+        absences,
         expiresAt: new Date(data.exp * 1000).toISOString(),
         generatedAt: new Date().toISOString()
       });

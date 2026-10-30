@@ -10,7 +10,7 @@ const MODES = [
 ];
 const CARRY = ['ay', 'grade', 'class', 'subject'];
 
-// หน้าเดียว "ติดตามงาน" สลับ รายวิชา | รายห้อง ด้วย ?mode=
+// หน้าเดียว "ตรวจงาน" สลับ รายวิชา | รายห้อง ด้วย ?mode=
 const MonitorPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = searchParams.get('mode') === 'class' ? 'class' : 'subject';

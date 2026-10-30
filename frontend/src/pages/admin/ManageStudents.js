@@ -258,6 +258,7 @@ const ManageStudents = () => {
             labelKey="gradeName"
             valueKey="id"
             placeholder={t("ทุกชั้น")}
+            allLabel={t("ทุกชั้น")}
             clearable
             searchable
           />
@@ -271,6 +272,7 @@ const ManageStudents = () => {
             labelKey="className"
             valueKey="id"
             placeholder={t("ทุกห้องเรียน")}
+            allLabel={t("ทุกห้องเรียน")}
             clearable
             searchable
           />

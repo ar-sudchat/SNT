@@ -93,6 +93,16 @@ module.exports = {
       const previousStatus = existing ? existing.status : 'NOT_SUBMITTED';
       const previousScore = existing && existing.score !== null && existing.score !== undefined ? existing.score : null;
 
+      // preview: แค่ดูว่าสแกนเจอใคร (ยังไม่บันทึก) ให้ครูเลือกผ่าน/ไม่ผ่านเอง
+      if (req.body.preview) {
+        const sc = task.scoringType === 'SCORED';
+        return res.json({
+          student: { id: student.id, studentCode: student.studentCode, studentNumber: student.studentNumber, name: student.name, className: student.class.className },
+          taskId, previousStatus, status: previousStatus, preview: true, progress: await progressOf(task),
+          scoringType: task.scoringType, maxScore: task.maxScore ?? null, score: sc ? previousScore : null
+        });
+      }
+
       // คะแนน: เฉพาะงานแบบ SCORED · ส่ง score มาเอง (ตัวเลข/null) = ตั้งตามนั้น · ไม่ส่ง = ไม่ทับคะแนนเดิม ถ้ายังไม่มีให้คะแนนเต็ม
       const scored = task.scoringType === 'SCORED';
       const maxScore = task.maxScore === null || task.maxScore === undefined ? null : task.maxScore;

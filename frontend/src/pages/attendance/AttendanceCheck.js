@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '../../context/AuthContext';
-import { attendanceAPI, classAPI } from '../../services/api';
+import { attendanceAPI, absenceNoticeAPI, classAPI } from '../../services/api';
 import { PageHeader, QuickFilterBar } from '../../components/ui';
 import { useDialog } from '../../components/ui/DialogProvider';
 import ScanModeTabs from '../../components/ScanModeTabs';
@@ -19,6 +19,7 @@ const SAME_CODE_MS = 3000;
 const MODE_KEY = 'attendance_mode';
 const SUBJECT_KEY = 'attendance_subject';
 const CLASS_KEY = 'attendance_class';
+const NOTIFY_KEY = 'attendance_notify_parents';
 const readId = (k) => { try { const v = parseInt(localStorage.getItem(k), 10); return Number.isInteger(v) ? v : null; } catch { return null; } };
 const saveId = (k, v) => { try { if (v) localStorage.setItem(k, String(v)); } catch { /* ไม่เก็บค่าก็ไม่เป็นไร */ } };
 
@@ -38,6 +39,8 @@ const AttendanceCheck = () => {
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [notifyOnClose, setNotifyOnClose] = useState(() => { try { return localStorage.getItem(NOTIFY_KEY) === '1'; } catch { return false; } });
+  const [notified, setNotified] = useState(0);
 
   const readerRef = useRef(null);
   const audioRef = useRef(null);
@@ -71,6 +74,7 @@ const AttendanceCheck = () => {
       } else {
         const r = await attendanceAPI.sheet({ subjectId: id, date: d });
         setSheet({ kind, id, title: r.data.subject.subjectName, students: r.data.students, counts: r.data.counts });
+        absenceNoticeAPI.count({ subjectId: id, date: d }).then(n => setNotified(n.data.notified)).catch(() => setNotified(0));
       }
     } catch (err) { setError(errorOf(err, t('โหลดข้อมูลไม่สำเร็จ'))); }
   }, []);
@@ -170,8 +174,21 @@ const AttendanceCheck = () => {
     if (!ok) return;
     try {
       await attendanceAPI.close({ subjectId: sheet.id, date });
+      if (notifyOnClose) await absenceNoticeAPI.notify({ subjectId: sheet.id, date });
       loadSheet('subject', sheet.id, date);
     } catch (err) { setError(errorOf(err, t('ปิดคาบไม่สำเร็จ'))); }
+  };
+
+  const toggleNotifyOnClose = (v) => {
+    setNotifyOnClose(v);
+    try { localStorage.setItem(NOTIFY_KEY, v ? '1' : '0'); } catch { /* ไม่เก็บค่าก็ไม่เป็นไร */ }
+  };
+
+  const notifyParents = async () => {
+    try {
+      const r = await absenceNoticeAPI.notify({ subjectId: sheet.id, date });
+      setNotified(r.data.notified);
+    } catch (err) { setError(errorOf(err, t('แจ้งผู้ปกครองไม่สำเร็จ'))); }
   };
 
   const cur = MODES.find(m => m.id === mode);
@@ -238,7 +255,18 @@ const AttendanceCheck = () => {
                   : t('มา {present}/{total} · ไม่มา {absent} · ยังไม่เช็ค {unchecked}', c)}
               </p>
             </div>
-            {sheet.kind === 'subject' && <button type="button" onClick={closeRound} className="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm font-medium hover:bg-gray-50">{t('ปิดคาบ (ที่เหลือ = ไม่มา)')}</button>}
+            {sheet.kind === 'subject' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex min-h-[44px] items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={notifyOnClose} onChange={e => toggleNotifyOnClose(e.target.checked)} className="h-5 w-5" />
+                  {t('แจ้งผู้ปกครองเมื่อปิดคาบ')}
+                </label>
+                <button type="button" onClick={notifyParents} disabled={!c?.absent} className="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">
+                  {notified ? t('แจ้งผู้ปกครองแล้ว {value1} คน · แจ้งเพิ่ม', { value1: notified }) : t('แจ้งผู้ปกครอง (ไม่มา)')}
+                </button>
+                <button type="button" onClick={closeRound} className="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm font-medium hover:bg-gray-50">{t('ปิดคาบ (ที่เหลือ = ไม่มา)')}</button>
+              </div>
+            )}
           </div>
           <ul className="divide-y">
             {sheet.students.map(s => (

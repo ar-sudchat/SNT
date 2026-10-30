@@ -123,7 +123,7 @@ const TeacherDashboard = () => {
     return {
       total, missing, pending, done: pct(total - missing, total),
       students: subjectSums[id]?.students || 0,
-      rooms: subjectSums[id]?.rooms || [],
+      rooms: (subjectSums[id]?.rooms || []).filter(r => r.total > 0),
       tasks: rows.filter(t => (t.notSubmitted || 0) > 0).length,
       taskCount: rows.length
     };

@@ -10,7 +10,7 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['AcademicYear','Grade','Class','Student','Teacher','Subject','Task',
                            'QRCode','Submission','AiConversation','AiMessage','Invite','AuditLog',
-                           'AssessmentTemplate','AssessmentRecord','AssessmentScore','TaskRoom','Attendance','DayAttendance']
+                           'AssessmentTemplate','AssessmentRecord','AssessmentScore','TaskRoom','Attendance','DayAttendance','AbsenceNotice']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

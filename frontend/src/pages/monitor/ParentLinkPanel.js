@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { parentAPI } from '../../services/parentApi';
 import { copyText } from './studentMonitorHelpers';
 
-// ปุ่ม + แผงลิงก์ติดตามงานสำหรับผู้ปกครอง (ซ่อนตอนพิมพ์ ยกเว้นบัตรลิงก์ที่เลือกพิมพ์ได้)
+// ปุ่ม + แผงลิงก์ตรวจงานสำหรับผู้ปกครอง (ซ่อนตอนพิมพ์ ยกเว้นบัตรลิงก์ที่เลือกพิมพ์ได้)
 export default function ParentLinkPanel({ studentId, btnClass = '', onToast, filtered = false, totalMissing = 0 }) {
   const [link, setLink] = useState(null);
   const [qr, setQr] = useState('');
@@ -40,7 +40,7 @@ export default function ParentLinkPanel({ studentId, btnClass = '', onToast, fil
           <div className="flex flex-col sm:flex-row gap-4 items-start">
             {qr && <img src={qr} alt={t("QR code ลิงก์สำหรับผู้ปกครอง")} width={160} height={160} className="rounded bg-white p-1 self-center sm:self-start" />}
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-sm font-semibold text-gray-900">{t('ลิงก์ติดตามงานสำหรับผู้ปกครอง')}</p>
+              <p className="text-sm font-semibold text-gray-900">{t('ลิงก์ตรวจงานสำหรับผู้ปกครอง')}</p>
               <p className="text-sm text-gray-600">{t('ผู้ปกครองเปิดดูได้โดยไม่ต้องเข้าสู่ระบบ (ดูอย่างเดียว) · ใช้ได้ถึง {value1}', { value1: expires })}</p>
               {filtered && <p className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1">{t('ลิงก์นี้แสดงทุกวิชาของนักเรียน (ค้างรวม {value1} งาน)', { value1: totalMissing })}</p>}
               <input readOnly value={link.url} onFocus={e => e.target.select()} aria-label={t("ลิงก์สำหรับผู้ปกครอง")}

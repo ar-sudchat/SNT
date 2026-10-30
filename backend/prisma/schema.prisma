@@ -130,6 +130,7 @@ model Student {
   assessmentScores AssessmentScore[]
   attendances      Attendance[]
   dayAttendances   DayAttendance[]
+  absenceNotices   AbsenceNotice[]
   user             User?
 
   @@unique([tenantId, studentCode])
@@ -185,6 +186,7 @@ model Subject {
   tasks             Task[]
   qrcodes           QRCode[]
   attendances       Attendance[]
+  absenceNotices    AbsenceNotice[]
   assessmentRecords AssessmentRecord[]
 
   @@unique([tenantId, subjectCode])
@@ -361,6 +363,7 @@ model Tenant {
   taskRooms           TaskRoom[]
   attendances         Attendance[]
   dayAttendances      DayAttendance[]
+  absenceNotices      AbsenceNotice[]
 }
 
 enum TenantRole {
@@ -541,4 +544,23 @@ model DayAttendance {
   @@unique([studentId, date])
   @@index([tenantId])
   @@index([date])
+}
+
+// แจ้งผู้ปกครองว่านักเรียนไม่มาเรียน (วิชา/วัน) · แสดงในลิงก์ผู้ปกครอง /p/:token · ไม่มีบริการส่งข้อความภายนอก
+model AbsenceNotice {
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  subjectId   Int
+  date        String
+  createdById Int? // ครูที่กดแจ้ง (Teacher.id)
+  createdAt   DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId, date])
+  @@index([tenantId])
+  @@index([studentId, date])
 }

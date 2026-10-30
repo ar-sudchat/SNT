@@ -71,6 +71,7 @@ app.use('/api/subjects', subjectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/qrcodes', qrcodeRoutes);
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/absence-notices', require('./routes/absenceNotices'));
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/reports', reportRoutes);

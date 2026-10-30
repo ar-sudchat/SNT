@@ -39,7 +39,7 @@ const BrandPanel = () => (
     <span className="pointer-events-none absolute inset-y-0 left-8 w-1.5 border-x border-accent-400/30" aria-hidden="true" />
 
     <div className="relative flex h-full flex-col px-12 py-10 xl:px-16">
-      <Link to="/" className="self-start rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-4 focus-visible:ring-offset-brand-900" aria-label={t("KruScan หน้าแรก")}>
+      <Link to="/" className="inline-flex min-h-[44px] items-center self-start rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-4 focus-visible:ring-offset-brand-900" aria-label={t("KruScan หน้าแรก")}>
         <Logo tone="white" size={40} tagline={false} />
       </Link>
 
@@ -63,7 +63,7 @@ const BrandPanel = () => (
 
         <div className="relative w-[clamp(176px,16vw,236px)]">
           <Phone src="/guide/img/phone-scan-grade.jpg" alt="" className="absolute left-[50%] -top-[6%] w-[88%] rotate-[9deg] brightness-[0.92]" />
-          <Phone src="/guide/img/phone-mon-all.jpg" alt={t("หน้าติดตามงานบนมือถือ แสดงจำนวนนักเรียนที่ส่งและยังไม่ส่งแต่ละห้อง")} className="relative w-full rotate-2" />
+          <Phone src="/guide/img/phone-mon-all.jpg" alt={t("หน้าตรวจงานบนมือถือ แสดงจำนวนนักเรียนที่ส่งและยังไม่ส่งแต่ละห้อง")} className="relative w-full rotate-2" />
         </div>
       </div>
 
@@ -76,7 +76,7 @@ const MobileHeader = () => (
   <header className="relative overflow-hidden text-white lg:hidden" style={PANEL_BG}>
     <div className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden="true" />
     <div className="relative mx-auto flex w-full max-w-[400px] items-center justify-between gap-3 px-4 py-4 sm:max-w-[432px]">
-      <Link to="/" className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300" aria-label={t("KruScan หน้าแรก")}>
+      <Link to="/" className="inline-flex min-h-[44px] items-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300" aria-label={t("KruScan หน้าแรก")}>
         <Logo tone="white" size={36} />
       </Link>
     </div>

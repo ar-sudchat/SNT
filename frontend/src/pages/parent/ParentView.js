@@ -51,7 +51,7 @@ export default function ParentView() {
   }, [token]);
 
   useEffect(() => {
-    document.title = data ? t('งานของ {firstName}', { firstName: data.student.firstName }) : t('ติดตามงานนักเรียน');
+    document.title = data ? t('งานของ {firstName}', { firstName: data.student.firstName }) : t('ตรวจงานนักเรียน');
   }, [data]);
 
   const missing = useMemo(() => {
@@ -87,6 +87,20 @@ export default function ParentView() {
               <h1 className="text-2xl font-bold">{t('งานของ {firstName}', { firstName: data.student.firstName })}</h1>
               <p className="text-sm text-gray-600">{t('ห้อง {className}', { className: data.student.className })}{data.academicYear ? ` · ${data.academicYear}` : ''}</p>
             </section>
+
+            {data.absences && data.absences.length > 0 && (
+              <section className="rounded-lg bg-red-50 border border-red-200 p-4" aria-label={t('แจ้งไม่มาเรียน')}>
+                <h2 className="text-base font-semibold text-red-800">{t('แจ้งไม่มาเรียน (30 วันล่าสุด)')}</h2>
+                <ul className="mt-2 divide-y divide-red-100">
+                  {data.absences.map((a, i) => (
+                    <li key={`${a.date}-${a.subjectName}-${i}`} className="flex items-center justify-between gap-3 py-2">
+                      <span className="break-words text-gray-900">{a.subjectName}</span>
+                      <span className="shrink-0 text-sm text-red-800">{fmtDate(a.date)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             <section className="rounded-lg bg-white border border-gray-200 p-4" aria-label={t("สรุป")}>
               <p className="text-lg font-semibold">{t('ส่งแล้ว {value1}/{total}', { value1: data.summary.submitted - data.summary.rejected, total: data.summary.total })}<span className="text-gray-400"> · </span>

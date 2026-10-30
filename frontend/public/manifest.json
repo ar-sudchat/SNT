@@ -1,7 +1,7 @@
 {
   "name": "KruScan — ครูสแกน",
   "short_name": "KruScan",
-  "description": "ระบบติดตามงานและสมุดนักเรียนด้วย QR Code",
+  "description": "ระบบตรวจงานและสมุดนักเรียนด้วย QR Code",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

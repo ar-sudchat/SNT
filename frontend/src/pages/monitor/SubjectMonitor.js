@@ -257,6 +257,12 @@ const SubjectMonitor = ({ embedded = false }) => {
       newStatus = currentStatus === 'APPROVED' ? 'NOT_SUBMITTED' : 'APPROVED';
     }
 
+    await applyStatus(studentId, taskId, newStatus, task);
+  };
+
+  // บันทึกสถานะของนักเรียน 1 คน/1 งาน แล้วอัปเดตตารางในหน้า (ใช้ทั้งตรวจเร็ว และปุ่มผ่าน/ยกเลิกในรายการ)
+  const applyStatus = async (studentId, taskId, newStatus, task) => {
+    setSavingCell({ studentId, taskId });
     try {
       await submissionAPI.createOrUpdate({
         studentId,
@@ -408,6 +414,7 @@ const SubjectMonitor = ({ embedded = false }) => {
     missing: studentsWithCounts.filter(s => s.missing > 0).length,
     pending: studentsWithCounts.filter(s => s.pending > 0).length,
     complete: studentsWithCounts.filter(s => s.missing === 0).length,
+    done: studentsWithCounts.filter(s => s.missing === 0).length,
     pendingTasks: studentsWithCounts.reduce((sum, s) => sum + s.pending, 0)
   }), [studentsWithCounts]);
 
@@ -423,6 +430,7 @@ const SubjectMonitor = ({ embedded = false }) => {
     const term = searchTerm.toLowerCase();
     return studentsWithCounts.filter(student => {
       if (quickFilter === 'missing' && student.missing === 0) return false;
+      if (quickFilter === 'done' && student.missing > 0) return false;
       if (quickFilter === 'pending' && student.pending === 0) return false;
       if (!term) return true;
       return (
@@ -540,6 +548,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           labelKey="gradeName"
           valueKey="id"
           placeholder={t("ทุกชั้น")}
+          allLabel={t("ทุกชั้น")}
         />
         <MonitorFilterField
           mobileHidden
@@ -566,6 +575,7 @@ const SubjectMonitor = ({ embedded = false }) => {
           labelKey="className"
           valueKey="id"
           placeholder={t("ทุกห้อง")}
+          allLabel={t("ทุกห้อง")}
         />
       </MonitorFilterBar>
 
@@ -612,9 +622,10 @@ const SubjectMonitor = ({ embedded = false }) => {
           {/* Quick filter + search + actions */}
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:flex-wrap">
             <div className="flex items-center gap-2">
-            <div className="grid grid-cols-2 gap-1 bg-gray-200 rounded-lg p-1">
+            <div className="grid grid-cols-3 gap-1 bg-gray-200 rounded-lg p-1">
               {[
                 { key: 'missing', label: t('ยังไม่ส่ง') },
+                { key: 'done', label: t('ส่งแล้ว') },
                 { key: 'all', label: t('ทั้งหมด') }
               ].map(opt => (
                 <button
@@ -694,10 +705,10 @@ const SubjectMonitor = ({ embedded = false }) => {
                     {student.className || t('ไม่ระบุห้อง')} <span className="font-normal text-gray-400">{t('· {value1} คน', { value1: groupSize(student.className) })}</span>
                   </li>
                 )}
-                <li>
+                <li className="flex items-stretch">
                   <button
                     onClick={() => handleStudentClick(student.id)}
-                    className="w-full min-h-[52px] px-3 py-2 flex items-center gap-3 text-left active:bg-brand-50"
+                    className="flex-1 min-w-0 min-h-[52px] px-3 py-2 flex items-center gap-3 text-left active:bg-brand-50"
                   >
                     <span className="w-7 shrink-0 text-right text-sm text-gray-400">{student.studentNumber || '-'}</span>
                     <span className="flex-1 min-w-0">
@@ -715,6 +726,19 @@ const SubjectMonitor = ({ embedded = false }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
+                  {activeTask && (() => {
+                    const cur = student.submissions.find(x => x.taskId === activeTask.id)?.status || 'NOT_SUBMITTED';
+                    const undo = cur !== 'NOT_SUBMITTED';
+                    const busy = savingCell?.studentId === student.id && savingCell?.taskId === activeTask.id;
+                    return (
+                      <button
+                        onClick={() => applyStatus(student.id, activeTask.id, undo ? 'NOT_SUBMITTED' : 'APPROVED', activeTask)}
+                        disabled={busy}
+                        aria-label={undo ? t('ยกเลิกการผ่าน {value1}', { value1: student.name }) : t('ให้ผ่าน {value1}', { value1: student.name })}
+                        className={`shrink-0 min-w-[64px] px-3 text-sm font-medium border-l disabled:opacity-50 ${undo ? 'text-red-600 active:bg-red-50' : 'text-green-700 active:bg-green-50'}`}
+                      >{busy ? '...' : undo ? t('ยกเลิก') : t('ให้ผ่าน')}</button>
+                    );
+                  })()}
                 </li>
                 </React.Fragment>
               ))}

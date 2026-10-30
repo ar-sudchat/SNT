@@ -302,6 +302,7 @@ const QRCodeGenerator = () => {
               labelKey="gradeName"
               valueKey="id"
               placeholder={t("ทุกชั้น")}
+              allLabel={t("ทุกชั้น")}
               searchable
               clearable
             />
