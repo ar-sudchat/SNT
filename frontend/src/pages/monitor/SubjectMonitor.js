@@ -60,6 +60,7 @@ const SubjectMonitor = ({ embedded = false }) => {
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const [scoreEdit, setScoreEdit] = useState(null); // { student, task, value } ช่องกรอกคะแนนตอนตรวจเร็ว
   const taskFilter = parseInt(searchParams.get('task'), 10) || null;
   const clearTaskFilter = () => {
     const params = new URLSearchParams(searchParams);
@@ -240,6 +241,13 @@ const SubjectMonitor = ({ embedded = false }) => {
     e.stopPropagation(); // Prevent row click
     if (!quickGradeMode) return;
 
+    if (task.scoringType === 'SCORED') {
+      const stu = data.students.find(x => x.id === studentId);
+      const cur = stu?.submissions.find(x => x.taskId === taskId)?.score;
+      setScoreEdit({ student: stu, task, value: cur === null || cur === undefined ? '' : String(cur) });
+      return;
+    }
+
     setSavingCell({ studentId, taskId });
 
     // Determine next status based on scoring type
@@ -261,14 +269,19 @@ const SubjectMonitor = ({ embedded = false }) => {
   };
 
   // บันทึกสถานะของนักเรียน 1 คน/1 งาน แล้วอัปเดตตารางในหน้า (ใช้ทั้งตรวจเร็ว และปุ่มผ่าน/ยกเลิกในรายการ)
-  const applyStatus = async (studentId, taskId, newStatus, task) => {
+  const applyStatus = async (studentId, taskId, newStatus, task, score) => {
     setSavingCell({ studentId, taskId });
     try {
-      await submissionAPI.createOrUpdate({
-        studentId,
-        taskId,
-        status: newStatus
-      });
+      if (score !== undefined) {
+        const code = data.students.find(x => x.id === studentId)?.studentCode;
+        await submissionAPI.scanCheck({ taskId, studentCode: code, status: newStatus, score });
+      } else {
+        await submissionAPI.createOrUpdate({
+          studentId,
+          taskId,
+          status: newStatus
+        });
+      }
 
       // Update local state
       setData(prev => ({
@@ -278,12 +291,12 @@ const SubjectMonitor = ({ embedded = false }) => {
 
           const newSubmissions = student.submissions.map(sub => {
             if (sub.taskId !== taskId) return sub;
-            return { ...sub, status: newStatus };
+            return { ...sub, status: newStatus, ...(score !== undefined ? { score } : {}) };
           });
 
           // Check if submission exists, if not add it
           if (!newSubmissions.find(s => s.taskId === taskId)) {
-            newSubmissions.push({ taskId, taskNumber: task.taskNumber, status: newStatus });
+            newSubmissions.push({ taskId, taskNumber: task.taskNumber, status: newStatus, ...(score !== undefined ? { score } : {}) });
           }
 
           // Recalculate progress
@@ -310,6 +323,23 @@ const SubjectMonitor = ({ embedded = false }) => {
     } finally {
       setSavingCell(null);
     }
+  };
+
+  // ตรวจเร็วงานให้คะแนน: บันทึกคะแนนที่กรอก (ว่าง = ล้างคะแนนและกลับเป็นยังไม่ส่ง)
+  const saveScore = async (raw) => {
+    if (!scoreEdit) return;
+    const { student, task } = scoreEdit;
+    const text = String(raw ?? '').trim();
+    let score = null;
+    if (text !== '') {
+      score = Number(text);
+      if (!Number.isFinite(score) || score < 0 || (task.maxScore != null && score > task.maxScore)) {
+        setError(task.maxScore != null ? t('คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}', { value1: task.maxScore }) : t('คะแนนต้องเป็นตัวเลข'));
+        return;
+      }
+    }
+    setScoreEdit(null);
+    await applyStatus(student.id, task.id, score === null ? 'NOT_SUBMITTED' : 'APPROVED', task, score);
   };
 
   // Batch Mark All for a specific task
@@ -843,7 +873,7 @@ const SubjectMonitor = ({ embedded = false }) => {
                                 } ${isSaving ? 'animate-pulse' : ''}`}
                                 title={t('{name} - {status}{hint}', { name: task.taskName, status: status === 'APPROVED' ? t('ผ่าน') : status === 'PENDING' ? t('รอตรวจ') : status === 'REJECTED' ? t('ไม่ผ่าน') : t('ยังไม่ส่ง'), hint: quickGradeMode ? t(' (แตะเพื่อเปลี่ยน)') : '' })}
                               >
-                                {isSaving ? '...' : getStatusIcon(status)}
+                                {isSaving ? '...' : (task.scoringType === 'SCORED' && submission?.score !== null && submission?.score !== undefined ? String(submission.score) : getStatusIcon(status))}
                               </button>
                             </div>
                           </td>
@@ -863,6 +893,45 @@ const SubjectMonitor = ({ embedded = false }) => {
           </div>
         </>
       )}
+
+      {scoreEdit && (() => {
+        const { student, task, value } = scoreEdit;
+        const max = task.maxScore;
+        const n = value === '' ? 0 : Number(value) || 0;
+        const set = (v) => setScoreEdit(e => ({ ...e, value: String(Math.round(Math.min(max ?? Infinity, Math.max(0, v)) * 100) / 100) }));
+        const quick = max == null ? [] : Array.from({ length: max <= 10 ? max + 1 : 6 }, (_, i) => (max <= 10 ? i : Math.round((max * i) / 5)));
+        return (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setScoreEdit(null)}>
+            <form onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); saveScore(value); }}
+              className="w-full max-w-md space-y-3 rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl" role="dialog" aria-label={t('ใส่คะแนน')}>
+              <div>
+                <div className="truncate text-lg font-bold text-gray-900">{student.name}</div>
+                <div className="truncate text-sm text-gray-500">{task.taskName}{max != null ? ` · ${t('เต็ม {value1}', { value1: max })}` : ''}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" aria-label={t('ลดคะแนน')} onClick={() => set(n - 1)} className="min-h-[56px] w-[72px] rounded-xl border border-gray-300 text-3xl">−</button>
+                <input autoFocus type="number" inputMode="decimal" min="0" max={max ?? undefined} step="any" value={value}
+                  onChange={e => setScoreEdit(x => ({ ...x, value: e.target.value }))} placeholder="0" aria-label={t('คะแนน')}
+                  className="min-h-[56px] min-w-0 flex-1 rounded-xl border border-gray-300 text-center text-3xl font-bold tabular-nums" />
+                <button type="button" aria-label={t('เพิ่มคะแนน')} onClick={() => set(n + 1)} className="min-h-[56px] w-[72px] rounded-xl border border-gray-300 text-3xl">+</button>
+              </div>
+              {quick.length > 0 && (
+                <div className="grid grid-cols-6 gap-1.5">
+                  {quick.map(v => (
+                    <button key={v} type="button" onClick={() => set(v)} aria-pressed={value !== '' && n === v}
+                      className={`min-h-[48px] rounded-lg border text-lg font-semibold tabular-nums ${value !== '' && n === v ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 bg-white'}`}>{v}</button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => saveScore('')} className="min-h-[48px] rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600">{t('ล้างคะแนน')}</button>
+                <button type="button" onClick={() => setScoreEdit(null)} className="min-h-[48px] flex-1 rounded-xl border border-gray-300 text-sm font-medium">{t('ยกเลิก')}</button>
+                <button type="submit" className="min-h-[48px] flex-1 rounded-xl bg-green-600 text-lg font-semibold text-white">{t('บันทึก')}</button>
+              </div>
+            </form>
+          </div>
+        );
+      })()}
 
       {/* No subject selected */}
       {!loading && !selectedSubject && (

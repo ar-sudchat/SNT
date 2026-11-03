@@ -2394,5 +2394,7 @@
  "วิธีตรวจ": "Prüfmodus",
  "สแกนแล้วผ่านเลย": "Scan = bestanden",
  "สแกนแล้วเลือกเอง": "Scannen, dann wählen",
- "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "QR scannen, dann „Bestanden“ oder „Nicht bestanden“ selbst wählen. Gespeichert wird erst nach dem Tippen"
+ "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "QR scannen, dann „Bestanden“ oder „Nicht bestanden“ selbst wählen. Gespeichert wird erst nach dem Tippen",
+ "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "Die Punktzahl muss zwischen 0 und {value1} liegen",
+ "ใส่คะแนน": "Punkte eingeben"
 }

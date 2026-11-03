@@ -2394,5 +2394,7 @@
  "วิธีตรวจ": "Check mode",
  "สแกนแล้วผ่านเลย": "Scan = pass",
  "สแกนแล้วเลือกเอง": "Scan, then choose",
- "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scan the QR, then choose \"Pass\" or \"Fail\" yourself. Nothing is saved until you tap"
+ "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scan the QR, then choose \"Pass\" or \"Fail\" yourself. Nothing is saved until you tap",
+ "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "Score must be between 0 and {value1}",
+ "ใส่คะแนน": "Enter score"
 }

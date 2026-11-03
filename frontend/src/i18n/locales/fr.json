@@ -2394,5 +2394,7 @@
  "วิธีตรวจ": "Mode de vérification",
  "สแกนแล้วผ่านเลย": "Scan = validé",
  "สแกนแล้วเลือกเอง": "Scanner puis choisir",
- "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scannez le QR puis choisissez « Validé » ou « Non validé ». Rien n’est enregistré avant votre appui"
+ "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scannez le QR puis choisissez « Validé » ou « Non validé ». Rien n’est enregistré avant votre appui",
+ "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "La note doit être comprise entre 0 et {value1}",
+ "ใส่คะแนน": "Saisir la note"
 }
