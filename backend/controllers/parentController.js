@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../config/database');
+const { parsePayload } = require('../services/qrPayload');
 const { noticesForStudent } = require('../services/absenceNotify');
 const { withoutTenant, runWithTenant, getTenantId } = require('../services/tenantContext');
 
@@ -88,6 +89,31 @@ const STATUS_WORDS = {
 exports.getPublic = async (req, res) => {
   const data = verifyToken(req.params.token);
   if (!data) return res.status(401).json({ error: INVALID_MSG });
+  return respondStudentView(res, data);
+};
+
+// สแกน QR ของนักเรียน (วิชาที่สแกนขึ้นก่อน แล้วตามด้วยวิชาอื่น) — โทเคนใน QR คือกุญแจเดียวกับที่ครูใช้สแกน
+exports.getByQr = async (req, res) => {
+  const parsed = parsePayload(req.params.payload);
+  if (!parsed || parsed.kind !== 'ks1') return res.status(401).json({ error: INVALID_MSG });
+  try {
+    const qr = await withoutTenant(async () => {
+      const tenant = await prisma.tenant.findUnique({ where: { slug: parsed.slug }, select: { id: true } });
+      if (!tenant) return null;
+      return prisma.qRCode.findFirst({
+        where: { tenantId: tenant.id, qrcodeData: parsed.raw, status: 'ACTIVE' },
+        select: { studentId: true, subjectId: true, tenantId: true }
+      });
+    });
+    if (!qr) return res.status(401).json({ error: INVALID_MSG });
+    return respondStudentView(res, { sid: qr.studentId, tid: qr.tenantId, exp: null }, qr.subjectId);
+  } catch (e) {
+    console.error('getByQr', e);
+    res.status(500).json({ error: 'โหลดข้อมูลไม่สำเร็จ' });
+  }
+};
+
+async function respondStudentView(res, data, focusSubjectId = null) {
   try {
     // Public link: the tenant comes from the signed student id, then everything below is scoped.
     // async + await: PrismaPromise ทำงานตอน await จึงต้อง await ภายใน withoutTenant ไม่งั้นหลุด scope (Student เป็นตารางของกลุ่ม)
@@ -125,6 +151,7 @@ exports.getPublic = async (req, res) => {
       const summary = { total: 0, submitted: 0, approved: 0, pending: 0, rejected: 0, missing: 0, overdue: 0 };
       const out = subjects.map(s => ({
         subjectName: s.subjectName,
+        focus: s.id === focusSubjectId,
         tasks: s.tasks.map(t => {
           const st = (byTask[t.id] && byTask[t.id].status) || 'NOT_SUBMITTED';
           const done = st === 'APPROVED' || st === 'PENDING';
@@ -146,10 +173,11 @@ exports.getPublic = async (req, res) => {
       res.json({
         student: { firstName, className: student.class.className },
         academicYear: student.class.academicYear ? (student.class.academicYear.name || student.class.academicYear.year) : null,
-        subjects: out,
+        subjects: focusSubjectId ? [...out.filter(s => s.focus), ...out.filter(s => !s.focus)] : out,
+        focusSubject: (out.find(s => s.focus) || {}).subjectName || null,
         summary,
         absences,
-        expiresAt: new Date(data.exp * 1000).toISOString(),
+        expiresAt: data.exp ? new Date(data.exp * 1000).toISOString() : null,
         generatedAt: new Date().toISOString()
       });
     });

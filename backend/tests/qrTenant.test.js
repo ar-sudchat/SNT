@@ -35,7 +35,7 @@ const mkRes = () => { const r = { code: 200 }; r.status = c => (r.code = c, r); 
 test('format/parse KS1 and legacy', () => {
   const p = qp.formatPayload('snt');
   assert.match(p, /^KS1\.snt\.[0-9a-f]{32}$/);
-  assert.deepStrictEqual(qp.parsePayload(p), { kind: 'ks1', slug: 'snt', token: p.split('.')[2] });
+  assert.deepStrictEqual(qp.parsePayload(p), { kind: 'ks1', slug: 'snt', token: p.split('.')[2], raw: p });
   assert.strictEqual(qp.parsePayload('SNT-1-1-abc').kind, 'legacy');
   for (const bad of ['', null, 'KS1.snt', 'KS1.SNT.abcdefabcdefabcdef', 'KS1.snt.short', 'x']) assert.strictEqual(qp.parsePayload(bad), null);
 });

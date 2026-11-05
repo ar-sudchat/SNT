@@ -38,17 +38,17 @@ function TaskRow({ task, showSubject }) {
 }
 
 export default function ParentView() {
-  const { token } = useParams();
+  const { token, payload } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
-    parentAPI.getPublic(token)
+    (payload ? parentAPI.getByQr(payload) : parentAPI.getPublic(token))
       .then(r => { if (alive) setData(r.data); })
       .catch(e => { if (alive) setError(e.response?.data?.error || t('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')); });
     return () => { alive = false; };
-  }, [token]);
+  }, [token, payload]);
 
   useEffect(() => {
     document.title = data ? t('งานของ {firstName}', { firstName: data.student.firstName }) : t('ตรวจงานนักเรียน');
@@ -132,9 +132,9 @@ export default function ParentView() {
               {data.subjects.map((s, i) => {
                 const left = s.tasks.filter(isMissing).length;
                 return (
-                  <details key={i} className="rounded-lg bg-white border border-gray-200 px-4 group" open={left > 0}>
+                  <details key={i} className={`rounded-lg bg-white border px-4 group ${s.focus ? 'border-brand-600 ring-1 ring-brand-600' : 'border-gray-200'}`} open={s.focus || left > 0}>
                     <summary className="flex items-center justify-between gap-3 py-3 min-h-[44px] cursor-pointer list-none">
-                      <span className="font-medium break-words">{s.subjectName}</span>
+                      <span className="font-medium break-words">{s.subjectName}{s.focus && <span className="ml-2 rounded bg-brand-600 px-2 py-0.5 text-xs font-medium text-white">{t('วิชาที่สแกน')}</span>}</span>
                       <span className={`shrink-0 text-sm ${left ? 'text-red-700' : 'text-green-700'}`}>
                         {left ? t('ค้าง {left}', { left: left }) : t('ครบ')}{t(' · {length} งาน', { length: s.tasks.length })}</span>
                     </summary>
@@ -148,7 +148,9 @@ export default function ParentView() {
 
             <footer className="pt-2 pb-8 text-center text-xs text-gray-500 space-y-1">
               <p>{t('ข้อมูลอัปเดตเมื่อ {value1}', { value1: fmtDateTime(data.generatedAt) })}</p>
-              <p>{tx('หน้านี้สำหรับดูอย่างเดียว · ลิงก์ใช้ได้ถึง {date} · <a>ความเป็นส่วนตัว</a>', { date: fmtDate(data.expiresAt), a: (c) => <a href="/privacy" className="underline">{c}</a> })}</p>
+              <p>{data.expiresAt
+                ? tx('หน้านี้สำหรับดูอย่างเดียว · ลิงก์ใช้ได้ถึง {date} · <a>ความเป็นส่วนตัว</a>', { date: fmtDate(data.expiresAt), a: (c) => <a href="/privacy" className="underline">{c}</a> })
+                : tx('หน้านี้สำหรับดูอย่างเดียว · <a>ความเป็นส่วนตัว</a>', { a: (c) => <a href="/privacy" className="underline">{c}</a> })}</p>
             </footer>
           </>
         )}

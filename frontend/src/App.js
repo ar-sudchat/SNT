@@ -28,6 +28,7 @@ import ClassTransfer from './pages/admin/ClassTransfer';
 import AIAssistant from './pages/ai/AIAssistant';
 import ClassroomTools from './pages/tools/ClassroomTools';
 import ParentView from './pages/parent/ParentView';
+import StudentScan from './pages/parent/StudentScan';
 import PrivacyNotice from './pages/legal/PrivacyNotice';
 import { StudentMonitor, MonitorPage, MonitorRedirect } from './pages/monitor';
 import SettingsHub from './pages/admin/SettingsHub';
@@ -104,6 +105,8 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* ลิงก์ผู้ปกครอง: สาธารณะ ไม่ต้องล็อกอิน */}
           <Route path="/p/:token" element={<ParentView />} />
+        <Route path="/scan" element={<StudentScan />} />
+        <Route path="/q/:payload" element={<ParentView />} />
           <Route path="/privacy" element={<PrivacyNotice />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/invite/:token" element={<InviteAccept />} />

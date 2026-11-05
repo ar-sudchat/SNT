@@ -2396,5 +2396,10 @@
  "สแกนแล้วเลือกเอง": "Scannen, dann wählen",
  "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "QR scannen, dann „Bestanden“ oder „Nicht bestanden“ selbst wählen. Gespeichert wird erst nach dem Tippen",
  "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "Die Punktzahl muss zwischen 0 und {value1} liegen",
- "ใส่คะแนน": "Punkte eingeben"
+ "ใส่คะแนน": "Punkte eingeben",
+ "วิชาที่สแกน": "Gescanntes Fach",
+ "หน้านี้สำหรับดูอย่างเดียว · <a>ความเป็นส่วนตัว</a>": "Nur Ansicht · <a>Datenschutz</a>",
+ "สแกน QR ดูงานของฉัน": "QR scannen, um meine Aufgaben zu sehen",
+ "ส่อง QR Code ที่ครูแจกให้ เพื่อดูงานที่ค้างและงานทุกวิชา": "Richte die Kamera auf den QR-Code deiner Lehrkraft, um offene Aufgaben und alle Fächer zu sehen",
+ "QR นี้ไม่ใช่ QR ของ KruScan ลองส่องใบที่ครูแจกให้": "Das ist kein KruScan-QR. Versuche den Code deiner Lehrkraft"
 }

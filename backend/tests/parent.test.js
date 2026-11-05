@@ -104,3 +104,13 @@ test('parent routes', async (t) => {
     assert.strictEqual((await req(port, 'GET', '/api/public/parent/' + ctrl.signToken(1, -1).token)).status, 401);
   });
 });
+
+test('parsePayload accepts printed QR link form', () => {
+  const { parsePayload, toUrlPayload } = require('../services/qrPayload');
+  const raw = 'KS1.demo-school.' + 'a'.repeat(32);
+  assert.strictEqual(parsePayload(raw).raw, raw);
+  const url = toUrlPayload('https://kruscan.duckdns.org/', raw);
+  assert.strictEqual(url, 'https://kruscan.duckdns.org/q/' + raw);
+  assert.strictEqual(parsePayload(url).raw, raw);
+  assert.strictEqual(parsePayload('https://evil.example/x/' + raw), null);
+});

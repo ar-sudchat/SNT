@@ -8,6 +8,7 @@ const publicClient = axios.create({ baseURL, headers: { 'Content-Type': 'applica
 
 export const parentAPI = {
   createLink: (studentId) => api.post('/parent-links', { studentId }),
+  getByQr: (payload) => publicClient.get(`/public/parent/qr/${encodeURIComponent(payload)}`),
   getPublic: (token) => publicClient.get(`/public/parent/${encodeURIComponent(token)}`),
 };
 

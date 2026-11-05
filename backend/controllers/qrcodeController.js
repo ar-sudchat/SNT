@@ -2,13 +2,19 @@ const QRCode = require('qrcode');
 const prisma = require('../config/database');
 const { ROOMS, appliesTo } = require('../services/taskRooms');
 const { withoutTenant, getTenantId } = require('../services/tenantContext');
-const { OTHER_SCHOOL_MSG, formatPayload, parsePayload, isForeign } = require('../services/qrPayload');
+const { OTHER_SCHOOL_MSG, formatPayload, toUrlPayload, parsePayload, isForeign } = require('../services/qrPayload');
 
 const currentSlug = async () => {
   const id = getTenantId();
   if (!id) return null;
   const t = await withoutTenant(() => prisma.tenant.findUnique({ where: { id }, select: { slug: true } }));
   return t && t.slug;
+};
+
+// รูป QR เข้ารหัสเป็นลิงก์ให้นักเรียนสแกนด้วยกล้องมือถือแล้วเห็นงานตัวเอง (ค่าที่เก็บในฐานข้อมูลยังเป็น KS1.… เหมือนเดิม)
+const qrLink = (req, data) => {
+  const base = (process.env.PARENT_LINK_BASE_URL || process.env.FRONTEND_URL || (req.get && req.get('host') ? `${req.protocol}://${req.get('host')}` : '')).split(',')[0].trim();
+  return base ? toUrlPayload(base, data) : data;
 };
 
 const qrcodeController = {
@@ -31,7 +37,7 @@ const qrcodeController = {
       const qrcodeData = formatPayload(slug);
 
       // Generate QR code image as base64
-      const qrcodeImage = await QRCode.toDataURL(qrcodeData, {
+      const qrcodeImage = await QRCode.toDataURL(qrLink(req, qrcodeData), {
         width: 300,
         margin: 2,
         color: {
@@ -92,7 +98,7 @@ const qrcodeController = {
           const qrcodeData = formatPayload(slug);
 
           // Generate QR code image as base64
-          const qrcodeImage = await QRCode.toDataURL(qrcodeData, {
+          const qrcodeImage = await QRCode.toDataURL(qrLink(req, qrcodeData), {
             width: 300,
             margin: 2
           });
@@ -137,7 +143,7 @@ const qrcodeController = {
       }
 
       const qrcode = await prisma.qRCode.findUnique({
-        where: { qrcodeData },
+        where: { qrcodeData: parsed.raw || qrcodeData },
         include: {
           student: {
             include: {

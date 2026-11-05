@@ -2396,5 +2396,10 @@
  "สแกนแล้วเลือกเอง": "Scanner puis choisir",
  "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scannez le QR puis choisissez « Validé » ou « Non validé ». Rien n’est enregistré avant votre appui",
  "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "La note doit être comprise entre 0 et {value1}",
- "ใส่คะแนน": "Saisir la note"
+ "ใส่คะแนน": "Saisir la note",
+ "วิชาที่สแกน": "Matière scannée",
+ "หน้านี้สำหรับดูอย่างเดียว · <a>ความเป็นส่วนตัว</a>": "Lecture seule · <a>Confidentialité</a>",
+ "สแกน QR ดูงานของฉัน": "Scanner le QR pour voir mes devoirs",
+ "ส่อง QR Code ที่ครูแจกให้ เพื่อดูงานที่ค้างและงานทุกวิชา": "Visez le QR code remis par votre enseignant pour voir les devoirs en retard et toutes les matières",
+ "QR นี้ไม่ใช่ QR ของ KruScan ลองส่องใบที่ครูแจกให้": "Ce n’est pas un QR KruScan. Essayez celui de votre enseignant"
 }

@@ -24,6 +24,7 @@ const linksRouter = express.Router();
 linksRouter.post('/', authenticate, authorize('ADMIN', 'TEACHER'), ctrl.createLink);
 
 const publicRouter = express.Router();
+publicRouter.get('/qr/:payload', rateLimit(), ctrl.getByQr);
 publicRouter.get('/:token', rateLimit(), ctrl.getPublic);
 
 module.exports = { linksRouter, publicRouter, rateLimit };

@@ -15,7 +15,7 @@ async function resolveStudent({ qrcodeData, studentCode }) {
     const parsed = parsePayload(qrcodeData);
     if (!parsed) return { status: 404, error: 'QR code ไม่ถูกต้อง' };
     if (parsed.kind === 'ks1' && isForeign(parsed, await currentSlug())) return { status: 403, error: OTHER_SCHOOL_MSG };
-    const qr = await prisma.qRCode.findUnique({ where: { qrcodeData }, include: { student: { include: { class: true } } } });
+    const qr = await prisma.qRCode.findUnique({ where: { qrcodeData: parsed.raw || qrcodeData }, include: { student: { include: { class: true } } } });
     if (!qr) return { status: 404, error: 'QR code ไม่ถูกต้อง' };
     if (qr.status === 'INACTIVE') return { status: 400, error: 'QR code นี้ถูกปิดใช้งาน' };
     return { student: qr.student, qr };

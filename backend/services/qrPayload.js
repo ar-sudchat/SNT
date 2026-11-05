@@ -11,11 +11,18 @@ function formatPayload(slug, token = newToken()) {
 }
 
 // -> { kind: 'ks1', slug, token } | { kind: 'legacy' } | null
+const URL_RE = /^https?:\/\/[^\s]+\/q\/(KS1\.[a-z0-9-]{3,40}\.[A-Za-z0-9_-]{16,128})\/?(?:[?#]\S*)?$/;
+
+// QR ที่พิมพ์ใหม่เป็นลิงก์ <เว็บ>/q/<KS1...> เพื่อให้กล้องมือถือเปิดได้ — ครูสแกนก็ยังอ่านได้เหมือนเดิม
+const toUrlPayload = (base, payload) => `${String(base).replace(/\/+$/, '')}/q/${payload}`;
+
 function parsePayload(raw) {
   if (typeof raw !== 'string') return null;
-  const s = raw.trim();
+  let s = raw.trim();
+  const u = URL_RE.exec(s);
+  if (u) s = u[1];
   const m = KS1_RE.exec(s);
-  if (m) return { kind: 'ks1', slug: m[1], token: m[2] };
+  if (m) return { kind: 'ks1', slug: m[1], token: m[2], raw: s };
   if (s.startsWith('SNT-') && s.length <= 200) return { kind: 'legacy' };
   return null;
 }
@@ -23,4 +30,4 @@ function parsePayload(raw) {
 // true when payload belongs to another school than currentSlug. Legacy never conflicts.
 const isForeign = (parsed, currentSlug) => !!parsed && parsed.kind === 'ks1' && parsed.slug !== currentSlug;
 
-module.exports = { OTHER_SCHOOL_MSG, newToken, formatPayload, parsePayload, isForeign };
+module.exports = { OTHER_SCHOOL_MSG, toUrlPayload, newToken, formatPayload, parsePayload, isForeign };

@@ -2396,5 +2396,10 @@
  "สแกนแล้วเลือกเอง": "Scan, then choose",
  "สแกน QR แล้วเลือก \"ผ่าน\" หรือ \"ไม่ผ่าน\" เอง ระบบยังไม่บันทึกจนกว่าจะกด": "Scan the QR, then choose \"Pass\" or \"Fail\" yourself. Nothing is saved until you tap",
  "คะแนนต้องอยู่ระหว่าง 0 ถึง {value1}": "Score must be between 0 and {value1}",
- "ใส่คะแนน": "Enter score"
+ "ใส่คะแนน": "Enter score",
+ "วิชาที่สแกน": "Scanned subject",
+ "หน้านี้สำหรับดูอย่างเดียว · <a>ความเป็นส่วนตัว</a>": "View only · <a>Privacy</a>",
+ "สแกน QR ดูงานของฉัน": "Scan QR to see my tasks",
+ "ส่อง QR Code ที่ครูแจกให้ เพื่อดูงานที่ค้างและงานทุกวิชา": "Point at the QR code your teacher gave you to see pending tasks and all subjects",
+ "QR นี้ไม่ใช่ QR ของ KruScan ลองส่องใบที่ครูแจกให้": "This is not a KruScan QR. Try the one your teacher gave you"
 }
