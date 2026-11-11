@@ -125,7 +125,8 @@ const schemas = {
   // Bulk QR Code generation
   qrcodeBulk: Joi.object({
     studentIds: Joi.array().items(Joi.number().integer()).required(),
-    subjectId: Joi.number().integer().required()
+    subjectId: Joi.number().integer().required(),
+    regenerate: Joi.boolean()
   })
 };
 

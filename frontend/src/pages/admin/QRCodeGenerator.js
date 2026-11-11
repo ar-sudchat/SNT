@@ -93,12 +93,16 @@ const QRCodeGenerator = () => {
     fetchStudents();
   }, [fetchStudents]);
 
+  const [regenerate, setRegenerate] = useState(false);
+
   const handleGenerate = async () => {
     if (!selectedSubject || selectedStudents.length === 0) {
       setError(t('กรุณาเลือกวิชาและนักเรียน'));
       return;
     }
 
+    // eslint-disable-next-line no-alert
+    if (regenerate && !window.confirm(t('สร้าง QR ใหม่ทับของเดิม {value1} คน — QR ใบเก่าที่พิมพ์ไปแล้วจะใช้ไม่ได้อีก ต้องพิมพ์ใหม่ ยืนยันไหม', { value1: selectedStudents.length }))) return;
     setGenerating(true);
     setError('');
     setSuccess('');
@@ -106,7 +110,8 @@ const QRCodeGenerator = () => {
     try {
       const response = await qrcodeAPI.generateBulk({
         studentIds: selectedStudents,
-        subjectId: parseInt(selectedSubject)
+        subjectId: parseInt(selectedSubject),
+        regenerate
       });
 
       const { success, failed } = response.data.results;
@@ -378,6 +383,10 @@ const QRCodeGenerator = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 pt-4 border-t">
               <span className="text-sm text-gray-500">{t("เลือก {value1} จาก {value2} คน", { value1: selectedStudents.length, value2: students.length })}</span>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <label className="flex items-center gap-2 min-h-[44px] text-sm text-gray-700">
+                  <input type="checkbox" className="h-5 w-5" checked={regenerate} onChange={(e) => setRegenerate(e.target.checked)} />
+                  {t('สร้างใหม่ทับของเดิม (ใบเก่าใช้ไม่ได้)')}
+                </label>
                 {!generating && generateDisabled && (
                   <p id="qr-generate-hint" className="text-sm text-amber-700" role="status">
                     {!selectedSubject ? (

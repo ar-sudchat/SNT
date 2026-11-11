@@ -87,7 +87,7 @@ const qrcodeController = {
             where: { studentId, subjectId }
           });
 
-          if (existing) {
+          if (existing && !req.body.regenerate) {
             results.failed.push({
               studentId,
               reason: 'QR code already exists'
@@ -103,14 +103,10 @@ const qrcodeController = {
             margin: 2
           });
 
-          const qrcode = await prisma.qRCode.create({
-            data: {
-              studentId,
-              subjectId,
-              qrcodeData,
-              qrcodeImage
-            }
-          });
+          // สร้างใหม่ทับของเดิม: เปลี่ยนรหัสในแถวเดิม QR ใบเก่าที่พิมพ์ไปแล้วจะสแกนไม่ได้อีก
+          const qrcode = existing
+            ? await prisma.qRCode.update({ where: { id: existing.id }, data: { qrcodeData, qrcodeImage, status: 'ACTIVE', printedAt: null } })
+            : await prisma.qRCode.create({ data: { studentId, subjectId, qrcodeData, qrcodeImage } });
 
           results.success.push(qrcode);
         } catch (err) {

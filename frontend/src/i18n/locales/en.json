@@ -2401,5 +2401,7 @@
  "หน้านี้สำหรับดูอย่างเดียว · <a>ความเป็นส่วนตัว</a>": "View only · <a>Privacy</a>",
  "สแกน QR ดูงานของฉัน": "Scan QR to see my tasks",
  "ส่อง QR Code ที่ครูแจกให้ เพื่อดูงานที่ค้างและงานทุกวิชา": "Point at the QR code your teacher gave you to see pending tasks and all subjects",
- "QR นี้ไม่ใช่ QR ของ KruScan ลองส่องใบที่ครูแจกให้": "This is not a KruScan QR. Try the one your teacher gave you"
+ "QR นี้ไม่ใช่ QR ของ KruScan ลองส่องใบที่ครูแจกให้": "This is not a KruScan QR. Try the one your teacher gave you",
+ "สร้าง QR ใหม่ทับของเดิม {value1} คน — QR ใบเก่าที่พิมพ์ไปแล้วจะใช้ไม่ได้อีก ต้องพิมพ์ใหม่ ยืนยันไหม": "Regenerate QR for {value1} students? Old printed QR codes will stop working and must be reprinted. Continue?",
+ "สร้างใหม่ทับของเดิม (ใบเก่าใช้ไม่ได้)": "Replace existing (old codes stop working)"
 }
